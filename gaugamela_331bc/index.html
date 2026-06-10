@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高加米拉會戰 331 BC — 3D 戰史劇場 第六集</title>
+<style>
+  :root { --ui:1; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000;
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:#e8edf4; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  .bar { position:fixed; left:0; right:0; height:3.2vh; background:#000; z-index:30; }
+  #barTop{top:0} #barBottom{bottom:0}
+  #vignette { position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(10,5,0,.55) 100%); }
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:6; background:#fff; opacity:0; }
+  #title { position:fixed; top:3.6vh; left:50%; transform:translateX(-50%); z-index:40;
+    text-align:center; text-shadow:0 2px 8px #000; }
+  #title h1 { font-size:calc(21px*var(--ui)); letter-spacing:3px; font-weight:700; }
+  #title .sub { font-size:calc(11px*var(--ui)); color:#c4b49a; letter-spacing:2px; margin-top:2px; }
+  #title .badge { display:inline-block; background:#8a6516; color:#fff; font-size:calc(10px*var(--ui));
+    padding:1px 8px; border-radius:2px; letter-spacing:2px; margin-bottom:4px; }
+  .panel { background:rgba(20,14,6,.82); border:1px solid rgba(200,170,110,.28);
+    border-radius:6px; backdrop-filter:blur(6px); }
+  #left { position:fixed; left:12px; top:9vh; z-index:40; width:248px; font-size:calc(11px*var(--ui)); }
+  #left .panel { padding:8px 10px; margin-bottom:8px; }
+  .legend-row { display:flex; align-items:center; gap:7px; margin:3px 0; }
+  .sw { width:14px; height:14px; border-radius:3px; flex:none; }
+  details summary { cursor:pointer; pointer-events:auto; color:#ecdfc8; font-weight:700; font-size:calc(12px*var(--ui)); }
+  details { pointer-events:auto; }
+  details .body { margin-top:6px; line-height:1.55; color:#d6c9b2; }
+  details .body b { color:#fff; }
+  .blue-t { color:#62b6ff; font-weight:700; } .red-t { color:#ff7066; font-weight:700; }
+  #right { position:fixed; right:12px; top:9vh; z-index:40; width:176px; }
+  #right .panel { padding:8px; }
+  #right h3 { font-size:calc(11px*var(--ui)); color:#c4b49a; letter-spacing:2px; margin-bottom:6px; }
+  .shotBtn { display:block; width:100%; margin:4px 0; padding:6px 8px; font-size:calc(12px*var(--ui));
+    background:rgba(90,65,25,.45); color:#f0e6d2; border:1px solid rgba(200,170,110,.4);
+    border-radius:4px; cursor:pointer; text-align:left; pointer-events:auto;
+    font-family:inherit; transition:background .15s; }
+  .shotBtn:hover { background:rgba(140,100,40,.6); }
+  .shotBtn .t { color:#b09f86; font-size:calc(10px*var(--ui)); float:right; }
+  #inset { position:fixed; left:12px; bottom:9.5vh; z-index:40; width:272px; padding:8px; display:none; }
+  #inset .it { font-size:calc(11px*var(--ui)); color:#ffd98a; font-weight:700; margin-bottom:5px; line-height:1.4; }
+  #inset svg { width:100%; display:block; border-radius:4px; }
+  #inset text { font-size:10px; fill:#ecdfc8; }
+  #inset .sea-t { fill:#6f8aa5; font-style:italic; font-size:9.5px; letter-spacing:2px; }
+  #bottom { position:fixed; left:50%; transform:translateX(-50%); bottom:4.2vh; z-index:40;
+    width:min(940px, 92vw); text-align:center; }
+  #caption { margin-bottom:10px; text-shadow:0 2px 6px #000; transition:opacity .3s; }
+  #caption .ct { font-size:calc(17px*var(--ui)); font-weight:700; letter-spacing:1px; color:#ffd98a; }
+  #caption .cd { font-size:calc(12.5px*var(--ui)); color:#ece2d0; margin-top:3px; line-height:1.5; }
+  #tl { padding:8px 14px 10px; }
+  #tlRow { display:flex; align-items:center; gap:10px; }
+  #date { font-size:calc(13px*var(--ui)); font-weight:700; color:#ffe9b8; min-width:165px; text-align:left;
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #trackWrap { position:relative; flex:1; height:18px; }
+  #slider { width:100%; height:18px; cursor:pointer; pointer-events:auto;
+    -webkit-appearance:none; background:transparent; position:relative; z-index:2; }
+  #slider::-webkit-slider-runnable-track { height:4px; background:#5a4a30; border-radius:2px; }
+  #slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; margin-top:-5px;
+    border-radius:50%; background:#ffd98a; border:2px solid #2a2010; box-shadow:0 0 6px #ffce6e; }
+  .tick { position:absolute; top:6px; width:5px; height:5px; margin-left:-2px; border-radius:50%;
+    background:#c4a86a; z-index:1; }
+  #btns { display:flex; align-items:center; gap:8px; }
+  .cbtn { background:rgba(90,65,25,.5); color:#fff; border:1px solid rgba(200,170,110,.45);
+    border-radius:4px; padding:4px 10px; font-size:calc(12px*var(--ui)); cursor:pointer; pointer-events:auto;
+    font-family:inherit; }
+  .cbtn:hover { background:rgba(140,100,40,.65); }
+  #play { width:60px; font-weight:700; }
+  label.ck { font-size:calc(11px*var(--ui)); color:#cbbda4; display:flex; gap:4px; align-items:center;
+    cursor:pointer; pointer-events:auto; white-space:nowrap; }
+  .ulabel { font-size:calc(11px*var(--ui)); line-height:1.25; padding:2px 7px 3px; border-radius:3px;
+    background:rgba(20,12,4,.78); white-space:nowrap; transform:translateY(-130%);
+    text-shadow:0 1px 2px #000; }
+  .ulabel.un  { border-left:3px solid #4db2ff; color:#dceeff; }
+  .ulabel.pla { border-left:3px solid #ff5d52; color:#ffe2df; }
+  .ulabel .sub { display:block; font-size:calc(9.5px*var(--ui)); color:#b3a78f; }
+  .ulabel.dead { opacity:.85; border-left-color:#666; color:#aaa; }
+  .ulabel.dead .name { text-decoration:line-through; }
+  .ulabel.dead .sub { color:#d98c86; }
+  .clabel { font-size:calc(11px*var(--ui)); color:#f6f0e2; text-shadow:0 1px 3px #000,0 0 6px #000;
+    transform:translateY(-145%); white-space:nowrap; letter-spacing:1px; }
+  .clabel .dot { color:#ffd98a; }
+  .tlabel { font-size:calc(12px*var(--ui)); color:#a89878; font-style:italic; letter-spacing:4px;
+    text-shadow:0 1px 3px #000; white-space:nowrap; }
+  .mlabel { font-size:calc(11px*var(--ui)); font-weight:700; color:#ffd2a0; background:rgba(60,30,8,.82);
+    border:1px solid rgba(255,170,80,.5); padding:2px 8px; border-radius:10px;
+    white-space:nowrap; transform:translateY(-260%); text-shadow:0 1px 2px #000; }
+  .mlabel.good { color:#b8ffc8; background:rgba(10,50,20,.82); border-color:rgba(120,255,160,.5); }
+  #hint { position:fixed; right:14px; bottom:4.4vh; z-index:40; font-size:calc(10.5px*var(--ui));
+    color:#998a72; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
+  #err { position:fixed; inset:0; display:none; place-items:center; z-index:99;
+    background:#16100a; font-size:calc(15px*var(--ui)); color:#fbb; text-align:center; padding:30px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+<div class="bar" id="barTop"></div>
+<div class="bar" id="barBottom"></div>
+
+<div id="title">
+  <div class="badge">歷史特別企劃・上古戰史 3D 戰史劇場 第六集</div>
+  <h1>高加米拉會戰 — 直取敵王</h1>
+  <div class="sub">BATTLE OF GAUGAMELA ・ 西元前331年10月1日 ・ 亞述平原 4.7萬對十萬 帝國一日傾覆</div>
+</div>
+
+<div id="left">
+  <div class="panel">
+    <div class="legend-row"><span class="sw" style="background:#3f8fdd"></span><b class="blue-t">馬其頓軍</b>&nbsp;亞歷山大・約47,000人</div>
+    <div class="legend-row"><span class="sw" style="background:#d6443a"></span><b class="red-t">波斯軍</b>&nbsp;大流士三世・estimated 10萬+</div>
+    <div class="legend-row"><span class="sw" style="background:#c9b283"></span>剷平的戰車跑道(大流士御製)</div>
+    <div class="legend-row"><span class="sw" style="background:#e8dcc0;border:1px solid #a99"></span>沙塵滾滾的亞述平原</div>
+  </div>
+  <div class="panel"><details>
+    <summary>⚔ 戰鬥序列・指揮官</summary>
+    <div class="body">
+      <b class="blue-t">馬其頓軍</b>(約4萬步兵+7千騎兵)<br>
+      國王:<b>亞歷山大三世</b>(25歲)親率夥友騎兵<br>
+      左翼統帥:老將<b>帕曼紐</b>+色薩利騎兵<br>
+      中央:六營薩里沙長矛方陣(6.4米長矛)<br>
+      雙線空心陣:第二線後備方陣可回身應戰<br><br>
+      <b class="red-t">波斯軍</b>(號稱百萬,實估10~25萬)<br>
+      皇帝:<b>大流士三世</b>(中央,戰車上督戰)<br>
+      左翼:<b>貝蘇斯</b>(巴克特里亞+斯基泰鐵甲騎兵)<br>
+      右翼:<b>馬扎尤斯</b>(敘利亞+亞美尼亞騎兵)<br>
+      王牌:鐮刀戰車200輛・戰象15頭・不死軍
+    </div>
+  </details></div>
+  <div class="panel"><details>
+    <summary>🏛 戰役結果・意義</summary>
+    <div class="body">
+      <b class="blue-t">馬其頓</b>:傷亡約1,000~4,000<br>
+      <b class="red-t">波斯</b>:死傷估4萬以上(古史載更鉅)<br><br>
+      大流士東逃後遭部將貝蘇斯弒殺;巴比倫、蘇薩、波斯波利斯相繼開城——立國兩百年的<b>阿契美尼德波斯帝國一戰傾覆</b>。「斜行誘敵、拉開缺口、直取敵王」成為西方戰史最經典的一役。
+    </div>
+  </details></div>
+</div>
+
+<div id="right"><div class="panel">
+  <h3>🎬 特寫鏡頭</h3>
+  <button class="shotBtn" data-shot="0">兩軍列陣<span class="t">07:00</span></button>
+  <button class="shotBtn" data-shot="1">斜行序列<span class="t">09:00</span></button>
+  <button class="shotBtn" data-shot="2">鐮刀戰車衝鋒<span class="t">11:20</span></button>
+  <button class="shotBtn" data-shot="3">夥友騎兵・直取敵王<span class="t">13:00</span></button>
+  <button class="shotBtn" data-shot="4">帕曼紐苦戰・大營被劫<span class="t">14:00</span></button>
+  <button class="shotBtn" data-shot="5">總崩潰・追擊<span class="t">16:00</span></button>
+</div></div>
+
+<div id="inset" class="panel">
+  <div class="it">🗺 亞歷山大東征 — 自馬其頓至高加米拉,八年三戰滅波斯</div>
+  <svg viewBox="0 0 240 150">
+    <rect x="0" y="0" width="240" height="150" fill="#243d2e"/>
+    <path d="M0,60 L40,52 L70,62 L60,86 L96,80 L120,92 L100,118 L60,112 L20,124 L0,110 Z" fill="#0d2236"/>
+    <text class="sea-t" x="38" y="92">地 中 海</text>
+    <circle cx="22" cy="38" r="2.6" fill="#9fd0ff"/><text x="6" y="30">馬其頓</text>
+    <circle cx="92" cy="58" r="2.2" fill="#dce8f4"/><text x="80" y="50">格拉尼庫斯 334</text>
+    <circle cx="124" cy="76" r="2.2" fill="#dce8f4"/><text x="116" y="92">伊蘇斯 333</text>
+    <circle cx="96" cy="122" r="2.2" fill="#dce8f4"/><text x="64" y="136">埃及 332</text>
+    <circle cx="178" cy="62" r="3.4" fill="#ffd98a"/><text x="150" y="52">高加米拉 ★331</text>
+    <circle cx="190" cy="92" r="2.4" fill="#ff8a7a"/><text x="196" y="96">巴比倫</text>
+    <path d="M24,40 Q70,40 92,58 Q116,66 124,76 Q110,104 96,122 Q140,110 160,84 Q172,70 178,62"
+          fill="none" stroke="#55c0ff" stroke-width="1.8" stroke-dasharray="5 3"/>
+    <polygon points="178,62 170,62 174,70" fill="#55c0ff"/>
+  </svg>
+</div>
+
+<div id="bottom">
+  <div id="caption"><div class="ct"></div><div class="cd"></div></div>
+  <div id="tl" class="panel">
+    <div id="tlRow">
+      <div id="date">前331年10月1日 06:00</div>
+      <div id="trackWrap">
+        <input type="range" id="slider" min="0" max="14" step="0.01" value="0">
+      </div>
+      <div id="btns">
+        <button class="cbtn" id="play">▶ 播放</button>
+        <button class="cbtn" id="speed">1×</button>
+        <button class="cbtn" id="sfx" title="音效開關">🔊</button>
+        <button class="cbtn" id="fontMinus" title="縮小字體">A−</button>
+        <button class="cbtn" id="fontPlus" title="放大字體">A＋</button>
+        <label class="ck"><input type="checkbox" id="cinema" checked>運鏡</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hint">滑鼠拖曳=旋轉視角・滾輪=縮放・右鍵拖曳=平移<br>時間軸以「小時」推演・首次點擊頁面後音效啟用・A−/A＋調整字體</div>
+<div id="err">⚠ 無法初始化 WebGL,請改用 Safari / Chrome 開啟。</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ════════════════════════════════ 基礎工具 ════════════════════════════════ */
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp  = (a,b,u)=>a+(b-a)*u;
+const fract = v=>v-Math.floor(v);
+function smoothstep(a,b,x){ const u=clamp((x-a)/(b-a),0,1); return u*u*(3-2*u); }
+function noise2(x,z){
+  let v = Math.sin(x*0.16+Math.sin(z*0.11)*1.7)*Math.cos(z*0.19+Math.sin(x*0.07)*2.3);
+  v += 0.5*Math.sin(x*0.37+z*0.29)*Math.cos(z*0.41-x*0.13);
+  v += 0.25*Math.sin(x*0.83-z*0.61)*Math.cos(z*0.97+x*0.53);
+  return v/1.75;
+}
+
+/* ════════════════════════════════ 地理 ════════════════════════════════
+   x=東, z=南, 1單位≈100m。波斯軍列陣於北(z=-12),馬其頓軍於南(z=+12)。
+   時間軸以「小時」計:t=0 為 06:00,大流士為戰車剷平了中央地帶。 */
+const inRunway=(x,z)=> x>-22&&x<22&&z>-10&&z<0;
+function terrainH(x,z){
+  let h=0.6+0.5*noise2(x*0.5,z*0.5)+0.2*noise2(x*1.6,z*1.6);
+  if(inRunway(x,z)) h=0.55+0.05*noise2(x*2,z*2);                 // 剷平的跑道
+  h+=3.0*smoothstep(-30,-44,z)*(0.5+0.5*noise2(x*0.3,z*0.3));    // 北方丘陵
+  h+=1.6*Math.exp(-(((x-26)**2)+((z+30)**2))/50);                // 高加米拉土丘
+  return h;
+}
+const groundY=(x,z)=>Math.max(terrainH(x,z),0.2);
+
+/* ════════════════════════════════ 場景 ════════════════════════════════ */
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias:true}); }
+catch(e){ document.getElementById('err').style.display='grid'; throw e; }
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.getElementById('app').appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.cssText='position:fixed;inset:0;pointer-events:none;';
+document.getElementById('labels').appendChild(labelRenderer.domElement);
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xc9b283, 90, 260);
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.5, 700);
+camera.position.set(0, 50, 48);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = 1.46; controls.minDistance = 4; controls.maxDistance = 180;
+const hemi = new THREE.HemisphereLight(0xf2e2c4, 0x5a4a32, 0.75);  scene.add(hemi);
+const sun  = new THREE.DirectionalLight(0xfff1dd, 1.0);
+sun.position.set(-60, 80, 30); scene.add(sun);
+const moonAmb = new THREE.AmbientLight(0x4a3c28, 0.3); scene.add(moonAmb);
+
+/* ── 地形(沙色平原+剷平跑道) ── */
+const W=130, D=110, SEG=190;
+const geo = new THREE.PlaneGeometry(W, D, SEG, SEG);
+geo.rotateX(-Math.PI/2);
+{
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i, terrainH(pos.getX(i), pos.getZ(i)));
+  geo.computeVertexNormals();
+  const colors = new Float32Array(pos.count*3);
+  const cSand=new THREE.Color(0xe0d3b2), cSand2=new THREE.Color(0xcdbf99),
+        cRun=new THREE.Color(0xc9b283), cRock=new THREE.Color(0x9a8b72),
+        c=new THREE.Color();
+  const nrm=geo.attributes.normal;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i), h=pos.getY(i);
+    const nf=noise2(x*0.7+9,z*0.7-4);
+    c.copy(cSand).lerp(cSand2, 0.5+0.5*nf);
+    if(inRunway(x,z)) c.lerp(cRun, 0.7);
+    const steep=1-nrm.getY(i);
+    c.lerp(cRock, smoothstep(0.12,0.4,steep)+0.3*smoothstep(2.5,5,h));
+    c.multiplyScalar(0.94+0.06*noise2(x*3.0,z*3.0));
+    colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+}
+scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
+
+/* ── 馬其頓大營(帳棚) + 地名 ── */
+function makeLabel(html, cls){
+  const div=document.createElement('div'); div.className=cls; div.innerHTML=html;
+  return new CSS2DObject(div);
+}
+{
+  const m=new THREE.MeshLambertMaterial({color:0xe8e0cc});
+  for(let i=0;i<8;i++){
+    const tent=new THREE.Mesh(new THREE.ConeGeometry(0.7,1.0,5), m);
+    const x=-3+(i%4)*1.6, z=19+Math.floor(i/4)*1.6;
+    tent.position.set(x, groundY(x,z)+0.5, z); scene.add(tent);
+  }
+}
+const CITIES=[['馬其頓大營',-1,20.5],['高加米拉(駝峰之丘)',26,-30]];
+for(const [n,x,z] of CITIES){
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.4,10,10),
+    new THREE.MeshBasicMaterial({color:0xffe2a8}));
+  dot.position.set(x, groundY(x,z)+0.45, z); scene.add(dot);
+  const l=makeLabel('<span class="dot">●</span> '+n,'clabel');
+  l.position.set(x, groundY(x,z)+1.2, z); scene.add(l);
+}
+for(const [n,x,z] of [['亞 述 平 原',-34,8],['剷平的戰車跑道',0,-5],
+  ['往 阿 爾 貝 拉 ↗',30,-38],['底格里斯河方向 ←',-42,-12]]){
+  const l=makeLabel(n,'tlabel'); l.position.set(x, groundY(x,z)+1.8, z); scene.add(l);
+}
+
+/* ════════════════════════════════ 部隊(橫隊軍標) ════════════════════════════ */
+function kfPos(kf,t){
+  if(t<=kf[0][0]) return [kf[0][1],kf[0][2]];
+  for(let i=0;i<kf.length-1;i++){
+    const a=kf[i], b=kf[i+1];
+    if(t<=b[0]){ const u=(t-a[0])/(b[0]-a[0]); return [lerp(a[1],b[1],u), lerp(a[2],b[2],u)]; }
+  }
+  const l=kf[kf.length-1]; return [l[1],l[2]];
+}
+/* 戰局時刻(小時,06:00=0):2 斜行/5.3 戰車/7 楔形衝鋒/7.8 大流士逃/8.5 回師/10 崩潰追擊 */
+const UNITS=[
+ {name:'亞歷山大・夥友騎兵', sub:'國王親率 2,100鐵騎(右翼)', side:'un', w:3,
+  kf:[[0,14,12],[2,14,12],[5,24,5],[6.5,25,3],[7,24,3],[7.6,10,-7],[8,6,-10],
+      [8.5,4,-8],[9.5,-8,2],[10.5,0,-6],[12,14,-22],[14,24,-32]]},
+ {name:'薩里沙長矛方陣', sub:'六營 約10,000人(中央)', side:'un', w:8,
+  kf:[[0,0,12],[2,0,12],[5,5,7],[7,5,5],[10,4,2],[12,4,-4],[14,4,-8]]},
+ {name:'帕曼紐・色薩利騎兵', sub:'老將坐鎮左翼 「鐵砧」', side:'un', w:4,
+  kf:[[0,-14,13],[2,-14,13],[5,-11,10],[7,-13,9],[9,-14,7],[10,-13,4],[12,-12,0],[14,-12,-4]]},
+ {name:'右翼掩護縱隊', sub:'傭兵騎兵+阿格瑞安標槍兵', side:'un', w:3,
+  kf:[[0,20,13],[2,20,13],[5,29,7],[7,31,4],[9,30,2],[12,28,-6],[14,30,-14]]},
+ {name:'第二線後備方陣', sub:'雙線空心陣・隨時回身', side:'un', w:6,
+  kf:[[0,0,17],[5,4,13],[8,2,12],[9,-1,13],[10,0,10],[12,0,4],[14,0,0]]},
+ /* 波斯 */
+ {name:'大流士三世・中軍', sub:'不死軍+希臘傭兵+15戰象', side:'pla', w:8, dieAt:7.8,
+  deadSub:'13:50 棄軍而逃・奔米底亞',
+  kf:[[0,0,-12],[7.8,0,-12],[8.5,-3,-20],[10,-8,-32],[11,-12,-44]]},
+ {name:'貝蘇斯・波斯左翼', sub:'巴克特里亞+斯基泰鐵甲騎兵', side:'pla', w:5,
+  kf:[[0,16,-12],[2,16,-12],[4,24,-8],[5.5,30,-4],[7,32,-2],[8.5,30,-6],[10,24,-16],[12,20,-30],[14,18,-40]]},
+ {name:'馬扎尤斯・波斯右翼', sub:'敘利亞+亞美尼亞騎兵', side:'pla', w:5,
+  kf:[[0,-18,-12],[2,-18,-12],[5,-17,-8],[6,-16,-2],[7,-15,4],[9,-15,6],[9.5,-16,0],[10.5,-18,-10],[12,-22,-24],[14,-26,-36]]},
+ {name:'印度+波斯近衛騎兵', sub:'穿透缺口直搗馬其頓大營', side:'pla', w:3, dieAt:9.3,
+  deadSub:'15:20 劫營部隊被後備方陣圍殲',
+  kf:[[5.5,-6,-11],[6.5,-5,-2],[7.5,-2,12],[8,-1,19],[9.3,-2,20]]},
+];
+const unitObjs=[];
+for(const u of UNITS){
+  const g=new THREE.Group();
+  const isUn=u.side==='un';
+  const col = isUn ? 0x3f8fdd : 0xd6443a;
+  const emi = isUn ? 0x1c5fae : 0x952a22;
+  const bodyMat=new THREE.MeshLambertMaterial({color:col, emissive:emi, transparent:true});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(u.w,0.55,1.3), bodyMat);   // 橫隊
+  body.position.y=0.35; g.add(body);
+  const coneMat=new THREE.MeshBasicMaterial({color:col, transparent:true});
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.4,6), coneMat);
+  cone.rotation.x=Math.PI/2; cone.position.y=0.45; cone.visible=false; g.add(cone);
+  const ringMat=new THREE.MeshBasicMaterial({color:isUn?0x7fd0ff:0xff8a7a,
+    transparent:true, opacity:0.55, side:THREE.DoubleSide});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(u.w*0.7,u.w*0.7+0.35,32), ringMat);
+  ring.rotation.x=-Math.PI/2; ring.position.y=0.12; g.add(ring);
+  const div=document.createElement('div');
+  div.className='ulabel '+(isUn?'un':'pla');
+  div.innerHTML=`<span class="name">${u.name}</span><span class="sub">${u.sub}</span>`;
+  const lab=new CSS2DObject(div); lab.position.y=1.5; g.add(lab);
+  scene.add(g);
+  unitObjs.push({u,g,body,bodyMat,cone,coneMat,ring,ringMat,div,dead:false});
+}
+
+/* ── 鐮刀戰車(200輛→6個視覺單位)與戰象 ── */
+const chariots=[];
+{
+  const m=new THREE.MeshLambertMaterial({color:0xb8742e});
+  for(let i=0;i<6;i++){
+    const ch=new THREE.Group();
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.4,0.9), m); cab.position.y=0.4; ch.add(cab);
+    for(const s of [-0.45,0.45]){
+      const wl=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.1,10),
+        new THREE.MeshLambertMaterial({color:0x6a5028}));
+      wl.rotation.z=Math.PI/2; wl.position.set(s,0.3,0.2); ch.add(wl);
+    }
+    ch.visible=false; scene.add(ch);
+    chariots.push({g:ch, x0:-12+i*4.8});
+  }
+}
+const elephants=[];
+{
+  const m=new THREE.MeshLambertMaterial({color:0x8a8076});
+  for(let i=0;i<4;i++){
+    const el=new THREE.Group();
+    const bd=new THREE.Mesh(new THREE.SphereGeometry(0.6,10,8), m); bd.position.y=0.7; bd.scale.set(1.2,1,0.8); el.add(bd);
+    const hd=new THREE.Mesh(new THREE.SphereGeometry(0.35,8,8), m); hd.position.set(0,0.8,-0.7); el.add(hd);
+    el.position.set(-4.5+i*3, 0, -10.2); scene.add(el);
+    elephants.push(el);
+  }
+}
+
+/* ── 箭頭(斜行/楔形/崩潰) ── */
+function makeArrow(x1,z1,x2,z2,color){
+  const y1=groundY(x1,z1), y2=groundY(x2,z2);
+  const mid=new THREE.Vector3((x1+x2)/2, Math.max(y1,y2)+5, (z1+z2)/2);
+  const curve=new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(x1,y1+1,z1), mid, new THREE.Vector3(x2,y2+1,z2));
+  const mat=new THREE.MeshBasicMaterial({color, transparent:true, opacity:0});
+  const grp=new THREE.Group();
+  grp.add(new THREE.Mesh(new THREE.TubeGeometry(curve,24,0.26,6), mat));
+  const head=new THREE.Mesh(new THREE.ConeGeometry(0.85,2.1,8), mat);
+  head.position.copy(curve.getPoint(0.99));
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), curve.getTangent(0.99).normalize());
+  grp.add(head); scene.add(grp);
+  return {grp,mat};
+}
+const ARROWS=[
+ {a:makeArrow(8,14,22,7,0x55c0ff),    from:2,  to:5},     // 全軍斜行
+ {a:makeArrow(18,-11,29,-5,0xff4438), from:3,  to:5.5},   // 貝蘇斯追截
+ {a:makeArrow(22,4,8,-9,0x55c0ff),    from:6.8,to:8.2},   // 楔形衝鋒!
+ {a:makeArrow(-16,-9,-15,3,0xff4438), from:6,  to:9},     // 馬扎尤斯壓帕曼紐
+ {a:makeArrow(-5,-8,-2,16,0xff4438),  from:5.8,to:8},     // 劫營穿透
+ {a:makeArrow(6,-9,-6,0,0x55c0ff),    from:8.5,to:9.8},   // 回師救左翼
+ {a:makeArrow(0,-16,-9,-34,0xff8a6a), from:8,  to:10.5},  // 大流士遁逃
+ {a:makeArrow(6,-10,18,-30,0x55c0ff), from:10, to:13.5},  // 追擊阿爾貝拉
+];
+
+/* ════════════════════════════════ 上古特效 ════════════════════════════════ */
+const softTex=(()=>{
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const ctx=cv.getContext('2d');
+  const g=ctx.createRadialGradient(32,32,2,32,32,30);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.45,'rgba(255,255,255,.75)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+})();
+/* 白刃閃光(取代砲火) */
+const clashPool=Array.from({length:30},()=>{
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:softTex, color:0xfff2c8, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+  sp.visible=false; scene.add(sp);
+  return {sp,t0:-9,size:1};
+});
+let clashIdx=0;
+function spawnClash(x,z,size,tNow){
+  const b=clashPool[clashIdx++%clashPool.length];
+  b.sp.position.set(x+(Math.random()-0.5)*1.4, groundY(x,z)+0.7+Math.random()*0.6, z+(Math.random()-0.5)*1.4);
+  b.t0=tNow; b.size=size; b.sp.visible=true;
+  if(typeof SFX!=='undefined') SFX.clash(camera.position.distanceTo(b.sp.position));
+}
+/* 沙塵(部隊移動揚塵+戰場塵霧) */
+const dustPool=Array.from({length:50},()=>{
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:softTex, color:0xcab78e, transparent:true, depthWrite:false}));
+  sp.visible=false; scene.add(sp);
+  return {sp,t0:-9,size:2};
+});
+let dustIdx=0;
+function spawnDust(x,z,size,tNow){
+  const d=dustPool[dustIdx++%dustPool.length];
+  d.sp.position.set(x+(Math.random()-0.5)*2, groundY(x,z)+0.8, z+(Math.random()-0.5)*2);
+  d.t0=tNow; d.size=size; d.sp.visible=true;
+}
+/* 白刃戰區 {x,z,r,from,to,rate}(座標隨時間由 fn 給) */
+const MELEES=[
+ {fx:t=>4,  fz:t=>3,   r:4,  from:5.5,to:10, rate:30},   // 方陣正面
+ {fx:t=>-14,fz:t=>6,   r:3.5,from:6,  to:9.5,rate:26},   // 帕曼紐左翼
+ {fx:t=>16, fz:t=>-3,  r:4,  from:6,  to:9,  rate:20},   // 右翼騎兵戰
+ {fx:t=>lerp(20,8,clamp((t-7)/1,0,1)), fz:t=>lerp(2,-8,clamp((t-7)/1,0,1)),
+  r:3, from:7, to:8.5, rate:38},                          // 楔形衝鋒鋒線
+ {fx:t=>-1, fz:t=>19,  r:2.5,from:7.6,to:9.3,rate:22},   // 大營被劫
+ {fx:t=>2,  fz:t=>0,   r:3,  from:5.1,to:5.9,rate:30},   // 戰車線
+];
+/* 箭雨(波斯弓箭齊射) */
+const arrows=[];
+for(let i=0;i<14;i++){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:0x554a38,transparent:true}));
+  sp.scale.set(0.35,0.35,1); sp.visible=false; scene.add(sp);
+  arrows.push(sp);
+}
+const VOLLEYS=[[4.6,5.6],[6.2,7.2]];   // 齊射時段
+
+/* ════════════════════════════════ 音效(上古套件) ════════════════════════════ */
+const SFX=(()=>{
+  let ctx=null, master=null, on=true, lastClash=0;
+  function ensure(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      ctx=new AC();
+      master=ctx.createGain(); master.gain.value=on?0.9:0;
+      const comp=ctx.createDynamicsCompressor();
+      master.connect(comp); comp.connect(ctx.destination);
+      /* 平原風 */
+      const len=ctx.sampleRate*2, buf=ctx.createBuffer(1,len,ctx.sampleRate);
+      const ch=buf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+      const src=ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=340;
+      const wg=ctx.createGain(); wg.gain.value=0.04;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.09;
+      const lg=ctx.createGain(); lg.gain.value=0.022;
+      lfo.connect(lg); lg.connect(wg.gain);
+      src.connect(lp).connect(wg).connect(master);
+      src.start(); lfo.start();
+    }
+    if(ctx.state==='suspended') ctx.resume();
+  }
+  /* 兵刃相擊 */
+  function clash(dist){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime;
+    if(now-lastClash<0.07) return;
+    lastClash=now;
+    const att=clamp(40/((dist||40)+15),0.05,1);
+    const dur=0.12;
+    const nn=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,nn,ctx.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<nn;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/nn,1.5);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type='bandpass';
+    f.frequency.value=2600+Math.random()*1800; f.Q.value=6;
+    const g=ctx.createGain(); g.gain.value=0.12*att;
+    src.connect(f).connect(g).connect(master); src.start(now);
+  }
+  /* 薩爾平克斯軍號 */
+  function horn(){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime;
+    [392,392,523].forEach((fr,i)=>{
+      const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=fr;
+      const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1300;
+      const g=ctx.createGain();
+      const t0=now+i*0.45;
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.linearRampToValueAtTime(0.09,t0+0.06);
+      g.gain.setValueAtTime(0.09,t0+0.32);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+0.45);
+      o.connect(f).connect(g).connect(master); o.start(t0); o.stop(t0+0.5);
+    });
+  }
+  /* 戰鼓 */
+  function drums(n){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime;
+    for(let i=0;i<(n||6);i++){
+      const o=ctx.createOscillator(); o.type='sine';
+      const t0=now+i*0.32;
+      o.frequency.setValueAtTime(110,t0);
+      o.frequency.exponentialRampToValueAtTime(50,t0+0.2);
+      const g=ctx.createGain();
+      g.gain.setValueAtTime(0.16,t0);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+0.28);
+      o.connect(g).connect(master); o.start(t0); o.stop(t0+0.3);
+    }
+  }
+  /* 萬人吶喊 */
+  function warcry(){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime, dur=2.4;
+    const nn=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,nn,ctx.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<nn;i++) ch[i]=(Math.random()*2-1);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=480; f.Q.value=1.1;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.14, now+0.6);
+    g.gain.setValueAtTime(0.14, now+dur-0.8);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    const lfo=ctx.createOscillator(); lfo.frequency.value=7;
+    const lg=ctx.createGain(); lg.gain.value=0.04;
+    lfo.connect(lg); lg.connect(g.gain); lfo.start(now); lfo.stop(now+dur);
+    src.connect(f).connect(g).connect(master); src.start(now);
+  }
+  /* 馬蹄雷鳴 */
+  function hooves(){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime, dur=3;
+    const nn=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,nn,ctx.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<nn;i++){
+      const tt=i/ctx.sampleRate;
+      ch[i]=(Math.random()*2-1)*(0.5+0.5*Math.sin(tt*44))*Math.pow(1-tt/dur,0.6);
+    }
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260;
+    const g=ctx.createGain(); g.gain.value=0.22;
+    src.connect(f).connect(g).connect(master); src.start(now);
+  }
+  function toggle(){ on=!on; if(master) master.gain.value=on?0.9:0; return on; }
+  return {ensure, clash, horn, drums, warcry, hooves, toggle};
+})();
+addEventListener('pointerdown', ()=>SFX.ensure());
+addEventListener('keydown', ()=>SFX.ensure());
+document.getElementById('sfx').addEventListener('click', e=>{
+  SFX.ensure(); e.currentTarget.textContent = SFX.toggle() ? '🔊' : '🔇';
+});
+let uiScale = +(localStorage.getItem('chosin_ui')||1);
+function applyUI(){
+  uiScale = clamp(+uiScale.toFixed(2), 0.7, 1.8);
+  document.documentElement.style.setProperty('--ui', uiScale);
+  localStorage.setItem('chosin_ui', uiScale);
+}
+applyUI();
+document.getElementById('fontPlus').addEventListener('click', ()=>{ uiScale+=0.1; applyUI(); });
+document.getElementById('fontMinus').addEventListener('click', ()=>{ uiScale-=0.1; applyUI(); });
+
+/* ════════════════════════════════ 事件 / 字幕 ════════════════════════════════ */
+const EVENTS=[
+ [0,  '西元前331年10月1日 — 決戰之晨','尼尼微以東,高加米拉平原。大流士三世徵集帝國全部兵力,並剷平戰場以利鐮刀戰車。亞歷山大拒絕夜襲:「我不偷竊勝利。」——然後,他睡過了頭。'],
+ [1,  '列陣 — 四萬七千對十萬','馬其頓擺出雙線空心陣:正面六營長矛方陣,兩翼騎兵,第二線後備方陣隨時回身——一座會行走的堡壘,四面被圍也能應戰。對面,波斯戰線一望無際。'],
+ [2,  '斜行序列 — 全軍向右','亞歷山大率全軍斜向右前方平移,一步步脫離大流士剷平的戰車跑道。波斯左翼貝蘇斯被迫派出大批鐵甲騎兵追截——波斯戰線,開始被拉長。'],
+ [5,  '11:20 — 鐮刀戰車衝鋒','大流士提前打出王牌:兩百輛鐮刀戰車轟然衝鋒。馬其頓標槍兵射殺馭手,方陣應聲開出通道——衝入通道的戰車,被後列盡數圍殲。'],
+ [6,  '⚡ 缺口','貝蘇斯的騎兵被越拉越遠,波斯左翼與中軍之間,裂開一道缺口。兩翼同時,印度與波斯近衛騎兵也撕開馬其頓中央,直撲後方大營。'],
+ [7,  '13:00 — 夥友騎兵・直取敵王','亞歷山大親率夥友騎兵排成巨大楔形,斜插缺口,直撲大流士本陣。長矛所向,不死軍動搖、希臘傭兵潰散——御者中矛倒下的那一刻,大流士調轉戰車。'],
+ [7.8,'13:50 — 王先逃了','大流士棄軍而逃,奔向米底亞群山。但另一邊,馬扎尤斯重壓帕曼紐,左翼快撐不住了——老將的求援騎兵,正穿過煙塵狂奔而來。'],
+ [8.5,'王者的抉擇','追擊大流士的亞歷山大勒馬回師,反向衝入混戰救援左翼。錯失生擒敵王——卻保全了整場勝利。後備方陣同時回身,圍殲劫營的波斯騎兵。'],
+ [10, '16:00 — 總崩潰','「王已遁逃」的消息傳遍波斯全軍,十萬大軍土崩瓦解。馬其頓騎兵銜尾追殺,直至阿爾貝拉——一日七十里,屍橫遍野。'],
+ [13, '波斯帝國的黃昏','此役馬其頓傷亡僅千餘,波斯死傷數萬。巴比倫、蘇薩、波斯波利斯相繼開城;大流士次年遭部將弒殺——立國兩百年的阿契美尼德王朝就此傾覆。而亞歷山大,時年二十五歲。'],
+];
+const MOMENTS=[
+ {html:'🌙 「我不偷竊勝利」',x:-1,z:20.5,from:0,to:1.2,cls:'good'},
+ {html:'🏟 大流士剷平的戰車跑道',x:0,z:-5,from:0.5,to:2.5,cls:''},
+ {html:'↗ 全軍斜行・脫離跑道',x:16,z:8,from:2.2,to:5,cls:'good'},
+ {html:'🐎 貝蘇斯被誘離戰線',x:26,z:-6,from:3.5,to:6,cls:''},
+ {html:'⚔ 鐮刀戰車被方陣開道圍殲',x:3,z:1,from:5.1,to:6.2,cls:'good'},
+ {html:'⚡ 缺口出現!',x:10,z:-9,from:6,to:7.2,cls:''},
+ {html:'🗡 楔形衝鋒・直取大流士',x:14,z:-4,from:7,to:8,cls:'good'},
+ {html:'🏃 大流士棄軍而逃',x:-3,z:-18,from:7.8,to:9.5,cls:''},
+ {html:'🏕 大營被劫・後備方陣回身',x:-1,z:19,from:7.6,to:9.3,cls:''},
+ {html:'🆘 帕曼紐告急',x:-14,z:6,from:7.8,to:8.6,cls:''},
+ {html:'↩ 亞歷山大回師救左翼',x:-4,z:-2,from:8.5,to:9.8,cls:'good'},
+ {html:'🏇 追擊七十里・直至阿爾貝拉',x:18,z:-28,from:10.5,to:13.5,cls:'good'},
+];
+const momentObjs=MOMENTS.map(m=>{
+  const o=makeLabel(m.html,'mlabel'+(m.cls?' '+m.cls:''));
+  o.position.set(m.x, groundY(m.x,m.z)+2.0, m.z);
+  o.visible=false; scene.add(o); return o;
+});
+{
+  const wrap=document.getElementById('trackWrap');
+  for(const e of EVENTS){
+    const d=document.createElement('div'); d.className='tick';
+    d.style.left=(e[0]/14*100)+'%'; d.title=e[1]; wrap.appendChild(d);
+  }
+}
+
+/* ════════════════════════════════ 運鏡 ════════════════════════════════ */
+const SHOTS=[
+ {t:1,    pos:[  0,42, 40], tgt:[  0, 0,  0]},
+ {t:3,    pos:[ 32,16, 22], tgt:[ 16, 0,  4]},
+ {t:5.3,  pos:[  9, 6, 12], tgt:[  2, 0,  0]},
+ {t:7.2,  pos:[ 22, 7,  2], tgt:[ 10, 0, -7]},
+ {t:8,    pos:[-22,11, 16], tgt:[-10, 0,  8]},
+ {t:10.5, pos:[  2,28,-12], tgt:[  4, 0,-22]},
+];
+const CINEMA_CUTS=[
+ {at:0.1,shot:0},{at:2.2,shot:1},{at:5.05,shot:2},{at:6.9,shot:3},{at:7.9,shot:4},{at:9.9,shot:5},
+];
+let fly=null;
+function flyTo(pos,tgt,dur=2.0){
+  fly={p0:camera.position.clone(), t0:controls.target.clone(),
+       p1:new THREE.Vector3(...pos), t1:new THREE.Vector3(...tgt), u:0, dur};
+}
+document.querySelectorAll('.shotBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const s=SHOTS[+btn.dataset.shot];
+    setT(s.t); flyTo(s.pos,s.tgt,1.6);
+  });
+});
+
+/* ════════════════════════════════ 時間軸(小時制) ════════════════════════════ */
+const T_MAX=14;
+let simT=0, playing=true, speed=1;
+const SPEEDS=[0.5,1,2,4];
+const slider=document.getElementById('slider'),
+      dateEl=document.getElementById('date'),
+      playBtn=document.getElementById('play'),
+      speedBtn=document.getElementById('speed'),
+      cinemaCk=document.getElementById('cinema'),
+      capT=document.querySelector('#caption .ct'),
+      capD=document.querySelector('#caption .cd'),
+      insetEl=document.getElementById('inset');
+function setT(v){ simT=clamp(v,0,T_MAX); slider.value=simT; }
+slider.addEventListener('input',()=>{ simT=+slider.value; });
+playBtn.addEventListener('click',()=>{
+  if(simT>=T_MAX) simT=0;
+  playing=!playing; playBtn.textContent=playing?'⏸ 暫停':'▶ 播放';
+});
+speedBtn.addEventListener('click',()=>{
+  speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; speedBtn.textContent=speed+'×';
+});
+function fmtDate(t){
+  const hh=String(6+Math.floor(t)).padStart(2,'0');
+  const mm=String(Math.floor(fract(t)*6)*10).padStart(2,'0');
+  return `前331年10月1日 ${hh}:${mm}`;
+}
+let curEvent=-1;
+function updateCaption(t){
+  let idx=-1;
+  for(let i=0;i<EVENTS.length;i++) if(EVENTS[i][0]<=t) idx=i;
+  if(idx!==curEvent){
+    curEvent=idx;
+    if(idx>=0){ capT.textContent=EVENTS[idx][1]; capD.textContent=EVENTS[idx][2]; }
+  }
+}
+
+/* ════════════════════════════════ 主更新 ════════════════════════════════ */
+const skyDawn=new THREE.Color(0xd9a05e), skyDay=new THREE.Color(0xc8d8e6),
+      skyDusk=new THREE.Color(0x8a5430), skyCur=new THREE.Color();
+let audioPrevT=-1;
+function update(t,dt){
+  /* 06:00 日出 → 18:00 日落(t=12)→ 暮色追擊 */
+  const sunI=clamp(Math.sin(Math.PI*t/12),0,1);
+  sun.intensity=0.25+1.0*sunI;
+  hemi.intensity=0.35+0.5*sunI;
+  if(t<2) skyCur.copy(skyDawn).lerp(skyDay, t/2);
+  else if(t<11) skyCur.copy(skyDay);
+  else skyCur.copy(skyDay).lerp(skyDusk, smoothstep(11,13.5,t));
+  scene.background=skyCur; scene.fog.color.copy(skyCur);
+  /* 戰況越烈,塵霧越濃 */
+  const battleK=smoothstep(5,7,t)*(1-smoothstep(11,13,t));
+  scene.fog.far=260-110*battleK;
+
+  for(const o of unitObjs){
+    const u=o.u;
+    o.g.visible = t>=u.kf[0][0]-0.01;
+    if(!o.g.visible) continue;
+    const [x,z]=kfPos(u.kf,t);
+    o.g.position.set(x, groundY(x,z)+0.1, z);
+    const [px,pz]=kfPos(u.kf,t-0.06);
+    const vx=x-px, vz=z-pz, moving=vx*vx+vz*vz>1e-7;
+    if(moving && !o.dead){
+      o.cone.visible=true;
+      const ang=Math.atan2(vx,vz);
+      o.cone.position.set(Math.sin(ang)*(u.w*0.7+1),0.45,Math.cos(ang)*(u.w*0.7+1));
+      o.cone.rotation.set(Math.PI/2,0,0); o.cone.rotateOnWorldAxis(new THREE.Vector3(0,1,0),ang);
+      if(dt>0 && Math.random()<dt*8) spawnDust(x,z,2+u.w*0.4,t);   // 行軍揚塵
+    } else o.cone.visible=false;
+    let inCombat=false;
+    for(const zn of MELEES){
+      if(t<zn.from||t>zn.to) continue;
+      if(Math.hypot(x-zn.fx(t),z-zn.fz(t))<zn.r+u.w*0.6){ inCombat=true; break; }
+    }
+    o.ring.visible=inCombat;
+    if(inCombat){ const s=1+0.3*Math.sin(performance.now()*0.006); o.ring.scale.set(s,s,1); }
+    if(u.dieAt!==undefined && t>=u.dieAt && !o.dead){
+      o.dead=true; o.bodyMat.color.set(0x4a4a4f); o.bodyMat.emissive.set(0x1a1a1c);
+      o.div.classList.add('dead'); o.div.querySelector('.sub').textContent=u.deadSub;
+    } else if(u.dieAt!==undefined && t<u.dieAt && o.dead){
+      o.dead=false; o.bodyMat.color.set(0xd6443a); o.bodyMat.emissive.set(0x952a22);
+      o.div.classList.remove('dead'); o.div.querySelector('.sub').textContent=u.sub;
+    }
+  }
+
+  /* 鐮刀戰車衝鋒(11:20–12:00,純時間函數) */
+  chariots.forEach((c,i)=>{
+    const ph=(t-5.1-i*0.05)/0.7;
+    c.g.visible=ph>0&&ph<1;
+    if(c.g.visible){
+      const x=c.x0*lerp(1,0.5,ph), z=lerp(-8,3.5,ph);
+      c.g.position.set(x, groundY(x,z), z);
+      c.g.rotation.y=Math.PI;
+      if(dt>0 && Math.random()<dt*20) spawnDust(x,z+0.8,1.8,t);
+    }
+  });
+  /* 戰象隨中軍崩潰後消失 */
+  elephants.forEach(el=>{ el.visible = t<8.5; });
+
+  /* 箭雨齊射 */
+  const volleyOn=VOLLEYS.some(v=>t>=v[0]&&t<=v[1]);
+  arrows.forEach((sp,i)=>{
+    if(!volleyOn){ sp.visible=false; return; }
+    const u=fract(t*4+i*0.0714);
+    const x0=-8+i*1.3, z0=-10, x1=x0+1.5, z1=6;
+    sp.visible=true;
+    sp.position.set(lerp(x0,x1,u), 1+7*Math.sin(u*Math.PI), lerp(z0,z1,u));
+    sp.material.opacity=0.7;
+  });
+
+  for(const A of ARROWS){
+    const op=smoothstep(A.from-0.15,A.from+0.3,t)*(1-smoothstep(A.to-0.3,A.to+0.15,t));
+    A.a.mat.opacity=op*0.8; A.a.grp.visible=op>0.02;
+  }
+
+  /* 白刃戰閃光+沙塵 */
+  if(dt>0){
+    for(const zn of MELEES){
+      if(t<zn.from||t>zn.to) continue;
+      const x=zn.fx(t), z=zn.fz(t);
+      if(Math.random()<zn.rate*dt*0.5)
+        spawnClash(x+(Math.random()-0.5)*zn.r*2, z+(Math.random()-0.5)*zn.r*2, 0.8+Math.random(), t);
+      if(Math.random()<zn.rate*dt*0.35)
+        spawnDust(x+(Math.random()-0.5)*zn.r*2, z+(Math.random()-0.5)*zn.r*2, 2.5+Math.random()*2, t);
+    }
+  }
+  for(const b of clashPool){
+    const ph=(t-b.t0)/0.06;
+    if(ph<0||ph>1){ b.sp.visible=false; continue; }
+    b.sp.visible=true;
+    const s=b.size*(0.5+1.5*ph); b.sp.scale.set(s,s,1);
+    b.sp.material.opacity=(1-ph)*0.9;
+  }
+  for(const d of dustPool){
+    const ph=(t-d.t0)/0.5;
+    if(ph<0||ph>1){ d.sp.visible=false; continue; }
+    d.sp.visible=true;
+    const s=d.size*(0.6+1.8*ph); d.sp.scale.set(s,s*0.7,1);
+    d.sp.position.y+=dt*6;
+    d.sp.material.opacity=0.4*(1-ph);
+  }
+
+  insetEl.style.display = (t<=1.8) ? 'block' : 'none';
+  MOMENTS.forEach((m,i)=>{ momentObjs[i].visible = t>=m.from && t<=m.to; });
+
+  /* 定時音效 */
+  {
+    const cr=(tt)=> audioPrevT>=0 && t-audioPrevT>0 && t-audioPrevT<0.06 && audioPrevT<tt && t>=tt;
+    if(cr(2))   { SFX.drums(8); SFX.horn(); }          // 斜行開始
+    if(cr(5.1)) { SFX.hooves(); SFX.warcry(); }        // 戰車衝鋒
+    if(cr(6.95)){ SFX.horn(); }                        // 楔形衝鋒號
+    if(cr(7.05)){ SFX.hooves(); SFX.warcry(); }
+    if(cr(8.5)) { SFX.horn(); SFX.hooves(); }          // 回師
+    if(cr(10))  { SFX.warcry(); SFX.drums(10); }       // 總崩潰
+    if(cr(10.5)){ SFX.hooves(); }
+    audioPrevT=t;
+  }
+  updateCaption(t);
+  dateEl.textContent=fmtDate(Math.min(t,13.99));
+}
+
+/* ════════════════════════════════ 主迴圈 ════════════════════════════════ */
+let lastReal=performance.now(), lastSimT=0;
+flyTo(SHOTS[0].pos, SHOTS[0].tgt, 3.5);
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  const rdt=Math.min(0.05,(now-lastReal)/1000); lastReal=now;
+  let dt=0;
+  if(playing){
+    dt=rdt*speed/10;                                 // 1 小時 = 10 秒(1×),全程140秒
+    simT=clamp(simT+dt,0,T_MAX);
+    slider.value=simT;
+    if(simT>=T_MAX){ playing=false; playBtn.textContent='↻ 重播'; }
+    if(cinemaCk.checked)
+      for(const c of CINEMA_CUTS)
+        if(lastSimT<c.at && simT>=c.at) flyTo(SHOTS[c.shot].pos, SHOTS[c.shot].tgt, 2.4);
+  }
+  lastSimT=simT;
+  if(fly){
+    fly.u=Math.min(1, fly.u+rdt/fly.dur);
+    const e=fly.u*fly.u*(3-2*fly.u);
+    camera.position.lerpVectors(fly.p0,fly.p1,e);
+    controls.target.lerpVectors(fly.t0,fly.t1,e);
+    if(fly.u>=1) fly=null;
+  }
+  update(simT, dt);
+  controls.update();
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  labelRenderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>

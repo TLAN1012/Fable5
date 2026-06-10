@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>法國戰役 1940 — 3D 戰史劇場 第五集</title>
+<style>
+  :root { --ui:1; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000;
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:#e8edf4; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  .bar { position:fixed; left:0; right:0; height:3.2vh; background:#000; z-index:30; }
+  #barTop{top:0} #barBottom{bottom:0}
+  #vignette { position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,.55) 100%); }
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:6; background:#fff; opacity:0; }
+  #title { position:fixed; top:3.6vh; left:50%; transform:translateX(-50%); z-index:40;
+    text-align:center; text-shadow:0 2px 8px #000; }
+  #title h1 { font-size:calc(21px*var(--ui)); letter-spacing:3px; font-weight:700; }
+  #title .sub { font-size:calc(11px*var(--ui)); color:#9fb4c8; letter-spacing:2px; margin-top:2px; }
+  #title .badge { display:inline-block; background:#a31621; color:#fff; font-size:calc(10px*var(--ui));
+    padding:1px 8px; border-radius:2px; letter-spacing:2px; margin-bottom:4px; }
+  .panel { background:rgba(8,14,24,.82); border:1px solid rgba(120,160,200,.25);
+    border-radius:6px; backdrop-filter:blur(6px); }
+  #left { position:fixed; left:12px; top:9vh; z-index:40; width:248px; font-size:calc(11px*var(--ui)); }
+  #left .panel { padding:8px 10px; margin-bottom:8px; }
+  .legend-row { display:flex; align-items:center; gap:7px; margin:3px 0; }
+  .sw { width:14px; height:14px; border-radius:3px; flex:none; }
+  details summary { cursor:pointer; pointer-events:auto; color:#cfe0ef; font-weight:700; font-size:calc(12px*var(--ui)); }
+  details { pointer-events:auto; }
+  details .body { margin-top:6px; line-height:1.55; color:#c2cedb; }
+  details .body b { color:#fff; }
+  .blue-t { color:#62b6ff; font-weight:700; } .red-t { color:#ff7066; font-weight:700; }
+  #right { position:fixed; right:12px; top:9vh; z-index:40; width:176px; }
+  #right .panel { padding:8px; }
+  #right h3 { font-size:calc(11px*var(--ui)); color:#9fb4c8; letter-spacing:2px; margin-bottom:6px; }
+  .shotBtn { display:block; width:100%; margin:4px 0; padding:6px 8px; font-size:calc(12px*var(--ui));
+    background:rgba(40,60,90,.55); color:#dce8f4; border:1px solid rgba(120,160,200,.35);
+    border-radius:4px; cursor:pointer; text-align:left; pointer-events:auto;
+    font-family:inherit; transition:background .15s; }
+  .shotBtn:hover { background:rgba(70,110,160,.7); }
+  .shotBtn .t { color:#8fa6bb; font-size:calc(10px*var(--ui)); float:right; }
+  #inset { position:fixed; left:12px; bottom:9.5vh; z-index:40; width:272px; padding:8px; display:none; }
+  #inset .it { font-size:calc(11px*var(--ui)); color:#ffd98a; font-weight:700; margin-bottom:5px; line-height:1.4; }
+  #inset svg { width:100%; display:block; border-radius:4px; }
+  #inset text { font-size:10px; fill:#dce8f4; }
+  #inset .sea-t { fill:#6f8aa5; font-style:italic; font-size:9.5px; letter-spacing:2px; }
+  #bottom { position:fixed; left:50%; transform:translateX(-50%); bottom:4.2vh; z-index:40;
+    width:min(940px, 92vw); text-align:center; }
+  #caption { margin-bottom:10px; text-shadow:0 2px 6px #000; transition:opacity .3s; }
+  #caption .ct { font-size:calc(17px*var(--ui)); font-weight:700; letter-spacing:1px; color:#ffd98a; }
+  #caption .cd { font-size:calc(12.5px*var(--ui)); color:#dde7f0; margin-top:3px; line-height:1.5; }
+  #tl { padding:8px 14px 10px; }
+  #tlRow { display:flex; align-items:center; gap:10px; }
+  #date { font-size:calc(13px*var(--ui)); font-weight:700; color:#ffe9b8; min-width:150px; text-align:left;
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #trackWrap { position:relative; flex:1; height:18px; }
+  #slider { width:100%; height:18px; cursor:pointer; pointer-events:auto;
+    -webkit-appearance:none; background:transparent; position:relative; z-index:2; }
+  #slider::-webkit-slider-runnable-track { height:4px; background:#3b4d63; border-radius:2px; }
+  #slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; margin-top:-5px;
+    border-radius:50%; background:#ffd98a; border:2px solid #1a2433; box-shadow:0 0 6px #ffce6e; }
+  .tick { position:absolute; top:6px; width:5px; height:5px; margin-left:-2px; border-radius:50%;
+    background:#7fa8cf; z-index:1; }
+  #btns { display:flex; align-items:center; gap:8px; }
+  .cbtn { background:rgba(40,60,90,.6); color:#fff; border:1px solid rgba(130,170,210,.4);
+    border-radius:4px; padding:4px 10px; font-size:calc(12px*var(--ui)); cursor:pointer; pointer-events:auto;
+    font-family:inherit; }
+  .cbtn:hover { background:rgba(70,110,160,.7); }
+  #play { width:60px; font-weight:700; }
+  label.ck { font-size:calc(11px*var(--ui)); color:#aebfd1; display:flex; gap:4px; align-items:center;
+    cursor:pointer; pointer-events:auto; white-space:nowrap; }
+  .ulabel { font-size:calc(11px*var(--ui)); line-height:1.25; padding:2px 7px 3px; border-radius:3px;
+    background:rgba(4,12,24,.78); white-space:nowrap; transform:translateY(-130%);
+    text-shadow:0 1px 2px #000; }
+  .ulabel.un  { border-left:3px solid #4db2ff; color:#dceeff; }
+  .ulabel.pla { border-left:3px solid #ff5d52; color:#ffe2df; }
+  .ulabel .sub { display:block; font-size:calc(9.5px*var(--ui)); color:#9fb2c4; }
+  .ulabel.dead { opacity:.85; border-left-color:#666; color:#aaa; }
+  .ulabel.dead .name { text-decoration:line-through; }
+  .ulabel.dead .sub { color:#d98c86; }
+  .clabel { font-size:calc(11px*var(--ui)); color:#f3f6fa; text-shadow:0 1px 3px #000,0 0 6px #000;
+    transform:translateY(-145%); white-space:nowrap; letter-spacing:1px; }
+  .clabel .dot { color:#ffd98a; }
+  .tlabel { font-size:calc(12px*var(--ui)); color:#8898aa; font-style:italic; letter-spacing:4px;
+    text-shadow:0 1px 3px #000; white-space:nowrap; }
+  .mlabel { font-size:calc(11px*var(--ui)); font-weight:700; color:#ffd2a0; background:rgba(60,20,8,.8);
+    border:1px solid rgba(255,150,80,.5); padding:2px 8px; border-radius:10px;
+    white-space:nowrap; transform:translateY(-260%); text-shadow:0 1px 2px #000; }
+  .mlabel.good { color:#b8ffc8; background:rgba(8,50,20,.8); border-color:rgba(120,255,160,.5); }
+  #hint { position:fixed; right:14px; bottom:4.4vh; z-index:40; font-size:calc(10.5px*var(--ui));
+    color:#7d8fa2; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
+  #err { position:fixed; inset:0; display:none; place-items:center; z-index:99;
+    background:#0a0f16; font-size:calc(15px*var(--ui)); color:#fbb; text-align:center; padding:30px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+<div class="bar" id="barTop"></div>
+<div class="bar" id="barBottom"></div>
+
+<div id="title">
+  <div class="badge">歷史特別企劃・二戰 3D 戰史劇場 第五集</div>
+  <h1>法國戰役 — 鐮刀閃擊</h1>
+  <div class="sub">FALL OF FRANCE ・ 1940.5.10 – 6.14 ・ 阿登 – 海峽 – 敦克爾克 – 巴黎 六週亡國</div>
+</div>
+
+<div id="left">
+  <div class="panel">
+    <div class="legend-row"><span class="sw" style="background:#3f8fdd"></span><b class="blue-t">盟軍</b>&nbsp;法・英・比・荷(約330萬)</div>
+    <div class="legend-row"><span class="sw" style="background:#d6443a"></span><b class="red-t">德軍</b>&nbsp;A/B/C 三集團軍群(約335萬)</div>
+    <div class="legend-row"><span class="sw" style="background:#ff5d52;height:3px;border-radius:0"></span>裝甲師「鐮刀」突進軌跡</div>
+    <div class="legend-row"><span class="sw" style="background:#8a8276"></span>馬奇諾防線 / 阿登森林</div>
+  </div>
+  <div class="panel"><details>
+    <summary>⚔ 戰鬥序列・指揮官</summary>
+    <div class="body">
+      <b class="red-t">德軍</b>(總長:哈爾德/計畫:<b>曼斯坦</b>)<br>
+      ・A集團軍群:<b>倫德施泰特</b>(主攻阿登)<br>
+      &nbsp;&nbsp;克萊斯特裝甲兵團:<b>古德里安</b>第19軍<br>
+      &nbsp;&nbsp;<b>隆美爾</b>第7裝甲師「魔鬼之師」<br>
+      ・B集團軍群:博克(誘餌,攻荷蘭比利時)<br>
+      ・C集團軍群:勒布(佯攻馬奇諾)<br><br>
+      <b class="blue-t">盟軍</b>(總司令:甘末林→魏剛)<br>
+      ・法第1集團軍群+<b>英國遠征軍</b>(戈特勳爵)<br>
+      ・法第9集團軍:科拉普(阿登正面)<br>
+      ・首相:雷諾/英首相:<b>邱吉爾</b>(5/10就任)
+    </div>
+  </details></div>
+  <div class="panel"><details>
+    <summary>🕯 戰役結果・代價</summary>
+    <div class="body">
+      <b class="blue-t">盟軍</b>:傷亡36萬,被俘逾190萬;敦克爾克撤出338,226人(裝備盡棄)<br>
+      <b class="red-t">德軍</b>:傷亡約15.6萬<br><br>
+      六週擊敗一戰四年未勝之對手;6/22 貢比涅停戰,法國三分之二領土淪陷。戴高樂於倫敦發出《告法國人民書》——「法國輸掉了一場戰役,但沒有輸掉這場戰爭。」
+    </div>
+  </details></div>
+</div>
+
+<div id="right"><div class="panel">
+  <h3>🎬 特寫鏡頭</h3>
+  <button class="shotBtn" data-shot="0">阿登奇襲・鐮刀計畫<span class="t">5/10</span></button>
+  <button class="shotBtn" data-shot="1">色當突破・斯圖卡<span class="t">5/13</span></button>
+  <button class="shotBtn" data-shot="2">裝甲洪流奔向大海<span class="t">5/20</span></button>
+  <button class="shotBtn" data-shot="3">敦克爾克大撤退<span class="t">5/26</span></button>
+  <button class="shotBtn" data-shot="4">紅色方案・南進<span class="t">6/05</span></button>
+  <button class="shotBtn" data-shot="5">巴黎陷落<span class="t">6/14</span></button>
+</div></div>
+
+<div id="inset" class="panel">
+  <div class="it">🗺 曼斯坦「鐮刀」 vs 盟軍預想 — 主攻不在比利時,在阿登</div>
+  <svg viewBox="0 0 240 150">
+    <rect x="0" y="0" width="240" height="150" fill="#243d2e"/>
+    <path d="M0,0 L90,0 L70,28 L52,60 L20,84 L0,80 Z" fill="#0d2236"/>
+    <path d="M90,0 L70,28 L52,60 L20,84" fill="none" stroke="#4d7596" stroke-width="1"/>
+    <text class="sea-t" x="14" y="34">英 吉 利 海 峽</text>
+    <circle cx="100" cy="96" r="3" fill="#9fd0ff"/><text x="78" y="110">巴黎</text>
+    <circle cx="128" cy="44" r="2.4" fill="#dce8f4"/><text x="134" y="40">布魯塞爾</text>
+    <circle cx="150" cy="74" r="2.4" fill="#ffd98a"/><text x="156" y="78">色當★</text>
+    <circle cx="74" cy="30" r="2.4" fill="#dce8f4"/><text x="80" y="26">敦克爾克</text>
+    <path d="M196,30 Q150,28 120,52" fill="none" stroke="#8a93a0" stroke-width="1.6" stroke-dasharray="5 3"/>
+    <text x="170" y="20" fill="#8a93a0">盟軍預想路線</text>
+    <path d="M96,86 Q108,62 124,50" fill="none" stroke="#55c0ff" stroke-width="1.6" stroke-dasharray="5 3"/>
+    <text x="60" y="130" fill="#55c0ff">戴爾計畫:盟軍北上迎戰誘餌</text>
+    <path d="M198,66 Q170,72 152,74 Q110,80 78,36" fill="none" stroke="#ff5d52" stroke-width="2.2"/>
+    <polygon points="78,36 84,44 88,34" fill="#ff5d52"/>
+    <text x="148" y="92" fill="#ff7066">鐮刀:七個裝甲師穿越阿登</text>
+  </svg>
+</div>
+
+<div id="bottom">
+  <div id="caption"><div class="ct"></div><div class="cd"></div></div>
+  <div id="tl" class="panel">
+    <div id="tlRow">
+      <div id="date">1940年5月10日</div>
+      <div id="trackWrap">
+        <input type="range" id="slider" min="0" max="35.5" step="0.02" value="0">
+      </div>
+      <div id="btns">
+        <button class="cbtn" id="play">▶ 播放</button>
+        <button class="cbtn" id="speed">1×</button>
+        <button class="cbtn" id="sfx" title="音效開關">🔊</button>
+        <button class="cbtn" id="fontMinus" title="縮小字體">A−</button>
+        <button class="cbtn" id="fontPlus" title="放大字體">A＋</button>
+        <label class="ck"><input type="checkbox" id="cinema" checked>運鏡</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hint">滑鼠拖曳=旋轉視角・滾輪=縮放・右鍵拖曳=平移<br>時間軸可直接拖動・首次點擊頁面後音效啟用・A−/A＋調整字體</div>
+<div id="err">⚠ 無法初始化 WebGL,請改用 Safari / Chrome 開啟。</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ════════════════════════════════ 基礎工具 ════════════════════════════════ */
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp  = (a,b,u)=>a+(b-a)*u;
+const fract = v=>v-Math.floor(v);
+function smoothstep(a,b,x){ const u=clamp((x-a)/(b-a),0,1); return u*u*(3-2*u); }
+function distSeg(px,pz,ax,az,bx,bz){
+  const dx=bx-ax, dz=bz-az, L2=dx*dx+dz*dz||1e-9;
+  const u=clamp(((px-ax)*dx+(pz-az)*dz)/L2,0,1);
+  return Math.hypot(ax+dx*u-px, az+dz*u-pz);
+}
+function noise2(x,z){
+  let v = Math.sin(x*0.16+Math.sin(z*0.11)*1.7)*Math.cos(z*0.19+Math.sin(x*0.07)*2.3);
+  v += 0.5*Math.sin(x*0.37+z*0.29)*Math.cos(z*0.41-x*0.13);
+  v += 0.25*Math.sin(x*0.83-z*0.61)*Math.cos(z*0.97+x*0.53);
+  return v/1.75;
+}
+
+/* ════════════════════════════════ 地理 ════════════════════════════════
+   x=東, z=南, 1單位≈7km。西北為英吉利海峽,東為德國/阿登,南為巴黎。 */
+function coastDist(x,z){           // <0 = 海
+  const s=(40*x+16*z+926)/43;      // 海峽斜岸
+  return Math.min(s, z+36);        // 北海
+}
+const RIVERS=[
+  [[11,-12],[12,-4],[12.5,2],[14,8]],            // 默茲河
+  [[-20,-5],[-14,-3],[-8,-3],[-2,-2]],           // 索姆河
+  [[-26,32],[-16,30],[-10,28],[-2,30],[4,34]],   // 塞納河
+];
+function riverDist(x,z){
+  let d=1e9;
+  for(const R of RIVERS)
+    for(let i=0;i<R.length-1;i++) d=Math.min(d,distSeg(x,z,R[i][0],R[i][1],R[i+1][0],R[i+1][1]));
+  return d-0.7;
+}
+const inArdennes=(x,z)=> x>12&&x<23&&z>-9&&z<5;
+function terrainH(x,z){
+  const cd=coastDist(x,z);
+  if(cd<0) return -2-Math.min(4,-cd*0.3);
+  let h=0.8+0.35*noise2(x*1.2,z*1.2);
+  if(inArdennes(x,z)) h+=2.2+1.8*(1-Math.abs(noise2(x*0.5,z*0.5)));     // 阿登高地
+  h+=2.5*smoothstep(24,34,x)*(0.5+0.5*noise2(x*0.4,z*0.4));             // 萊茵蘭山地
+  const rd=riverDist(x,z);
+  if(rd<1.2) h=lerp(-1.2,h,smoothstep(-0.2,1.2,rd));
+  if(cd<3) h=h*smoothstep(0,3,cd)-1.5*(1-smoothstep(0,3,cd));
+  return h;
+}
+const groundY=(x,z)=>Math.max(terrainH(x,z),0.25);
+const CITIES=[['巴黎',-10,28],['色當',12.5,2],['列日',11,-10],['布魯塞爾',2,-16],
+  ['安特衛普',2,-23],['鹿特丹',4,-31],['阿拉斯',-10,-10],['亞眠',-14,-2],
+  ['阿布維爾',-18,-5.5],['布洛涅',-20,-15],['加萊',-17,-19],['敦克爾克',-13,-21.5],
+  ['里爾',-6,-14],['蘭斯',2,12],['貢比涅',-4,18]];
+
+/* ════════════════════════════════ 場景 ════════════════════════════════ */
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias:true}); }
+catch(e){ document.getElementById('err').style.display='grid'; throw e; }
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.getElementById('app').appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.cssText='position:fixed;inset:0;pointer-events:none;';
+document.getElementById('labels').appendChild(labelRenderer.domElement);
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a1226, 110, 300);
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.5, 800);
+camera.position.set(36, 58, 56);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 2, 2);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = 1.46; controls.minDistance = 5; controls.maxDistance = 210;
+const hemi = new THREE.HemisphereLight(0xbfd4ea, 0x40483c, 0.7);  scene.add(hemi);
+const sun  = new THREE.DirectionalLight(0xfff1dd, 1.0);
+sun.position.set(-60, 90, 40); scene.add(sun);
+const moonAmb = new THREE.AmbientLight(0x33415a, 0.35); scene.add(moonAmb);
+
+/* ── 地形 ── */
+const W=120, D=110, SEG=200;
+const geo = new THREE.PlaneGeometry(W, D, SEG, SEG);
+geo.rotateX(-Math.PI/2);
+{
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i, terrainH(pos.getX(i), pos.getZ(i)));
+  geo.computeVertexNormals();
+  const colors = new Float32Array(pos.count*3);
+  const cF1=new THREE.Color(0xb9c98e), cF2=new THREE.Color(0xa3b67e),
+        cTan=new THREE.Color(0xcfc89e), cForest=new THREE.Color(0x4c6a45),
+        cTown=new THREE.Color(0x97928a), cBed=new THREE.Color(0x12273c),
+        c=new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i), h=pos.getY(i);
+    if(h < 0.15){ c.copy(cBed); }
+    else {
+      const nf=noise2(x*0.8+5,z*0.8-2);
+      c.copy(cF1).lerp(cF2, 0.5+0.5*nf);
+      if(noise2(x*0.45+2,z*0.45)>0.4) c.lerp(cTan, 0.45);
+      if(inArdennes(x,z) || (x>24&&noise2(x*0.6,z*0.6)>0)) c.lerp(cForest, 0.8);
+      for(const ct of CITIES){
+        if((x-ct[1])**2+(z-ct[2])**2 < 2.0){ c.lerp(cTown, 0.7); break; }
+      }
+      c.multiplyScalar(0.93+0.07*noise2(x*3.1,z*3.1));
+    }
+    colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+}
+scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
+const water=new THREE.Mesh(new THREE.PlaneGeometry(320,320),
+  new THREE.MeshLambertMaterial({color:0x16344f, transparent:true, opacity:0.93}));
+water.rotation.x=-Math.PI/2; water.position.y=0.12; scene.add(water);
+
+/* ── 馬奇諾防線 + 巴黎鐵塔 ── */
+function makeLabel(html, cls){
+  const div=document.createElement('div'); div.className=cls; div.innerHTML=html;
+  return new CSS2DObject(div);
+}
+{
+  const m=new THREE.MeshLambertMaterial({color:0x8a8276});
+  for(let i=0;i<7;i++){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.9,1.1), m);
+    const x=20+i*1.7, z=9+i*2.6;
+    b.position.set(x, groundY(x,z)+0.45, z); scene.add(b);
+  }
+  const tower=new THREE.Mesh(new THREE.ConeGeometry(0.5,2.6,4),
+    new THREE.MeshLambertMaterial({color:0x6a665e}));
+  tower.position.set(-10, groundY(-10,28)+1.4, 28); scene.add(tower);
+}
+function densify(pts, n, yOff, times){
+  const out=[], tout=[];
+  for(let i=0;i<pts.length-1;i++){
+    for(let k=0;k<n;k++){
+      const u=k/n;
+      const x=lerp(pts[i][0],pts[i+1][0],u), z=lerp(pts[i][1],pts[i+1][1],u);
+      out.push(new THREE.Vector3(x, groundY(x,z)+yOff, z));
+      if(times) tout.push(lerp(times[i],times[i+1],u));
+    }
+  }
+  const L=pts.length-1;
+  out.push(new THREE.Vector3(pts[L][0], groundY(pts[L][0],pts[L][1])+yOff, pts[L][1]));
+  if(times) tout.push(times[L]);
+  return {pts:out, times:tout};
+}
+/* ── 裝甲突進軌跡(紅) ── */
+const TRAILS=[
+ {pts:[[22,2],[16,-1],[12.5,2],[10,1],[0,-3],[-13,-2],[-18,-5.5],[-19,-15],[-16,-20]],
+  times:[0,1.5,3,3.6,6,9,10,12,14], color:0xff5d52},
+ {pts:[[16,-2],[10,-5],[-6,-8],[-10,-9.5],[-14,-14],[-13,-19]],
+  times:[1,2.5,9,11,12.5,18], color:0xff8a6a},
+ {pts:[[-12,-6],[-10,5],[-4,16],[-7,25]],
+  times:[26,30,33,35], color:0xff5d52},
+].map(tr=>{
+  const data=densify(tr.pts,12,0.5,tr.times);
+  const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(data.pts),
+    new THREE.LineBasicMaterial({color:tr.color}));
+  l.geometry.setDrawRange(0,0); scene.add(l);
+  return {l, times:data.times};
+});
+
+for(const [n,x,z] of CITIES){
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.35,10,10),
+    new THREE.MeshBasicMaterial({color:0xffe2a8}));
+  dot.position.set(x, groundY(x,z)+0.4, z); scene.add(dot);
+  const l=makeLabel('<span class="dot">●</span> '+n,'clabel');
+  l.position.set(x, groundY(x,z)+1.1, z); scene.add(l);
+}
+for(const [n,x,z] of [['英 吉 利 海 峽',-27,-8],['阿 登 森 林',17,-2],['馬 奇 諾 防 線',27,18],
+  ['索 姆 河',-16,-4.5],['塞 納 河',-20,30.5],['默 茲 河',13.5,-5],['荷 蘭',6,-34],['德 國',30,2]]){
+  const l=makeLabel(n,'tlabel'); l.position.set(x, groundY(x,z)+2.0, z); scene.add(l);
+}
+
+/* ════════════════════════════════ 部隊 ════════════════════════════════ */
+function kfPos(kf,t){
+  if(t<=kf[0][0]) return [kf[0][1],kf[0][2]];
+  for(let i=0;i<kf.length-1;i++){
+    const a=kf[i], b=kf[i+1];
+    if(t<=b[0]){ const u=(t-a[0])/(b[0]-a[0]); return [lerp(a[1],b[1],u), lerp(a[2],b[2],u)]; }
+  }
+  const l=kf[kf.length-1]; return [l[1],l[2]];
+}
+const UNITS=[
+ {name:'法第1集團軍+英遠征軍', sub:'比約特/戈特勳爵・北上戴爾防線', side:'un', embark:23.5,
+  kf:[[0,-6,6],[2,0,-14],[8,2,-15],[12,-4,-15],[14,-8,-18],[16,-12,-20.5],[23,-12.5,-21]]},
+ {name:'法第7集團軍', sub:'吉羅・遠征布雷達失敗', side:'un', embark:24,
+  kf:[[0,-8,-6],[2,2,-29],[5,-2,-26],[8,-6,-22],[12,-9,-20],[16,-12,-21.5]]},
+ {name:'荷蘭軍', sub:'溫克爾曼・約28萬人', side:'un', dieAt:5,
+  deadSub:'5/15 鹿特丹遭轟炸,荷蘭投降', kf:[[0,3,-33]]},
+ {name:'比利時軍', sub:'利奧波德三世親率・約60萬', side:'un', dieAt:18,
+  deadSub:'5/28 比利時投降,口袋北翼洞開',
+  kf:[[0,6,-16],[4,2,-18],[10,-2,-19],[16,-5,-19.5]]},
+ {name:'法第9集團軍', sub:'科拉普・守阿登正面「不可能被攻」', side:'un', dieAt:4,
+  deadSub:'5/14 默茲防線崩潰,全軍潰散', kf:[[0,9,3]]},
+ {name:'魏剛防線', sub:'法軍殘存66個師・索姆-埃納刺蝟陣', side:'un', dieAt:30,
+  deadSub:'6/9 防線被突破', kf:[[26,-8,0]]},
+ {name:'阿拉斯反擊隊', sub:'英軍瑪蒂達戰車74輛', side:'un', embark:12.2,
+  kf:[[10.6,-10,-12],[11,-9.5,-9.8],[11.8,-10,-11.5]]},
+ {name:'法國政府', sub:'雷諾總理・巴黎', side:'un', embark:31,
+  kf:[[0,-10,28]]},
+ /* 德軍 */
+ {name:'古德里安裝甲軍', sub:'克萊斯特兵團先鋒・「快!快!快!」', side:'pla',
+  kf:[[0,22,2],[1.5,16,-1],[3,12.5,2],[3.6,10,1],[6,0,-3],[9,-13,-2],[10,-18,-5.5],
+      [12,-19,-15],[14,-16,-20],[16,-16,-20],[18,-14.5,-21],[25.5,-14.5,-21],
+      [26,-12,-6],[30,-10,5],[33,-4,16],[35,-7,25],[35.5,-7,25]]},
+ {name:'隆美爾第7裝甲師', sub:'「魔鬼之師」・一日疾進百里', side:'pla',
+  kf:[[1,16,-2],[2.5,12,-4],[5,6,-6],[9,-6,-8],[11,-10,-9.5],[12.5,-14,-14],
+      [18,-13,-19],[25.5,-13,-19],[26,-16,4],[30,-20,12],[35.5,-25,18]]},
+ {name:'B集團軍群', sub:'博克・誘餌:猛攻荷蘭比利時', side:'pla',
+  kf:[[0,14,-22],[2,8,-26],[5,4,-30],[8,2,-17],[12,-4,-18],[16,-8,-19],[20,-11,-20],
+      [25.5,-11,-20],[26,-8,-8],[30,-9,8],[34,-9,22],[35.5,-10,27]]},
+ {name:'C集團軍群', sub:'勒布・佯攻牽制馬奇諾', side:'pla',
+  kf:[[0,27,14]]},
+];
+const unitObjs=[];
+for(const u of UNITS){
+  const g=new THREE.Group();
+  const isUn=u.side==='un';
+  const col = isUn ? 0x3f8fdd : 0xd6443a;
+  const emi = isUn ? 0x1c5fae : 0x952a22;
+  const bodyMat=new THREE.MeshLambertMaterial({color:col, emissive:emi, transparent:true});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.25,0.6,8), bodyMat);
+  body.position.y=0.35; g.add(body);
+  const coneMat=new THREE.MeshBasicMaterial({color:col, transparent:true});
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.4,6), coneMat);
+  cone.rotation.x=Math.PI/2; cone.position.y=0.45; cone.visible=false; g.add(cone);
+  const ringMat=new THREE.MeshBasicMaterial({color:isUn?0x7fd0ff:0xff8a7a,
+    transparent:true, opacity:0.6, side:THREE.DoubleSide});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(1.5,1.8,28), ringMat);
+  ring.rotation.x=-Math.PI/2; ring.position.y=0.12; g.add(ring);
+  const div=document.createElement('div');
+  div.className='ulabel '+(isUn?'un':'pla');
+  div.innerHTML=`<span class="name">${u.name}</span><span class="sub">${u.sub}</span>`;
+  const lab=new CSS2DObject(div); lab.position.y=1.4; g.add(lab);
+  scene.add(g);
+  unitObjs.push({u,g,body,bodyMat,cone,coneMat,ring,ringMat,div,dead:false});
+}
+
+/* ── 箭頭 ── */
+function makeArrow(x1,z1,x2,z2,color){
+  const y1=groundY(x1,z1), y2=groundY(x2,z2);
+  const mid=new THREE.Vector3((x1+x2)/2, Math.max(y1,y2)+7, (z1+z2)/2);
+  const curve=new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(x1,y1+1.2,z1), mid, new THREE.Vector3(x2,y2+1.2,z2));
+  const mat=new THREE.MeshBasicMaterial({color, transparent:true, opacity:0});
+  const grp=new THREE.Group();
+  grp.add(new THREE.Mesh(new THREE.TubeGeometry(curve,24,0.28,6), mat));
+  const head=new THREE.Mesh(new THREE.ConeGeometry(0.9,2.2,8), mat);
+  head.position.copy(curve.getPoint(0.99));
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), curve.getTangent(0.99).normalize());
+  grp.add(head); scene.add(grp);
+  return {grp,mat};
+}
+const ARROWS=[
+ {a:makeArrow(14,-26,4,-31,0xff4438),   from:0,   to:5},     // B群攻荷蘭
+ {a:makeArrow(12,-18,3,-16.5,0xff4438), from:0.5, to:8},     // B群攻比利時
+ {a:makeArrow(22,1,13,1.5,0xff4438),    from:1,   to:3.6},   // 穿越阿登
+ {a:makeArrow(-7,3,0,-13,0x55c0ff),     from:0.3, to:2.5},   // 盟軍北上(戴爾)
+ {a:makeArrow(-10,-13,-9.6,-9.6,0x55c0ff),from:10.6,to:12},  // 阿拉斯反擊
+ {a:makeArrow(-13,-22,-18,-27,0x55c0ff),from:16,  to:25},    // 敦克爾克撤離
+ {a:makeArrow(-11,-4,-9,4,0xff4438),    from:26,  to:30},    // 紅色方案
+ {a:makeArrow(-9,12,-10,24,0xff4438),   from:31,  to:35.3},  // 直撲巴黎
+];
+
+/* ════════════════════════════════ 特效 ════════════════════════════════ */
+const softTex=(()=>{
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const ctx=cv.getContext('2d');
+  const g=ctx.createRadialGradient(32,32,2,32,32,30);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.45,'rgba(255,255,255,.75)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+})();
+function makeBoom(color){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:softTex, color, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+  sp.visible=false; scene.add(sp); return sp;
+}
+const boomPool=Array.from({length:40},()=>({sp:makeBoom(0xffa540),t0:-9,dur:0.03,size:2}));
+let boomIdx=0;
+const combatLight=new THREE.PointLight(0xffa040,0,45,1.8); scene.add(combatLight);
+function spawnBoom(x,z,size,tNow,dur){
+  const b=boomPool[boomIdx++%boomPool.length];
+  b.sp.position.set(x+(Math.random()-0.5)*1.2, groundY(x,z)+0.9+Math.random()*1.1, z+(Math.random()-0.5)*1.2);
+  b.t0=tNow; b.dur=dur||0.03; b.size=size; b.sp.visible=true;
+  combatLight.position.copy(b.sp.position); combatLight.intensity=12;
+  if(typeof SFX!=='undefined') SFX.boom(size*2.2, camera.position.distanceTo(b.sp.position));
+}
+const ZONES=[
+ {x:4,  z:-30,r:3,  from:0.2, to:5,   rate:6},   // 荷蘭
+ {x:10.5,z:-12,r:2.5,from:0.1,to:2,   rate:8},   // 艾本-艾美爾/列日
+ {x:2,  z:-16,r:3.5,from:2,   to:8,   rate:6},   // 比利時中部
+ {x:12.5,z:2, r:2.8,from:2.8, to:4.5, rate:16},  // 色當
+ {x:-9.5,z:-10,r:2.5,from:10.6,to:12, rate:14},  // 阿拉斯
+ {x:-19,z:-17,r:2.5,from:12,  to:16,  rate:8},   // 布洛涅/加萊
+ {x:-12,z:-20,r:3.5,from:16,  to:25,  rate:9},   // 敦克爾克
+ {x:-9, z:-1, r:4,  from:26,  to:30,  rate:11},  // 索姆防線
+ {x:2,  z:8,  r:3.5,from:27,  to:30.5,rate:8},   // 埃納
+];
+const FIRES=[
+ {from:3.1, to:4.8, x:12.5,z:2,    s:2.8},   // 色當
+ {from:4.8, to:8,   x:4,  z:-30.5, s:3.2},   // 鹿特丹
+ {from:14,  to:16.5,x:-17,z:-19,   s:2.4},   // 加萊
+ {from:16,  to:25,  x:-13,z:-21.8, s:3.0},   // 敦克爾克濃煙
+];
+const fireSp =FIRES.map(()=>makeBoom(0xff7a20));
+const fireSm =FIRES.map(()=>{
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:0x1c1c20,transparent:true}));
+  sp.visible=false; scene.add(sp); return sp;
+});
+/* 斯圖卡空襲:{t,fx,fz,tx,tz} */
+const RAIDS=[
+ {t:3.0, f:[26,9,8],  to:[-2,9,-3]},
+ {t:17,  f:[2,8,-32], to:[-24,8,-14]},
+ {t:20,  f:[2,8,-32], to:[-24,8,-14]},
+];
+function makePlane(){
+  const g=new THREE.Group();
+  const m=new THREE.MeshLambertMaterial({color:0x6e7a6a});
+  const fus=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.4,0.55), m); g.add(fus);
+  const wing=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.1,3.6), m); wing.position.x=0.15; g.add(wing);
+  g.visible=false; scene.add(g); return g;
+}
+const planes=[makePlane(),makePlane()];
+/* 滑翔機奇襲艾本-艾美爾 */
+const gliders=[];
+for(let i=0;i<4;i++){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:0xd8dde2,transparent:true}));
+  sp.scale.set(1.4,1.4,1); sp.visible=false; scene.add(sp);
+  gliders.push({sp, dx:(i%2)*1.2-0.6, dz:Math.floor(i/2)*1.2-0.6, delay:i*0.02});
+}
+/* 敦克爾克船團 */
+function makeBoat(){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.3,0.45),
+    new THREE.MeshLambertMaterial({color:0x9aa4ae}));
+  b.visible=false; scene.add(b); return b;
+}
+const boats=Array.from({length:8},makeBoat);
+
+/* ════════════════════════════════ 音效 ════════════════════════════════ */
+const SFX=(()=>{
+  let ctx=null, master=null, on=true, lastSmall=0;
+  function ensure(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      ctx=new AC();
+      master=ctx.createGain(); master.gain.value=on?0.9:0;
+      const comp=ctx.createDynamicsCompressor();
+      master.connect(comp); comp.connect(ctx.destination);
+      const len=ctx.sampleRate*2, buf=ctx.createBuffer(1,len,ctx.sampleRate);
+      const ch=buf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+      const src=ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300;
+      const wg=ctx.createGain(); wg.gain.value=0.038;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.1;
+      const lg=ctx.createGain(); lg.gain.value=0.02;
+      lfo.connect(lg); lg.connect(wg.gain);
+      src.connect(lp).connect(wg).connect(master);
+      src.start(); lfo.start();
+    }
+    if(ctx.state==='suspended') ctx.resume();
+  }
+  function boom(size, dist){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime;
+    if(size<6 && now-lastSmall<0.08) return;
+    lastSmall=now;
+    const att=clamp(55/((dist||50)+20),0.06,1);
+    const vol=clamp(size/14,0.1,1.0)*att;
+    const dur=0.28+Math.min(size,24)*0.04;
+    const nn=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,nn,ctx.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<nn;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/nn,2.2);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type='lowpass';
+    f.frequency.setValueAtTime(900+size*40, now);
+    f.frequency.exponentialRampToValueAtTime(90, now+dur);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(vol, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    src.connect(f).connect(g).connect(master); src.start(now);
+    const o=ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(75, now);
+    o.frequency.exponentialRampToValueAtTime(28, now+dur*1.5);
+    const og=ctx.createGain();
+    og.gain.setValueAtTime(vol*0.85, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now+dur*1.5);
+    o.connect(og).connect(master); o.start(now); o.stop(now+dur*1.6);
+  }
+  function divebomb(){           // 斯圖卡「耶利哥號角」
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime, dur=2.8;
+    const o=ctx.createOscillator(); o.type='sawtooth';
+    o.frequency.setValueAtTime(560, now);
+    o.frequency.exponentialRampToValueAtTime(130, now+dur);
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.075, now+0.4);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    o.connect(f).connect(g).connect(master); o.start(now); o.stop(now+dur+0.1);
+  }
+  function drone(){              // 裝甲引擎/機群
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime, dur=4.5;
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=200;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.06, now+0.8);
+    g.gain.setValueAtTime(0.06, now+dur-1);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    [64,68,71].forEach(fr=>{
+      const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=fr;
+      o.connect(f); o.start(now); o.stop(now+dur+0.1);
+    });
+    f.connect(g).connect(master);
+  }
+  function toggle(){ on=!on; if(master) master.gain.value=on?0.9:0; return on; }
+  return {ensure, boom, divebomb, drone, toggle};
+})();
+addEventListener('pointerdown', ()=>SFX.ensure());
+addEventListener('keydown', ()=>SFX.ensure());
+document.getElementById('sfx').addEventListener('click', e=>{
+  SFX.ensure(); e.currentTarget.textContent = SFX.toggle() ? '🔊' : '🔇';
+});
+let uiScale = +(localStorage.getItem('chosin_ui')||1);
+function applyUI(){
+  uiScale = clamp(+uiScale.toFixed(2), 0.7, 1.8);
+  document.documentElement.style.setProperty('--ui', uiScale);
+  localStorage.setItem('chosin_ui', uiScale);
+}
+applyUI();
+document.getElementById('fontPlus').addEventListener('click', ()=>{ uiScale+=0.1; applyUI(); });
+document.getElementById('fontMinus').addEventListener('click', ()=>{ uiScale-=0.1; applyUI(); });
+
+/* ════════════════════════════════ 事件 / 字幕 ════════════════════════════════ */
+const EVENTS=[
+ [0,   '1940年5月10日 — 閃擊西歐','「鐮刀計畫」發動:B集團軍群在北方猛攻荷蘭、比利時作為誘餌;真正的主力——七個裝甲師——正悄悄駛入「戰車無法通過」的阿登森林。同日,邱吉爾出任英國首相。'],
+ [0.15,'拂曉 — 艾本-艾美爾要塞','78名德軍工兵乘滑翔機無聲降落在「歐洲最強要塞」頂上,以聚能炸藥逐一癱瘓砲塔——1,200名守軍向78人投降。'],
+ [1,   '盟軍躍入圈套','法第1集團軍與英國遠征軍依「戴爾計畫」開入比利時迎戰誘餌——主力越深入,阿登後方越空虛。'],
+ [3,   '5月13日 — 色當突破','古德里安抵達默茲河。數百架斯圖卡輪番俯衝,工兵冒死強渡,入夜橋頭堡已成。「不可能被突破」的防線,一日告破。'],
+ [4,   '5月14日 — 第9集團軍潰散','德軍裝甲自缺口洶湧而出,科拉普第9集團軍崩潰。雷諾總理致電邱吉爾:「我們被打敗了,我們輸了這場戰爭。」'],
+ [5,   '5月15日 — 荷蘭投降','鹿特丹遭地毯式轟炸,市中心化為焦土,荷蘭投降。北方誘餌戰場逐一收網。'],
+ [6,   '裝甲洪流奔向大海','古德里安抗命疾進:「我的師不能停!」裝甲師群以每日50公里狂飆,在盟軍後方一路向西——巴黎以北,已無成建制防線。'],
+ [10,  '5月20日 — 鐮刀到海','第2裝甲師黃昏抵達阿布維爾海岸。鐮刀完成切割:北方近百萬盟軍,被裝進口袋。'],
+ [11,  '5月21日 — 阿拉斯反擊','英軍以74輛瑪蒂達戰車反擊,德軍37砲彈彈起無效,隆美爾親自指揮88砲平射才穩住。反擊雖敗,卻讓德軍統帥部對側翼心生疑懼。'],
+ [14,  '5月24日 — 希特勒停止令','裝甲師距敦克爾克僅15公里,卻接到停止前進的命令——戈林保證空軍可獨力解決口袋。盟軍獲得寶貴的三天。'],
+ [16,  '5月26日 — 發電機行動','敦克爾克大撤退開始:驅逐艦、渡輪、漁船、遊艇——861艘大小船隻冒著斯圖卡轟炸往返海峽,沙灘上的隊伍蜿蜒入海。'],
+ [18,  '5月28日 — 比利時投降','利奧波德三世投降,口袋北翼洞開;英法後衛部隊以血肉之軀守住不斷收縮的環形防線。'],
+ [25,  '6月4日 — 奇蹟落幕','發電機行動共撤出338,226人,重裝備盡棄於沙灘。邱吉爾:「我們將在海灘上戰鬥……我們決不投降!」'],
+ [26,  '6月5日 — 紅色方案','德軍掉頭南下。魏剛以僅餘的66個師沿索姆-埃納河布防,「刺蝟陣地」節節抵抗——但兵力已是二比一之劣。'],
+ [30,  '6月9日 — 防線崩潰','索姆-埃納防線被突破,裝甲師群分頭撲向塞納河與香檳平原。次日,義大利對法宣戰;法國政府遷往波爾多。'],
+ [33,  '6月13日 — 巴黎不設防','為免千年古都毀於戰火,法軍宣布巴黎為不設防城市,守軍南撤。兩百萬巴黎人加入難民洪流。'],
+ [35,  '6月14日 — 德軍進入巴黎','清晨,德軍縱隊踏過香榭麗舍。六週,擊敗了上一場大戰四年未曾擊敗的對手;11天後法國停戰。而在倫敦,戴高樂的廣播已經響起:「法國輸掉了一場戰役,但沒有輸掉這場戰爭。」'],
+];
+const MOMENTS=[
+ {html:'🪂 滑翔機奇襲:78人降服要塞',x:10.5,z:-13,from:0.1,to:1.5,cls:''},
+ {html:'🌲 七個裝甲師正穿越阿登',x:17,z:0,from:0.8,to:3,cls:''},
+ {html:'✈ 斯圖卡輪番俯衝・強渡默茲',x:12.5,z:2,from:2.9,to:4.5,cls:''},
+ {html:'🔥 鹿特丹遭地毯轟炸',x:4,z:-30.5,from:4.8,to:6.5,cls:''},
+ {html:'🌊 鐮刀到海:百萬盟軍入袋',x:-18,z:-5.5,from:10,to:12,cls:''},
+ {html:'🛡 瑪蒂達戰車阿拉斯反擊',x:-10,z:-10,from:10.6,to:12.2,cls:'good'},
+ {html:'⛔ 希特勒停止令:口袋暫停收口',x:-16,z:-19,from:14,to:16,cls:''},
+ {html:'⛵ 發電機行動:861艘船蹈海來援',x:-14,z:-23,from:16,to:25,cls:'good'},
+ {html:'✓ 338,226人撤離・敦克爾克奇蹟',x:-13,z:-22,from:25,to:26.5,cls:'good'},
+ {html:'🦔 魏剛防線:66個師的刺蝟陣',x:-8,z:0,from:26,to:30,cls:'good'},
+ {html:'🏛 巴黎宣布不設防',x:-10,z:28,from:33,to:35,cls:''},
+ {html:'🗼 德軍進入巴黎',x:-10,z:28,from:35,to:35.5,cls:''},
+];
+const momentObjs=MOMENTS.map(m=>{
+  const o=makeLabel(m.html,'mlabel'+(m.cls?' '+m.cls:''));
+  o.position.set(m.x, groundY(m.x,m.z)+2.2, m.z);
+  o.visible=false; scene.add(o); return o;
+});
+{
+  const wrap=document.getElementById('trackWrap');
+  for(const e of EVENTS){
+    const d=document.createElement('div'); d.className='tick';
+    d.style.left=(e[0]/35.5*100)+'%'; d.title=e[1]; wrap.appendChild(d);
+  }
+}
+
+/* ════════════════════════════════ 運鏡 ════════════════════════════════ */
+const SHOTS=[
+ {t:1.6,  pos:[ 30,16,  8], tgt:[ 15, 2, -1]},
+ {t:3.2,  pos:[ 20,10, 10], tgt:[ 12.5,1, 2]},
+ {t:8,    pos:[ 12,46,  4], tgt:[ -6, 0, -6]},
+ {t:18,   pos:[ -2,10,-11], tgt:[-13, 0.5,-21]},
+ {t:27,   pos:[  6,32, 16], tgt:[ -8, 0,  4]},
+ {t:35.1, pos:[ -2, 9, 36], tgt:[-10, 1, 28]},
+];
+const CINEMA_CUTS=[
+ {at:0.06,shot:0},{at:2.9,shot:1},{at:5.6,shot:2},{at:15.6,shot:3},{at:25.8,shot:4},{at:33.6,shot:5},
+];
+let fly=null;
+function flyTo(pos,tgt,dur=2.0){
+  fly={p0:camera.position.clone(), t0:controls.target.clone(),
+       p1:new THREE.Vector3(...pos), t1:new THREE.Vector3(...tgt), u:0, dur};
+}
+document.querySelectorAll('.shotBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const s=SHOTS[+btn.dataset.shot];
+    setT(s.t); flyTo(s.pos,s.tgt,1.6);
+  });
+});
+
+/* ════════════════════════════════ 時間軸 ════════════════════════════════ */
+const T_MAX=35.5;
+let simT=0, playing=true, speed=1;
+const SPEEDS=[0.5,1,2,4];
+const EPOCH=Date.UTC(1940,4,10);
+const slider=document.getElementById('slider'),
+      dateEl=document.getElementById('date'),
+      playBtn=document.getElementById('play'),
+      speedBtn=document.getElementById('speed'),
+      cinemaCk=document.getElementById('cinema'),
+      capT=document.querySelector('#caption .ct'),
+      capD=document.querySelector('#caption .cd'),
+      flashEl=document.getElementById('flash'),
+      insetEl=document.getElementById('inset');
+function setT(v){ simT=clamp(v,0,T_MAX); slider.value=simT; }
+slider.addEventListener('input',()=>{ simT=+slider.value; });
+playBtn.addEventListener('click',()=>{
+  if(simT>=T_MAX) simT=0;
+  playing=!playing; playBtn.textContent=playing?'⏸ 暫停':'▶ 播放';
+});
+speedBtn.addEventListener('click',()=>{
+  speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; speedBtn.textContent=speed+'×';
+});
+function fmtDate(t){
+  const d=new Date(EPOCH + Math.floor(t)*86400000);
+  const hh=String(Math.floor((t%1)*24)).padStart(2,'0');
+  return `1940年${d.getUTCMonth()+1}月${d.getUTCDate()}日 ${hh}:00`;
+}
+let curEvent=-1;
+function updateCaption(t){
+  let idx=-1;
+  for(let i=0;i<EVENTS.length;i++) if(EVENTS[i][0]<=t) idx=i;
+  if(idx!==curEvent){
+    curEvent=idx;
+    if(idx>=0){ capT.textContent=EVENTS[idx][1]; capD.textContent=EVENTS[idx][2]; }
+  }
+}
+
+/* ════════════════════════════════ 主更新 ════════════════════════════════ */
+const skyNight=new THREE.Color(0x0a1226), skyDay=new THREE.Color(0xaec8e2),
+      skyCur=new THREE.Color();
+let audioPrevT=-1;
+function update(t,dt){
+  const f=((t%1)+1)%1;
+  const sunI=Math.max(0, Math.sin((f-0.25)*Math.PI/0.5));
+  sun.intensity=0.18+1.05*sunI;
+  hemi.intensity=0.32+0.55*sunI;
+  moonAmb.intensity=0.42-0.22*sunI;
+  skyCur.copy(skyNight).lerp(skyDay, sunI);
+  scene.background=skyCur; scene.fog.color.copy(skyCur);
+  const night = sunI<0.25;
+
+  for(const o of unitObjs){
+    const u=o.u;
+    let vis = t>=u.kf[0][0]-0.01;
+    if(u.embark!==undefined && t>u.embark+0.3) vis=false;
+    o.g.visible=vis;
+    if(!vis) continue;
+    const [x,z]=kfPos(u.kf,t);
+    o.g.position.set(x, groundY(x,z)+0.12, z);
+    const [px,pz]=kfPos(u.kf,t-0.08);
+    const vx=x-px, vz=z-pz;
+    if(vx*vx+vz*vz>1e-7 && !o.dead){
+      o.cone.visible=true;
+      const ang=Math.atan2(vx,vz);
+      o.cone.position.set(Math.sin(ang)*1.9,0.45,Math.cos(ang)*1.9);
+      o.cone.rotation.set(Math.PI/2,0,0); o.cone.rotateOnWorldAxis(new THREE.Vector3(0,1,0),ang);
+    } else o.cone.visible=false;
+    let inCombat=false;
+    for(const zn of ZONES)
+      if(t>=zn.from&&t<=zn.to&&Math.hypot(x-zn.x,z-zn.z)<zn.r+2.5){ inCombat=true; break; }
+    o.ring.visible=inCombat;
+    if(inCombat){ const s=1+0.35*Math.sin(performance.now()*0.006); o.ring.scale.set(s,s,1); }
+    if(u.dieAt!==undefined && t>=u.dieAt && !o.dead){
+      o.dead=true; o.bodyMat.color.set(0x4a4a4f); o.bodyMat.emissive.set(0x1a1a1c);
+      o.div.classList.add('dead'); o.div.querySelector('.sub').textContent=u.deadSub;
+    } else if(u.dieAt!==undefined && t<u.dieAt && o.dead){
+      o.dead=false; o.bodyMat.color.set(0x3f8fdd); o.bodyMat.emissive.set(0x1c5fae);
+      o.div.classList.remove('dead'); o.div.querySelector('.sub').textContent=u.sub;
+    }
+    if(u.embark!==undefined){
+      const k=1-clamp((t-(u.embark-0.3))/0.6,0,1);
+      o.bodyMat.opacity=k; o.coneMat.opacity=k; o.div.style.opacity=k;
+    }
+  }
+
+  for(const tr of TRAILS){
+    let nn=0;
+    while(nn<tr.times.length && tr.times[nn]<=t) nn++;
+    tr.l.geometry.setDrawRange(0, nn>1?nn:0);
+  }
+  for(const A of ARROWS){
+    const op=smoothstep(A.from-0.2,A.from+0.4,t)*(1-smoothstep(A.to-0.4,A.to+0.2,t));
+    A.a.mat.opacity=op*0.8; A.a.grp.visible=op>0.02;
+  }
+
+  /* 滑翔機奇襲 */
+  for(const g of gliders){
+    const ph=(t-0.1-g.delay)/0.2;
+    g.sp.visible=ph>0&&ph<1;
+    if(g.sp.visible){
+      g.sp.position.set(10.5+g.dx+ph*1.5, lerp(8,groundY(10.5,-13)+0.6,ph), -13+g.dz);
+      g.sp.material.opacity=0.9;
+    }
+  }
+  /* 斯圖卡 */
+  let raid=null, raidU=0;
+  for(const r of RAIDS) if(t>=r.t&&t<=r.t+0.3){ raid=r; raidU=(t-r.t)/0.3; }
+  planes.forEach((p,i)=>{
+    if(!raid){ p.visible=false; return; }
+    const u=fract(raidU*1.6+i*0.3);
+    p.visible=true;
+    const F=new THREE.Vector3(...raid.f), T2=new THREE.Vector3(...raid.to);
+    p.position.lerpVectors(F,T2,u);
+    p.position.y+=1.2*Math.sin(u*Math.PI)-2.8*Math.exp(-((u-0.5)**2)/0.012);
+    p.rotation.y=Math.atan2(T2.x-F.x, T2.z-F.z);
+  });
+  /* 敦克爾克船團 */
+  boats.forEach((b,i)=>{
+    const on=t>=16&&t<=25.2;
+    if(!on){ b.visible=false; return; }
+    const u=fract((t-16)/0.9+i*0.125);
+    b.visible=true;
+    b.position.set(lerp(-13,-20,u)+Math.sin(i*2.1)*1.2, 0.3, lerp(-22.5,-29,u));
+  });
+
+  if(dt>0){
+    for(const zn of ZONES){
+      if(t<zn.from||t>zn.to) continue;
+      const p=zn.rate*dt*(night?1.4:0.7);
+      if(Math.random()<p)
+        spawnBoom(zn.x+(Math.random()-0.5)*zn.r*2, zn.z+(Math.random()-0.5)*zn.r*2,
+                  1.5+Math.random()*2.0, t, 0.03);
+    }
+  }
+  combatLight.intensity*=Math.pow(0.0008, dt*4+0.001);
+  for(const b of boomPool){
+    const ph=(t-b.t0)/b.dur;
+    if(ph<0||ph>1){ b.sp.visible=false; continue; }
+    b.sp.visible=true;
+    const s=b.size*(0.4+2.4*ph); b.sp.scale.set(s,s,1);
+    b.sp.material.opacity=(1-ph)*0.95;
+  }
+  FIRES.forEach((fi,i)=>{
+    const on=t>=fi.from&&t<=fi.to;
+    const fr=fireSp[i], sm=fireSm[i];
+    fr.visible=sm.visible=on;
+    if(!on) return;
+    const gy=groundY(fi.x,fi.z);
+    const fl=1+0.18*Math.sin(performance.now()*0.025+i*3);
+    fr.position.set(fi.x, gy+1.0, fi.z);
+    fr.scale.set(fi.s*fl, fi.s*0.8*fl, 1);
+    fr.material.opacity=0.8;
+    const sph=fract(t*2+i*0.37);
+    sm.position.set(fi.x, gy+1.5+5*sph, fi.z);
+    const ss=fi.s*(0.7+1.5*sph); sm.scale.set(ss,ss,1);
+    sm.material.opacity=0.45*(1-sph);
+  });
+
+  insetEl.style.display = (t<=3.5) ? 'block' : 'none';
+  MOMENTS.forEach((m,i)=>{ momentObjs[i].visible = t>=m.from && t<=m.to; });
+
+  {
+    const cr=(tt)=> audioPrevT>=0 && t-audioPrevT>0 && t-audioPrevT<0.12 && audioPrevT<tt && t>=tt;
+    for(const r of RAIDS) if(cr(r.t)||cr(r.t+0.12)) SFX.divebomb();
+    if(cr(1.5)||cr(6)||cr(26)) SFX.drone();           // 裝甲縱隊
+    if(cr(4.8)) SFX.boom(24, 40);                      // 鹿特丹
+    if(cr(0.12)) SFX.boom(14, 40);                     // 艾本-艾美爾爆破
+    audioPrevT=t;
+  }
+  updateCaption(t);
+  dateEl.textContent=fmtDate(Math.min(t,35.49));
+}
+
+/* ════════════════════════════════ 主迴圈 ════════════════════════════════ */
+let lastReal=performance.now(), lastSimT=0;
+flyTo([40,52,50],[2,2,0],3.5);
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  const rdt=Math.min(0.05,(now-lastReal)/1000); lastReal=now;
+  let dt=0;
+  if(playing){
+    dt=rdt*speed/4;                                  // 1 天 = 4 秒(1×),全程約142秒
+    simT=clamp(simT+dt,0,T_MAX);
+    slider.value=simT;
+    if(simT>=T_MAX){ playing=false; playBtn.textContent='↻ 重播'; }
+    if(cinemaCk.checked)
+      for(const c of CINEMA_CUTS)
+        if(lastSimT<c.at && simT>=c.at) flyTo(SHOTS[c.shot].pos, SHOTS[c.shot].tgt, 2.4);
+  }
+  lastSimT=simT;
+  if(fly){
+    fly.u=Math.min(1, fly.u+rdt/fly.dur);
+    const e=fly.u*fly.u*(3-2*fly.u);
+    camera.position.lerpVectors(fly.p0,fly.p1,e);
+    controls.target.lerpVectors(fly.t0,fly.t1,e);
+    if(fly.u>=1) fly=null;
+  }
+  update(simT, dt);
+  controls.update();
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  labelRenderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
