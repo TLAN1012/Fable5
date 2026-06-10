@@ -26,6 +26,12 @@
 | 4 | 台兒莊大捷 — 血肉長城 | 1938 對日抗戰 | [taierzhuang_1938](https://tlan1012.github.io/Fable5/taierzhuang_1938/) |
 | 5 | 法國戰役 — 鐮刀閃擊 | 1940 二戰西線 | [france_1940](https://tlan1012.github.io/Fable5/france_1940/) |
 | 6 | 高加米拉會戰 — 直取敵王 | 前331 上古 | [gaugamela_331bc](https://tlan1012.github.io/Fable5/gaugamela_331bc/) |
+| 番外 | 關原之戰 — 天下分け目 | 1600 戰國 | [sekigahara_1600](https://tlan1012.github.io/Fable5/sekigahara_1600/) |
+
+**番外篇**正是本系列的緣起:朋友用 Fable 5 做出了「信長之野望」般的關原之戰 3D 圖,
+我們以同一場戰役收尾,致敬這個起點——並依朋友原始 prompt 的要求,
+**把各軍家紋以 Canvas 程序繪製在 3D 幟旗上**(三つ葉葵、大一大万大吉、丸に十字、
+違い鎌、一文字三星……),小早川叛變時連軍標帶幟旗色帶即時由紅轉藍。
 
 ## 戰史回顧 — 六役一線牽
 
