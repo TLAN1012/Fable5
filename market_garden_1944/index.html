@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市場花園作戰 1944 — 3D 戰史劇場 第三集</title>
+<style>
+  :root { --ui:1; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000;
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:#e8edf4; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+
+  .bar { position:fixed; left:0; right:0; height:3.2vh; background:#000; z-index:30; }
+  #barTop{top:0} #barBottom{bottom:0}
+  #vignette { position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,10,.55) 100%); }
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:6; background:#fff; opacity:0; }
+
+  #title { position:fixed; top:3.6vh; left:50%; transform:translateX(-50%); z-index:40;
+    text-align:center; text-shadow:0 2px 8px #000; }
+  #title h1 { font-size:calc(21px*var(--ui)); letter-spacing:3px; font-weight:700; }
+  #title .sub { font-size:calc(11px*var(--ui)); color:#9fb4c8; letter-spacing:2px; margin-top:2px; }
+  #title .badge { display:inline-block; background:#a31621; color:#fff; font-size:calc(10px*var(--ui));
+    padding:1px 8px; border-radius:2px; letter-spacing:2px; margin-bottom:4px; }
+
+  .panel { background:rgba(8,14,24,.82); border:1px solid rgba(120,160,200,.25);
+    border-radius:6px; backdrop-filter:blur(6px); }
+
+  #left { position:fixed; left:12px; top:9vh; z-index:40; width:248px; font-size:calc(11px*var(--ui)); }
+  #left .panel { padding:8px 10px; margin-bottom:8px; }
+  .legend-row { display:flex; align-items:center; gap:7px; margin:3px 0; }
+  .sw { width:14px; height:14px; border-radius:3px; flex:none; }
+  details summary { cursor:pointer; pointer-events:auto; color:#cfe0ef; font-weight:700; font-size:calc(12px*var(--ui)); }
+  details { pointer-events:auto; }
+  details .body { margin-top:6px; line-height:1.55; color:#c2cedb; }
+  details .body b { color:#fff; }
+  .blue-t { color:#62b6ff; font-weight:700; } .red-t { color:#ff7066; font-weight:700; }
+
+  #right { position:fixed; right:12px; top:9vh; z-index:40; width:176px; }
+  #right .panel { padding:8px; }
+  #right h3 { font-size:calc(11px*var(--ui)); color:#9fb4c8; letter-spacing:2px; margin-bottom:6px; }
+  .shotBtn { display:block; width:100%; margin:4px 0; padding:6px 8px; font-size:calc(12px*var(--ui));
+    background:rgba(40,60,90,.55); color:#dce8f4; border:1px solid rgba(120,160,200,.35);
+    border-radius:4px; cursor:pointer; text-align:left; pointer-events:auto;
+    font-family:inherit; transition:background .15s; }
+  .shotBtn:hover { background:rgba(70,110,160,.7); }
+  .shotBtn .t { color:#8fa6bb; font-size:calc(10px*var(--ui)); float:right; }
+
+  /* 空降航線小地圖 */
+  #inset { position:fixed; left:12px; bottom:9.5vh; z-index:40; width:270px; padding:8px;
+    display:none; }
+  #inset .it { font-size:calc(11px*var(--ui)); color:#ffd98a; font-weight:700; margin-bottom:5px;
+    line-height:1.4; }
+  #inset svg { width:100%; display:block; border-radius:4px; }
+  #inset text { font-size:10.5px; fill:#dce8f4; }
+  #inset .sea-t { fill:#6f8aa5; font-style:italic; font-size:9.5px; letter-spacing:2px; }
+
+  #bottom { position:fixed; left:50%; transform:translateX(-50%); bottom:4.2vh; z-index:40;
+    width:min(940px, 92vw); text-align:center; }
+  #caption { margin-bottom:10px; text-shadow:0 2px 6px #000; transition:opacity .3s; }
+  #caption .ct { font-size:calc(17px*var(--ui)); font-weight:700; letter-spacing:1px; color:#ffd98a; }
+  #caption .cd { font-size:calc(12.5px*var(--ui)); color:#dde7f0; margin-top:3px; line-height:1.5; }
+  #tl { padding:8px 14px 10px; }
+  #tlRow { display:flex; align-items:center; gap:10px; }
+  #date { font-size:calc(13px*var(--ui)); font-weight:700; color:#ffe9b8; min-width:155px; text-align:left;
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #trackWrap { position:relative; flex:1; height:18px; }
+  #slider { width:100%; height:18px; cursor:pointer; pointer-events:auto;
+    -webkit-appearance:none; background:transparent; position:relative; z-index:2; }
+  #slider::-webkit-slider-runnable-track { height:4px; background:#3b4d63; border-radius:2px; }
+  #slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; margin-top:-5px;
+    border-radius:50%; background:#ffd98a; border:2px solid #1a2433; box-shadow:0 0 6px #ffce6e; }
+  .tick { position:absolute; top:6px; width:5px; height:5px; margin-left:-2px; border-radius:50%;
+    background:#7fa8cf; z-index:1; }
+  #btns { display:flex; align-items:center; gap:8px; }
+  .cbtn { background:rgba(40,60,90,.6); color:#fff; border:1px solid rgba(130,170,210,.4);
+    border-radius:4px; padding:4px 10px; font-size:calc(12px*var(--ui)); cursor:pointer; pointer-events:auto;
+    font-family:inherit; }
+  .cbtn:hover { background:rgba(70,110,160,.7); }
+  #play { width:60px; font-weight:700; }
+  label.ck { font-size:calc(11px*var(--ui)); color:#aebfd1; display:flex; gap:4px; align-items:center;
+    cursor:pointer; pointer-events:auto; white-space:nowrap; }
+
+  .ulabel { font-size:calc(11px*var(--ui)); line-height:1.25; padding:2px 7px 3px; border-radius:3px;
+    background:rgba(4,12,24,.78); white-space:nowrap; transform:translateY(-130%);
+    text-shadow:0 1px 2px #000; }
+  .ulabel.un  { border-left:3px solid #4db2ff; color:#dceeff; }
+  .ulabel.pla { border-left:3px solid #ff5d52; color:#ffe2df; }
+  .ulabel .sub { display:block; font-size:calc(9.5px*var(--ui)); color:#9fb2c4; }
+  .ulabel.dead { opacity:.85; border-left-color:#666; color:#aaa; }
+  .ulabel.dead .name { text-decoration:line-through; }
+  .ulabel.dead .sub { color:#d98c86; }
+  .clabel { font-size:calc(11px*var(--ui)); color:#f3f6fa; text-shadow:0 1px 3px #000,0 0 6px #000;
+    transform:translateY(-145%); white-space:nowrap; letter-spacing:1px; }
+  .clabel .dot { color:#ffd98a; }
+  .tlabel { font-size:calc(12px*var(--ui)); color:#8898aa; font-style:italic; letter-spacing:4px;
+    text-shadow:0 1px 3px #000; white-space:nowrap; }
+  .mlabel { font-size:calc(11px*var(--ui)); font-weight:700; color:#ffd2a0; background:rgba(60,20,8,.8);
+    border:1px solid rgba(255,150,80,.5); padding:2px 8px; border-radius:10px;
+    white-space:nowrap; transform:translateY(-260%); text-shadow:0 1px 2px #000; }
+  .mlabel.good { color:#b8ffc8; background:rgba(8,50,20,.8); border-color:rgba(120,255,160,.5); }
+
+  #hint { position:fixed; right:14px; bottom:4.4vh; z-index:40; font-size:calc(10.5px*var(--ui));
+    color:#7d8fa2; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; }
+  #err { position:fixed; inset:0; display:none; place-items:center; z-index:99;
+    background:#0a0f16; font-size:calc(15px*var(--ui)); color:#fbb; text-align:center; padding:30px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+<div class="bar" id="barTop"></div>
+<div class="bar" id="barBottom"></div>
+
+<div id="title">
+  <div class="badge">歷史特別企劃・二戰 3D 戰史劇場 第三集</div>
+  <h1>市場花園作戰 — 多走了一座橋</h1>
+  <div class="sub">OPERATION MARKET GARDEN ・ 1944.9.17 – 9.26 ・ 荷蘭 恩荷芬–奈梅亨–安恆 100km 走廊</div>
+</div>
+
+<div id="left">
+  <div class="panel">
+    <div class="legend-row"><span class="sw" style="background:#3f8fdd"></span><b class="blue-t">盟軍</b>&nbsp;「市場」空降3.5萬+「花園」第30軍</div>
+    <div class="legend-row"><span class="sw" style="background:#d6443a"></span><b class="red-t">德軍</b>&nbsp;B集團軍群(莫德爾元帥)</div>
+    <div class="legend-row"><span class="sw" style="background:#d9c878;height:3px;border-radius:0"></span>「地獄公路」單線走廊 100km</div>
+    <div class="legend-row"><span class="sw" style="background:#1d3f5e"></span>馬士河・瓦爾河・下萊茵河</div>
+  </div>
+  <div class="panel"><details>
+    <summary>⚔ 戰鬥序列・指揮官</summary>
+    <div class="body">
+      <b class="blue-t">盟軍</b><br>
+      21集團軍群:<b>蒙哥馬利</b>元帥<br>
+      第1空降軍:<b>布朗寧</b>中將(「多走了一座橋」)<br>
+      「市場」:美101師(泰勒)、美82師(蓋文)、<br>
+      英1空降師(厄克特)+波蘭旅(索沙保斯基)<br>
+      「花園」:第30軍 <b>霍羅克斯</b>中將,近衛裝甲師先鋒<br>
+      安恆橋:<b>弗羅斯特</b>中校 第2營約740人<br><br>
+      <b class="red-t">德軍</b><br>
+      B集團軍群:<b>莫德爾</b>元帥(司令部就在奧斯特貝克!)<br>
+      黨衛軍第2裝甲軍:<b>比特里希</b><br>
+      ・第9裝甲師「霍亨斯陶芬」:哈策爾<br>
+      ・第10裝甲師「弗倫茲貝格」:哈梅爾<br>
+      第1傘兵集團軍:斯圖登特/第15集團軍:馮·贊根
+    </div>
+  </details></div>
+  <div class="panel"><details>
+    <summary>🕯 戰役結果・代價</summary>
+    <div class="body">
+      <b class="blue-t">盟軍</b>:傷亡約1.5~1.7萬<br>
+      英1空降師北渡10,600人,生還僅約2,400<br>
+      (陣亡1,485・被俘6,414)<br>
+      <b class="red-t">德軍</b>:傷亡估3,300~8,000(史料差異大)<br><br>
+      走廊終點止於瓦爾河;安恆遲至1945年4月才解放。荷蘭西北隨後的「飢餓之冬」奪走約1.8萬平民性命。
+    </div>
+  </details></div>
+</div>
+
+<div id="right"><div class="panel">
+  <h3>🎬 特寫鏡頭</h3>
+  <button class="shotBtn" data-shot="0">史上最大空降<span class="t">9/17</span></button>
+  <button class="shotBtn" data-shot="1">孫橋眼前被炸<span class="t">9/17</span></button>
+  <button class="shotBtn" data-shot="2">死守安恆橋<span class="t">9/18</span></button>
+  <button class="shotBtn" data-shot="3">瓦爾河強渡<span class="t">9/20</span></button>
+  <button class="shotBtn" data-shot="4">奧斯特貝克鍋爐<span class="t">9/22</span></button>
+  <button class="shotBtn" data-shot="5">柏林行動・夜渡撤退<span class="t">9/25夜</span></button>
+</div></div>
+
+<div id="inset" class="panel">
+  <div class="it">✈ 「市場」空降航線 — 英格蘭 → 荷蘭 約450km・運輸機1,500架+滑翔機500架</div>
+  <svg viewBox="0 0 240 150">
+    <rect x="0" y="0" width="240" height="150" fill="#0d2236"/>
+    <path d="M0,20 L30,18 L52,32 L44,52 L56,70 L46,92 L54,112 L30,128 L0,130 Z"
+          fill="#2a4a66" stroke="#4d7596" stroke-width="1"/>
+    <path d="M240,10 L196,16 L188,34 L198,50 L186,64 L194,80 L182,98 L196,118 L240,124 Z"
+          fill="#2a4a66" stroke="#4d7596" stroke-width="1"/>
+    <text class="sea-t" x="100" y="58">北 海</text>
+    <path d="M38,62 Q130,30 200,42" fill="none" stroke="#ffd98a" stroke-width="1.4"
+          stroke-dasharray="4 3" opacity="0.9"/>
+    <path d="M34,96 Q120,118 192,80" fill="none" stroke="#ffd98a" stroke-width="1.4"
+          stroke-dasharray="4 3" opacity="0.9"/>
+    <circle cx="200" cy="42" r="3.2" fill="#ffd98a"/>
+    <text x="166" y="34">安恆 ★</text>
+    <circle cx="192" cy="80" r="3.2" fill="#9fd0ff"/>
+    <text x="148" y="96">恩荷芬</text>
+    <circle cx="38" cy="62" r="2.6" fill="#9fd0ff"/>
+    <circle cx="34" cy="96" r="2.6" fill="#9fd0ff"/>
+    <text x="2" y="48">英格蘭・機場群</text>
+    <circle id="ip1" cx="38" cy="62" r="2.6" fill="#ffffff"/>
+    <circle id="ip2" cx="34" cy="96" r="2.6" fill="#ffffff"/>
+  </svg>
+</div>
+
+<div id="bottom">
+  <div id="caption"><div class="ct"></div><div class="cd"></div></div>
+  <div id="tl" class="panel">
+    <div id="tlRow">
+      <div id="date">1944年9月17日</div>
+      <div id="trackWrap">
+        <input type="range" id="slider" min="0" max="9.8" step="0.01" value="0">
+      </div>
+      <div id="btns">
+        <button class="cbtn" id="play">▶ 播放</button>
+        <button class="cbtn" id="speed">1×</button>
+        <button class="cbtn" id="sfx" title="音效開關">🔊</button>
+        <button class="cbtn" id="fontMinus" title="縮小字體">A−</button>
+        <button class="cbtn" id="fontPlus" title="放大字體">A＋</button>
+        <label class="ck"><input type="checkbox" id="cinema" checked>運鏡</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hint">滑鼠拖曳=旋轉視角・滾輪=縮放・右鍵拖曳=平移<br>時間軸可直接拖動・首次點擊頁面後音效啟用・A−/A＋調整字體</div>
+<div id="err">⚠ 無法初始化 WebGL,請改用 Safari / Chrome 開啟。</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ════════════════════════════════ 基礎工具 ════════════════════════════════ */
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp  = (a,b,u)=>a+(b-a)*u;
+const fract = v=>v-Math.floor(v);
+function smoothstep(a,b,x){ const u=clamp((x-a)/(b-a),0,1); return u*u*(3-2*u); }
+function noise2(x,z){
+  let v = Math.sin(x*0.16+Math.sin(z*0.11)*1.7)*Math.cos(z*0.19+Math.sin(x*0.07)*2.3);
+  v += 0.5*Math.sin(x*0.37+z*0.29)*Math.cos(z*0.41-x*0.13);
+  v += 0.25*Math.sin(x*0.83-z*0.61)*Math.cos(z*0.97+x*0.53);
+  return v/1.75;
+}
+
+/* ════════════════════════════════ 地理定義 ════════════════════════════════
+   座標系:x=東(+), z=南(+), 1單位≈1.2km。走廊由南(z=+52 喬伊橋)往北(z=-28 安恆)。
+   荷蘭低地:平坦圩田+三條大河(馬士/瓦爾/下萊茵)+運河,單線公路即「地獄公路」。 */
+function riverDist(x,z){               // 到最近水面邊緣的有號距離(<0 在水裡)
+  let d=1e9;
+  d=Math.min(d, Math.abs(z-(-25+1.2*Math.sin(x*0.08+1)))-1.6);   // 下萊茵河
+  d=Math.min(d, Math.abs(z-(-6.3+0.9*Math.sin(x*0.09)))-1.8);    // 瓦爾河
+  d=Math.min(d, Math.abs(z-(5.8+0.8*Math.sin(x*0.07+2)))-1.4);   // 馬士河
+  d=Math.min(d, Math.abs(z-30.0)-0.55);                          // 威廉明娜運河
+  d=Math.min(d, Math.abs(z-19.0)-0.45);                          // 南威廉斯運河
+  if(z>-5.5&&z<5.5) d=Math.min(d, Math.abs(x-4.5)-0.45);         // 馬士-瓦爾運河
+  return d;
+}
+function terrainH(x,z){
+  let h=0.9+0.45*noise2(x*1.7,z*1.7)+0.3*noise2(x*0.3,z*0.3);
+  h+=2.2*Math.exp(-(((x-7)**2)+((z+1)**2))/40);                       // 格魯斯貝克高地
+  h+=2.0*smoothstep(-30,-40,z)*(0.6+0.4*noise2(x*0.5,z*0.5));         // 維魯威丘陵
+  const d=riverDist(x,z);
+  if(d<1.5) h=lerp(-1.3,h,smoothstep(-0.2,1.5,d));
+  return h;
+}
+const groundY=(x,z)=>Math.max(terrainH(x,z),0.25);
+const HIGHWAY=[[-2,52],[0,44],[2,36],[3,28.8],[4,24.5],[6,18.2],[8,13],[6,7],[4.5,1],
+               [2,-4],[1,-8.8],[-1,-16],[-2,-23.8]];
+const CITIES=[['安恆',-2,-28],['奧斯特貝克',-9,-27.5],['德里爾',-10,-22.8],['艾爾斯特',-1,-16],
+  ['倫特',1,-8.8],['奈梅亨',2,-4],['格雷夫',6,7],['費赫爾',6,18.2],['聖烏登羅德',4,24.5],
+  ['孫村',3,28.8],['恩荷芬',2,35],['瓦爾肯斯瓦德',0,44],['喬伊橋(出發線)',-2,51.5]];
+
+/* ════════════════════════════════ 場景 ════════════════════════════════ */
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias:true}); }
+catch(e){ document.getElementById('err').style.display='grid'; throw e; }
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.getElementById('app').appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.cssText='position:fixed;inset:0;pointer-events:none;';
+document.getElementById('labels').appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a1226, 110, 290);
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.5, 800);
+camera.position.set(50, 70, 50);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 2, 8);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = 1.46; controls.minDistance = 5; controls.maxDistance = 220;
+
+const hemi = new THREE.HemisphereLight(0xbfd4ea, 0x39434f, 0.7);  scene.add(hemi);
+const sun  = new THREE.DirectionalLight(0xfff1dd, 1.0);
+sun.position.set(-60, 90, 40); scene.add(sun);
+const moonAmb = new THREE.AmbientLight(0x33415a, 0.35); scene.add(moonAmb);
+
+/* ── 地形(頂點色:圩田/森林/城鎮/河) ── */
+const W=110, D=130, SEGX=190, SEGZ=220;
+const geo = new THREE.PlaneGeometry(W, D, SEGX, SEGZ);
+geo.rotateX(-Math.PI/2);
+{
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i, terrainH(pos.getX(i), pos.getZ(i)));
+  geo.computeVertexNormals();
+  const colors = new Float32Array(pos.count*3);
+  const cF1=new THREE.Color(0xc2cf96), cF2=new THREE.Color(0xa9bd80),
+        cTan=new THREE.Color(0xd8cfa4), cForest=new THREE.Color(0x52704a),
+        cTown=new THREE.Color(0x97928a), cBed=new THREE.Color(0x1c3b58),
+        c=new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i), h=pos.getY(i);
+    if(h < 0.15){ c.copy(cBed); }
+    else {
+      /* 圩田拼布 */
+      const nf=noise2(x*0.9+7,z*0.9-3);
+      c.copy(cF1).lerp(cF2, 0.5+0.5*nf);
+      if(noise2(x*0.45,z*0.45)>0.42) c.lerp(cTan, 0.5);
+      /* 森林:帝國森林 / 維魯威 / 奧斯特貝克林地 */
+      const forest = (x>9&&x<32&&z>-3&&z<7) ||
+                     (z<-31 && noise2(x*0.6+3,z*0.6)>0.05) ||
+                     (x>-15&&x<-4&&z>-30.5&&z<-25.5 && noise2(x*1.2,z*1.2)>-0.2);
+      if(forest) c.lerp(cForest, 0.8);
+      /* 城鎮 */
+      for(const ct of CITIES){
+        if((x-ct[1])**2+(z-ct[2])**2 < 2.6){ c.lerp(cTown, 0.7); break; }
+      }
+      c.multiplyScalar(0.94+0.06*noise2(x*3.1,z*3.1));
+    }
+    colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+}
+scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
+
+/* ── 水面 ── */
+const water=new THREE.Mesh(new THREE.PlaneGeometry(300,300),
+  new THREE.MeshLambertMaterial({color:0x1d3f5e, transparent:true, opacity:0.93}));
+water.rotation.x=-Math.PI/2; water.position.y=0.12; scene.add(water);
+
+/* ── 地獄公路(亮黃線)與切斷閃爍段 ── */
+function densify(pts, n, yOff, times){
+  const out=[], tout=[];
+  for(let i=0;i<pts.length-1;i++){
+    for(let k=0;k<n;k++){
+      const u=k/n;
+      const x=lerp(pts[i][0],pts[i+1][0],u), z=lerp(pts[i][1],pts[i+1][1],u);
+      out.push(new THREE.Vector3(x, groundY(x,z)+yOff, z));
+      if(times) tout.push(lerp(times[i],times[i+1],u));
+    }
+  }
+  const L=pts.length-1;
+  out.push(new THREE.Vector3(pts[L][0], groundY(pts[L][0],pts[L][1])+yOff, pts[L][1]));
+  if(times) tout.push(times[L]);
+  return {pts:out, times:tout};
+}
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(densify(HIGHWAY,12,0.3).pts),
+  new THREE.LineBasicMaterial({color:0xd9c878})));
+const CUTS=[
+ {from:5.45,to:6.25,seg:[[2,21],[6,18.2],[7,17]]},      // 費赫爾
+ {from:6.95,to:7.85,seg:[[3,25.5],[4,24.5],[5,23]]},    // 庫弗靈
+];
+const cutLines=CUTS.map(cu=>{
+  const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(densify(cu.seg,10,0.45).pts),
+    new THREE.LineBasicMaterial({color:0xff3b30, transparent:true, opacity:0}));
+  scene.add(l); return l;
+});
+
+/* ── 30軍推進軌跡(藍,隨時間點亮) ── */
+const ADV_T=[0.75,0.95,1.55,1.7,2.25,2.35,2.45,2.6,2.8,3.6,3.7,4.5,4.7];
+const trailData = densify(HIGHWAY,12,0.5,ADV_T);
+const trail = new THREE.Line(new THREE.BufferGeometry().setFromPoints(trailData.pts),
+  new THREE.LineBasicMaterial({color:0x55c0ff}));
+trail.geometry.setDrawRange(0,0); scene.add(trail);
+
+/* ── 五座橋(顏色=控制方) ── */
+function makeLabel(html, cls){
+  const div=document.createElement('div'); div.className=cls; div.innerHTML=html;
+  return new CSS2DObject(div);
+}
+const bridgeMat=col=>new THREE.MeshLambertMaterial({color:col});
+const BRIDGES=[
+ {name:'孫橋',      x:3, z:30,   cap:1.6,  blownAt:0.65, bailey:true},
+ {name:'費赫爾橋',  x:6, z:19,   cap:0.62},
+ {name:'格雷夫橋',  x:6, z:5.8,  cap:0.7},
+ {name:'奈梅亨大橋',x:2, z:-6.3, cap:3.55},
+ {name:'安恆大橋',  x:-2,z:-25,  cap:null},
+];
+for(const b of BRIDGES){
+  b.mesh=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.3,3.4), bridgeMat(0xb05548));
+  b.mesh.position.set(b.x, 0.7, b.z); scene.add(b.mesh);
+  if(b.bailey){
+    b.stubA=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.25,1.0), bridgeMat(0x55504a));
+    b.stubA.position.set(b.x,0.55,b.z-1.3); b.stubA.rotation.x=0.3; scene.add(b.stubA);
+    b.stubB=b.stubA.clone(); b.stubB.position.z=b.z+1.3; b.stubB.rotation.x=-0.3; scene.add(b.stubB);
+    b.baileyMesh=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.28,3.4), bridgeMat(0xa8b6c8));
+    b.baileyMesh.position.set(b.x,0.75,b.z); scene.add(b.baileyMesh);
+  }
+  const l=makeLabel('⬛ '+b.name,'clabel'); l.position.set(b.x, 1.8, b.z); scene.add(l);
+}
+
+/* ── 地名 / 地理標籤 ── */
+for(const [n,x,z] of CITIES){
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.35,10,10),
+    new THREE.MeshBasicMaterial({color:0xffe2a8}));
+  dot.position.set(x, groundY(x,z)+0.4, z); scene.add(dot);
+  const l=makeLabel('<span class="dot">●</span> '+n,'clabel');
+  l.position.set(x, groundY(x,z)+1.1, z); scene.add(l);
+}
+for(const [n,x,z] of [['下 萊 茵 河',-22,-25],['瓦 爾 河',-20,-6.5],['馬 士 河',-20,5.5],
+  ['威廉明娜運河',-18,30],['帝國森林(德國)',18,3],['「島」・貝圖韋低地',-9,-19],['地 獄 公 路',10,26]]){
+  const l=makeLabel(n,'tlabel'); l.position.set(x, groundY(x,z)+1.8, z); scene.add(l);
+}
+
+/* ════════════════════════════════ 部隊 ════════════════════════════════ */
+function kfPos(kf,t){
+  if(t<=kf[0][0]) return [kf[0][1],kf[0][2]];
+  for(let i=0;i<kf.length-1;i++){
+    const a=kf[i], b=kf[i+1];
+    if(t<=b[0]){ const u=(t-a[0])/(b[0]-a[0]); return [lerp(a[1],b[1],u), lerp(a[2],b[2],u)]; }
+  }
+  const l=kf[kf.length-1]; return [l[1],l[2]];
+}
+const UNITS=[
+ {name:'近衛裝甲師(30軍先鋒)', sub:'霍羅克斯中將・5萬人 2萬部車輛', side:'un',
+  kf:[[0.75,-2,52],[0.95,0,44],[1.5,1,40],[1.55,2,36],[1.7,3,31],[2.2,3,29],[2.45,6,7],
+      [2.6,4.5,1],[2.8,2,-4],[3.55,2,-5],[3.7,1,-8.8],[4.0,1,-9],[4.5,-1,-16],[9.8,-1,-16]]},
+ {name:'美101空降師', sub:'泰勒少將・約14,000人 守恩荷芬-費赫爾段', side:'un',
+  kf:[[0.58,3,28],[5.4,5,21],[6.5,4,25],[9.8,4,25]]},
+ {name:'美82空降師', sub:'蓋文准將・約11,000人 守格雷夫-奈梅亨段', side:'un',
+  kf:[[0.6,7,-1],[9.8,7,-1]]},
+ {name:'英第1空降師', sub:'厄克特少將・約10,600人', side:'un', embark:9.2,
+  kf:[[0.6,-14,-27],[0.9,-11,-27.5],[1.5,-9.5,-27.5],[8.9,-9,-27.5],[9.15,-9.5,-23.3]]},
+ {name:'弗羅斯特第2營', sub:'約740人・佔領安恆橋北端', side:'un', dieAt:4.2,
+  deadSub:'死守81小時・9/21晨彈盡被俘',
+  kf:[[0.85,-2,-27.2]]},
+ {name:'波蘭第1傘兵旅', sub:'索沙保斯基少將・1,690人', side:'un',
+  kf:[[4.7,-10,-22.5],[9.8,-10,-22.5]]},
+ {name:'英43威塞克斯師', sub:'托馬斯少將・打通至德里爾', side:'un',
+  kf:[[5.0,2,-4],[5.8,-8,-22],[9.8,-8,-22]]},
+ /* 德軍 */
+ {name:'黨衛軍第9裝甲師', sub:'哈策爾・「霍亨斯陶芬」圍攻奧斯特貝克', side:'pla',
+  kf:[[0.3,-4,-31],[0.9,-7.5,-30],[9.8,-7.5,-30]]},
+ {name:'黨衛軍第10裝甲師', sub:'哈梅爾・「弗倫茲貝格」封鎖「島」區', side:'pla',
+  kf:[[0.3,0,-29],[1.0,1,-22],[3.0,1.5,-12],[4.3,0,-17.5],[9.8,0,-17.5]]},
+ {name:'德第15集團軍部隊', sub:'馮·贊根・自西側反覆撲向走廊', side:'pla',
+  kf:[[1.5,-12,22],[5.4,-9,20],[5.6,3,19.5],[6.3,-6,20],[7.0,1,23.5],[7.8,-8,22],[9.8,-12,22]]},
+ {name:'德第1傘兵集團軍部隊', sub:'斯圖登特・自東側反撲', side:'pla',
+  kf:[[1.0,16,20],[5.5,9,19],[6.3,14,20],[9.8,14,20]]},
+ {name:'德軍邊境守備部隊', sub:'自帝國森林攻擊格魯斯貝克高地', side:'pla',
+  kf:[[1.0,14,1],[2.0,11,0],[9.8,11,0]]},
+];
+const unitObjs=[];
+for(const u of UNITS){
+  const g=new THREE.Group();
+  const col = u.side==='un' ? 0x3f8fdd : 0xd6443a;
+  const emi = u.side==='un' ? 0x1c5fae : 0x952a22;
+  const bodyMat=new THREE.MeshLambertMaterial({color:col, emissive:emi, transparent:true});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.2,0.55,8), bodyMat);
+  body.position.y=0.32; g.add(body);
+  const coneMat=new THREE.MeshBasicMaterial({color:col, transparent:true});
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(0.48,1.3,6), coneMat);
+  cone.rotation.x=Math.PI/2; cone.position.y=0.42; cone.visible=false; g.add(cone);
+  const ringMat=new THREE.MeshBasicMaterial({color:u.side==='un'?0x7fd0ff:0xff8a7a,
+    transparent:true, opacity:0.6, side:THREE.DoubleSide});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(1.4,1.7,28), ringMat);
+  ring.rotation.x=-Math.PI/2; ring.position.y=0.1; g.add(ring);
+  const div=document.createElement('div');
+  div.className='ulabel '+(u.side==='un'?'un':'pla');
+  div.innerHTML=`<span class="name">${u.name}</span><span class="sub">${u.sub}</span>`;
+  const lab=new CSS2DObject(div); lab.position.y=1.3; g.add(lab);
+  scene.add(g);
+  unitObjs.push({u,g,body,bodyMat,cone,coneMat,ring,ringMat,div,dead:false});
+}
+
+/* ── 德軍反擊箭頭(視窗顯隱) ── */
+function makeArrow(x1,z1,x2,z2){
+  const y1=groundY(x1,z1), y2=groundY(x2,z2);
+  const mid=new THREE.Vector3((x1+x2)/2, Math.max(y1,y2)+6, (z1+z2)/2);
+  const curve=new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(x1,y1+1,z1), mid, new THREE.Vector3(x2,y2+1,z2));
+  const mat=new THREE.MeshBasicMaterial({color:0xff4438, transparent:true, opacity:0});
+  const grp=new THREE.Group();
+  grp.add(new THREE.Mesh(new THREE.TubeGeometry(curve,24,0.26,6), mat));
+  const head=new THREE.Mesh(new THREE.ConeGeometry(0.8,2.0,8), mat);
+  head.position.copy(curve.getPoint(0.99));
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), curve.getTangent(0.99).normalize());
+  grp.add(head); scene.add(grp);
+  return {grp,mat};
+}
+const ARROWS=[
+ {a:makeArrow(-4,-33,-8.5,-28.5), from:0.7, to:5},      // 9SS 壓向奧斯特貝克
+ {a:makeArrow(4,-31,-1,-26.5),    from:0.9, to:4.2},    // 10SS 壓向安恆橋
+ {a:makeArrow(-10,20,4,19.3),     from:5.4, to:6.3},    // 費赫爾切斷(西)
+ {a:makeArrow(15,18,7.5,18.8),    from:5.4, to:6.3},    // 費赫爾切斷(東)
+ {a:makeArrow(13,25,5,23.5),      from:6.9, to:7.9},    // 庫弗靈切斷
+ {a:makeArrow(-15,-29,-10.5,-27.8),from:4.5,to:8.8},    // 鍋爐西
+ {a:makeArrow(-4,-31.5,-7.8,-28.6),from:4.5,to:8.8},    // 鍋爐東
+];
+
+/* ── 奧斯特貝克「鍋爐」環形陣地(逐日收縮) ── */
+const CAULDRON={x:-9,z:-27.3,r:3.4};
+const cauldronMat=new THREE.LineBasicMaterial({color:0x57c0ff, transparent:true, opacity:0});
+const cauldron=(()=>{
+  const pts=[];
+  for(let i=0;i<=56;i++){
+    const a=i/56*Math.PI*2;
+    pts.push(new THREE.Vector3(Math.cos(a)*CAULDRON.r, 0, Math.sin(a)*CAULDRON.r*0.72));
+  }
+  const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cauldronMat);
+  l.position.set(CAULDRON.x, groundY(CAULDRON.x,CAULDRON.z)+0.45, CAULDRON.z);
+  scene.add(l); return l;
+})();
+
+/* ════════════════════════════════ 特效素材 ════════════════════════════════ */
+const softTex=(()=>{
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const ctx=cv.getContext('2d');
+  const g=ctx.createRadialGradient(32,32,2,32,32,30);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.45,'rgba(255,255,255,.75)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+})();
+function makeBoom(color){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:softTex, color, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+  sp.visible=false; scene.add(sp); return sp;
+}
+const boomPool=Array.from({length:40},()=>({sp:makeBoom(0xffa540),t0:-9,dur:0.008,size:2}));
+let boomIdx=0;
+const combatLight=new THREE.PointLight(0xffa040,0,45,1.8); scene.add(combatLight);
+function spawnBoom(x,z,size,tNow,dur){
+  const b=boomPool[boomIdx++%boomPool.length];
+  b.sp.position.set(x+(Math.random()-0.5)*1.2, groundY(x,z)+0.9+Math.random()*1.1, z+(Math.random()-0.5)*1.2);
+  b.t0=tNow; b.dur=dur||0.008; b.size=size; b.sp.visible=true;
+  combatLight.position.copy(b.sp.position); combatLight.intensity=12;
+  if(typeof SFX!=='undefined') SFX.boom(size*2.2, camera.position.distanceTo(b.sp.position));
+}
+const ZONES=[
+ {x:0,  z:48,  r:3,  from:0.75,to:0.98,rate:30},  // 瓦爾肯斯瓦德公路伏擊
+ {x:3,  z:30,  r:2.5,from:0.6, to:0.85,rate:25},  // 孫村
+ {x:-6, z:-28, r:3,  from:0.85,to:4.5, rate:14},  // 安恆西郊阻擊
+ {x:-2, z:-26, r:2.2,from:0.9, to:4.2, rate:22},  // 安恆橋
+ {x:-2, z:-25.5,r:2, from:1.36,to:1.5, rate:90},  // 格雷布納衝橋
+ {x:2,  z:-5.3,r:2.5,from:2.5, to:3.7, rate:26},  // 奈梅亨橋爭奪
+ {x:0,  z:-6.3,r:2.5,from:3.28,to:3.55,rate:70},  // 瓦爾河渡河彈幕
+ {x:-1, z:-16, r:3,  from:3.8, to:7,   rate:10},  // 艾爾斯特「島」區
+ {x:-9, z:-27.3,r:3, from:4.5, to:9.05,rate:18},  // 奧斯特貝克鍋爐
+ {x:5,  z:19,  r:3,  from:5.45,to:6.25,rate:28},  // 費赫爾斷路
+ {x:4,  z:24,  r:3,  from:6.95,to:7.85,rate:22},  // 庫弗靈斷路
+ {x:10, z:0,   r:4,  from:1.5, to:6,   rate:7},   // 格魯斯貝克-帝國森林
+ {x:-10,z:-22.5,r:2.5,from:4.7,to:5.2, rate:18},  // 德里爾空降遭高砲
+];
+
+/* ── 持續火場(孫橋殘骸/安恆橋面/鍋爐/斷路點) ── */
+const FIRES=[
+ {from:0.66,to:1.1, x:3,  z:30,   s:3.5},
+ {from:1.42,to:3.4, x:-2, z:-25.3,s:3.2},
+ {from:5.0, to:9.0, x:-9, z:-27.6,s:2.6},
+ {from:5.5, to:6.25,x:5,  z:19.3, s:2.8},
+ {from:7.0, to:7.85,x:4,  z:23.5, s:2.8},
+];
+const fireSp =FIRES.map(()=>makeBoom(0xff7a20));
+const fireSm =FIRES.map(()=>{
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:0x1c1c20,transparent:true}));
+  sp.visible=false; scene.add(sp); return sp;
+});
+
+/* ── 空降:三波(9/17・9/18・9/21波蘭旅) ── */
+const LIFTS=[{t0:0.45,t1:0.72},{t0:1.5,t1:1.72},{t0:4.65,t1:4.87}];
+function makePlane(){
+  const g=new THREE.Group();
+  const m=new THREE.MeshLambertMaterial({color:0x7d8a7a});
+  const fus=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.45,0.6), m); g.add(fus);
+  const wing=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.1,4.4), m); wing.position.x=0.2; g.add(wing);
+  g.visible=false; scene.add(g); return g;
+}
+const planes=Array.from({length:6},makePlane);
+const P_FROM=new THREE.Vector3(-50,13,50), P_TO=new THREE.Vector3(8,15,-36);
+const planeYaw=Math.atan2(P_TO.x-P_FROM.x, P_TO.z-P_FROM.z);
+/* 傘降群:{t0,x,z,n,color} */
+const DROPS=[
+ {t0:0.50,x:2,  z:30.5,n:14,col:0xf2f5f8},   // 101師 孫村
+ {t0:0.55,x:7,  z:-1,  n:14,col:0xf2f5f8},   // 82師 格魯斯貝克
+ {t0:0.60,x:-14,z:-27, n:16,col:0xf2f5f8},   // 英1空降 沃爾夫海澤
+ {t0:1.55,x:7,  z:-1,  n:10,col:0xf2f5f8},   // 第二波
+ {t0:1.60,x:-13,z:-26.5,n:10,col:0xf2f5f8},
+ {t0:4.72,x:-10,z:-22.5,n:14,col:0xf2f5f8},  // 波蘭旅 德里爾
+ {t0:5.25,x:-5.5,z:-29.5,n:8, col:0xd8c890}, // 補給空投誤落德軍戰線
+];
+const chutes=[];
+for(const d of DROPS){
+  for(let j=0;j<d.n;j++){
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:d.col,transparent:true}));
+    sp.scale.set(1.2,1.2,1);
+    sp.visible=false; scene.add(sp);
+    const a=j*2.4+d.x, rad=0.5+(j*37%30)/10;
+    chutes.push({sp, t0:d.t0+j*0.004,
+      x:d.x+Math.cos(a)*rad, z:d.z+Math.sin(a)*rad*0.7});
+  }
+}
+
+const sonBlast=makeBoom(0xffc070);     // 孫橋起爆火球
+
+/* ── 格雷布納縱隊(9/18 衝橋被殲) ── */
+const grabner=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.5,2.2),
+  new THREE.MeshLambertMaterial({color:0xd6443a, emissive:0x6a1812}));
+grabner.visible=false; scene.add(grabner);
+
+/* ── 瓦爾河突擊舟(9/20)與柏林行動撤退舟(9/25夜) ── */
+function makeBoat(col){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.25,0.42),
+    new THREE.MeshLambertMaterial({color:col}));
+  b.visible=false; scene.add(b); return b;
+}
+const waalBoats =Array.from({length:6},()=>makeBoat(0x8a8f78));
+const rhineBoats=Array.from({length:5},()=>makeBoat(0x4a5260));
+
+/* ════════════════════════════════ 降雨(9/21 起連日陰雨) ════════════════════ */
+const RAIN_N=2400, rainGeo=new THREE.BufferGeometry();
+const rainPos=new Float32Array(RAIN_N*3), rainVel=new Float32Array(RAIN_N);
+for(let i=0;i<RAIN_N;i++){
+  rainPos[i*3]=(Math.random()-0.5)*140; rainPos[i*3+1]=Math.random()*40;
+  rainPos[i*3+2]=(Math.random()-0.5)*140; rainVel[i]=3.2+Math.random()*2.4;
+}
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos,3));
+const rainMat=new THREE.PointsMaterial({map:softTex, color:0xa8bccb, size:0.26,
+  transparent:true, opacity:0, depthWrite:false});
+scene.add(new THREE.Points(rainGeo, rainMat));
+
+/* ════════════════════════════════ 音效(Web Audio 即時合成) ════════════════ */
+const SFX=(()=>{
+  let ctx=null, master=null, rainG=null, on=true, lastSmall=0;
+  function ensure(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      ctx=new AC();
+      master=ctx.createGain(); master.gain.value=on?0.9:0;
+      const comp=ctx.createDynamicsCompressor();
+      master.connect(comp); comp.connect(ctx.destination);
+      const len=ctx.sampleRate*2, buf=ctx.createBuffer(1,len,ctx.sampleRate);
+      const ch=buf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+      /* 平原風 */
+      const src=ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=280;
+      const wg=ctx.createGain(); wg.gain.value=0.035;
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.1;
+      const lg=ctx.createGain(); lg.gain.value=0.02;
+      lfo.connect(lg); lg.connect(wg.gain);
+      src.connect(lp).connect(wg).connect(master);
+      src.start(); lfo.start();
+      /* 雨聲(增益由 setRain 控制) */
+      const rs=ctx.createBufferSource(); rs.buffer=buf; rs.loop=true;
+      const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400;
+      rainG=ctx.createGain(); rainG.gain.value=0;
+      rs.connect(hp).connect(rainG).connect(master); rs.start();
+    }
+    if(ctx.state==='suspended') ctx.resume();
+  }
+  function setRain(k){ if(rainG) rainG.gain.value=on?k*0.10:0; }
+  function boom(size, dist){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime;
+    if(size<6 && now-lastSmall<0.08) return;
+    lastSmall=now;
+    const att=clamp(55/((dist||50)+20),0.06,1);
+    const vol=clamp(size/14,0.1,1.0)*att;
+    const dur=0.28+Math.min(size,24)*0.04;
+    const nn=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,nn,ctx.sampleRate);
+    const ch=buf.getChannelData(0);
+    for(let i=0;i<nn;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/nn,2.2);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const f=ctx.createBiquadFilter(); f.type='lowpass';
+    f.frequency.setValueAtTime(900+size*40, now);
+    f.frequency.exponentialRampToValueAtTime(90, now+dur);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(vol, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    src.connect(f).connect(g).connect(master); src.start(now);
+    const o=ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(75, now);
+    o.frequency.exponentialRampToValueAtTime(28, now+dur*1.5);
+    const og=ctx.createGain();
+    og.gain.setValueAtTime(vol*0.85, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now+dur*1.5);
+    o.connect(og).connect(master); o.start(now); o.stop(now+dur*1.6);
+  }
+  /* 運輸機群低鳴 */
+  function drone(){
+    if(!ctx||!on||ctx.state!=='running') return;
+    const now=ctx.currentTime, dur=5;
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=240;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.065, now+0.9);
+    g.gain.setValueAtTime(0.065, now+dur-1.2);
+    g.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    [72,76,80.5].forEach(fr=>{
+      const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=fr;
+      o.connect(f); o.start(now); o.stop(now+dur+0.1);
+    });
+    f.connect(g).connect(master);
+  }
+  function toggle(){ on=!on; if(master) master.gain.value=on?0.9:0; return on; }
+  return {ensure, setRain, boom, drone, toggle};
+})();
+addEventListener('pointerdown', ()=>SFX.ensure());
+addEventListener('keydown', ()=>SFX.ensure());
+document.getElementById('sfx').addEventListener('click', e=>{
+  SFX.ensure(); e.currentTarget.textContent = SFX.toggle() ? '🔊' : '🔇';
+});
+
+/* ════════════════════════════════ 字體縮放 ════════════════════════════════ */
+let uiScale = +(localStorage.getItem('chosin_ui')||1);
+function applyUI(){
+  uiScale = clamp(+uiScale.toFixed(2), 0.7, 1.8);
+  document.documentElement.style.setProperty('--ui', uiScale);
+  localStorage.setItem('chosin_ui', uiScale);
+}
+applyUI();
+document.getElementById('fontPlus').addEventListener('click', ()=>{ uiScale+=0.1; applyUI(); });
+document.getElementById('fontMinus').addEventListener('click', ()=>{ uiScale-=0.1; applyUI(); });
+
+/* ════════════════════════════════ 事件 / 字幕 ════════════════════════════════ */
+const EVENTS=[
+ [0,   '1944年9月 — 蒙哥馬利的豪賭','為趕在聖誕節前結束戰爭,蒙哥馬利說服艾森豪:以3.5萬空降兵在荷蘭鋪一條「空降地毯」,第30軍48小時沿單線公路衝100公里,奪取萊茵河上最後一座橋——安恆。'],
+ [0.3, '被忽視的警訊','荷蘭抵抗軍與空照都顯示安恆附近有德軍裝甲縱隊——黨衛軍第9、10裝甲師正在當地整補。情報被斥為過慮。布朗寧留下一句話:「我想,我們可能多走了一座橋。」'],
+ [0.54,'9月17日13:00 — 史上最大空降','1,500餘架運輸機與500架滑翔機自英格蘭南部起飛,三個空降師於白晝同時著陸。荷蘭人湧上街頭歡呼,以為解放只在旦夕。'],
+ [0.65,'孫橋在眼前炸毀','101師逼近孫村威廉明娜運河橋時,德軍按下起爆器——大橋在傘兵眼前騰空而起。時間表第一次崩壞。'],
+ [0.75,'14:35 — 「花園」部隊出擊','霍羅克斯第30軍以徐進彈幕開路衝出喬伊橋。單線公路兩側即沼澤,戰車無法展開,首日僅推進11公里,在瓦爾肯斯瓦德過夜。'],
+ [0.85,'弗羅斯特潛入安恆橋','英1空降師著陸點竟距大橋13公里,無線電全面失靈,主力被黨衛軍第9師擋在森林;只有弗羅斯特中校的第2營約740人沿低路潛入,佔領大橋北端。'],
+ [1.4, '9月18日 — 格雷布納衝橋覆滅','黨衛軍第9師偵察營22輛裝甲車自南端強衝大橋,被第2營反戰車砲與步兵火力殲滅於橋面,殘骸燃燒兩日。'],
+ [1.6, '恩荷芬會師・貝雷橋通車','101師與第30軍在恩荷芬會師,工兵連夜在孫村架通貝雷橋——但已落後時間表33小時。'],
+ [2.3, '9月19日 — 急馳格雷夫','近衛裝甲師清晨疾馳40公里與82師會師,格雷夫橋早被完整奪下。但奈梅亨大橋仍在德軍手中——首日優先防守高地的代價浮現。'],
+ [3.3, '9月20日15:00 — 瓦爾河強渡','82師504團第3營乘26艘帆布突擊舟,於白晝橫渡300米寬的瓦爾河,半數船隻被擊毀仍奪下北岸——倖存者稱之為「小奧馬哈」。19:10 近衛戰車同步衝過大橋,德軍按下起爆器——沒有爆炸。'],
+ [3.65,'戰車停在倫特','奪橋的戰車卻在倫特停了下來:無步兵協同、彈藥油料見底、夜幕已垂。此地距弗羅斯特只剩18公里。'],
+ [4.2, '9月21日 — 安恆橋陷落','死守81小時後,第2營彈盡援絕,重傷的弗羅斯特下令停火。最後的無線電訊息:「彈藥耗盡,天佑吾王。」黨衛軍第10師隨即南下死鎖「島」區。'],
+ [4.7, '波蘭旅空降德里爾','被天候延誤三天的索沙保斯基旅,在德軍高射砲火中傘降德里爾。渡口渡輪已沉,雨夜中僅約200人渡河增援北岸。'],
+ [5.2, '奧斯特貝克「鍋爐」','厄克特殘部約3,600人退守奧斯特貝克環形陣地,司令部設於哈滕斯坦旅館。補給機冒死按原定座標空投——大多落入德軍戰線。'],
+ [5.5, '地獄公路被切斷','德第15集團軍與傘兵部隊自兩翼反覆撲向僅一車寬的走廊。101師稱這條路為「地獄公路」——每斷一次,北上的彈藥就停一次。'],
+ [7.0, '9月24日 — 放棄安恆','走廊在庫弗靈再度被切斷36小時。蒙哥馬利批准撤退:市場花園的終點,改為瓦爾河。'],
+ [8.7, '9月25日夜 — 柏林行動','滂沱大雨中,工兵突擊舟往返下萊茵河,船槳裹布、口令耳語,砲兵彈幕掩護兩翼。一夜撤出2,398人;傷員與軍醫自願留下斷後。'],
+ [9.3, '結局 — 多走了一座橋','英1空降師10,600人北渡,生還約2,400:1,485人陣亡、6,414人被俘。走廊永遠停在瓦爾河;安恆要到1945年4月才解放,荷蘭北部則熬過奪走1.8萬人的「飢餓之冬」。'],
+];
+const MOMENTS=[
+ {html:'💥 孫橋被炸・時間表崩壞',x:3,z:30,from:0.63,to:1.0,cls:''},
+ {html:'✓ 格雷夫橋完整奪取',x:6,z:6.5,from:0.72,to:1.3,cls:'good'},
+ {html:'🌉 第2營佔領橋北端',x:-2,z:-27,from:0.85,to:1.36,cls:'good'},
+ {html:'🔥 格雷布納縱隊被殲於橋面',x:-2,z:-25,from:1.38,to:2.1,cls:''},
+ {html:'🛠 貝雷橋通車(落後33小時)',x:3,z:30,from:1.6,to:2.2,cls:'good'},
+ {html:'🚤 504團白晝強渡「小奧馬哈」',x:0,z:-6.5,from:3.28,to:3.6,cls:'good'},
+ {html:'⛔ 戰車停止於倫特・距橋18km',x:1,z:-9,from:3.65,to:4.15,cls:''},
+ {html:'✕ 安恆橋陷落:「彈藥耗盡,天佑吾王」',x:-2,z:-26,from:4.2,to:4.9,cls:''},
+ {html:'🪂 波蘭旅冒高砲傘降',x:-10,z:-22.8,from:4.68,to:5.1,cls:'good'},
+ {html:'🏨 哈滕斯坦「鍋爐」陣地',x:-9,z:-27.5,from:5.2,to:8.6,cls:''},
+ {html:'📦 空投落入德軍戰線',x:-5.5,z:-29.5,from:5.25,to:5.8,cls:''},
+ {html:'✂ 公路被切斷(費赫爾)',x:5,z:19,from:5.5,to:6.25,cls:''},
+ {html:'✂ 公路再斷(庫弗靈36小時)',x:4,z:24,from:7.0,to:7.85,cls:''},
+ {html:'🌧 柏林行動:雨夜渡河撤退',x:-9,z:-24.8,from:8.7,to:9.25,cls:'good'},
+];
+const momentObjs=MOMENTS.map(m=>{
+  const o=makeLabel(m.html,'mlabel'+(m.cls?' '+m.cls:''));
+  o.position.set(m.x, groundY(m.x,m.z)+2.0, m.z);
+  o.visible=false; scene.add(o); return o;
+});
+{
+  const wrap=document.getElementById('trackWrap');
+  for(const e of EVENTS){
+    const d=document.createElement('div'); d.className='tick';
+    d.style.left=(e[0]/9.8*100)+'%'; d.title=e[1]; wrap.appendChild(d);
+  }
+}
+
+/* ════════════════════════════════ 運鏡 ════════════════════════════════ */
+const SHOTS=[
+ {t:0.56, pos:[ 52,72, 38], tgt:[ 0, 0,  8]},    // 空降大軍:全走廊
+ {t:0.64, pos:[ 11, 7, 37], tgt:[ 3, 1, 30]},    // 孫橋被炸
+ {t:1.4,  pos:[  7, 8,-19], tgt:[-2, 1,-26]},    // 安恆橋死守
+ {t:3.32, pos:[ 11, 8,  1], tgt:[ 1, 0.5,-6]},   // 瓦爾河強渡
+ {t:5.25, pos:[ -2,11,-15], tgt:[-9, 1,-27]},    // 鍋爐
+ {t:8.95, pos:[ -4, 9,-16], tgt:[-9, 0.5,-25]},  // 柏林行動
+];
+const CINEMA_CUTS=[
+ {at:0.05,shot:0},{at:0.62,shot:1},{at:1.32,shot:2},{at:2.32,shot:0},
+ {at:3.26,shot:3},{at:5.05,shot:4},{at:8.62,shot:5},
+];
+let fly=null;
+function flyTo(pos,tgt,dur=2.0){
+  fly={p0:camera.position.clone(), t0:controls.target.clone(),
+       p1:new THREE.Vector3(...pos), t1:new THREE.Vector3(...tgt), u:0, dur};
+}
+document.querySelectorAll('.shotBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const s=SHOTS[+btn.dataset.shot];
+    setT(s.t); flyTo(s.pos,s.tgt,1.6);
+  });
+});
+
+/* ════════════════════════════════ 時間軸控制 ════════════════════════════════ */
+const T_MAX=9.8;
+let simT=0, playing=true, speed=1;
+const SPEEDS=[0.5,1,2,4];
+const EPOCH=Date.UTC(1944,8,17);                  // 1944-09-17 = t0
+const slider=document.getElementById('slider'),
+      dateEl=document.getElementById('date'),
+      playBtn=document.getElementById('play'),
+      speedBtn=document.getElementById('speed'),
+      cinemaCk=document.getElementById('cinema'),
+      capT=document.querySelector('#caption .ct'),
+      capD=document.querySelector('#caption .cd'),
+      flashEl=document.getElementById('flash'),
+      insetEl=document.getElementById('inset'),
+      ip1=document.getElementById('ip1'), ip2=document.getElementById('ip2');
+function setT(v){ simT=clamp(v,0,T_MAX); slider.value=simT; }
+slider.addEventListener('input',()=>{ simT=+slider.value; });
+playBtn.addEventListener('click',()=>{
+  if(simT>=T_MAX) simT=0;
+  playing=!playing; playBtn.textContent=playing?'⏸ 暫停':'▶ 播放';
+});
+speedBtn.addEventListener('click',()=>{
+  speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; speedBtn.textContent=speed+'×';
+});
+function fmtDate(t){
+  const d=new Date(EPOCH + Math.floor(t)*86400000);
+  const hh=String(Math.floor((t%1)*24)).padStart(2,'0');
+  return `1944年${d.getUTCMonth()+1}月${d.getUTCDate()}日 ${hh}:00`;
+}
+let curEvent=-1;
+function updateCaption(t){
+  let idx=-1;
+  for(let i=0;i<EVENTS.length;i++) if(EVENTS[i][0]<=t) idx=i;
+  if(idx!==curEvent){
+    curEvent=idx;
+    if(idx>=0){ capT.textContent=EVENTS[idx][1]; capD.textContent=EVENTS[idx][2]; }
+  }
+}
+
+/* ════════════════════════════════ 主更新 ════════════════════════════════ */
+const skyNight=new THREE.Color(0x0a1226), skyDay=new THREE.Color(0xaec8e2),
+      skyGrey=new THREE.Color(0x6e7c8a), skyCur=new THREE.Color();
+let audioPrevT=-1;
+function update(t,dt){
+  /* 晝夜 + 9/21 起陰雨 */
+  const f=((t%1)+1)%1;
+  const sunI=Math.max(0, Math.sin((f-0.25)*Math.PI/0.5));
+  const rainK=clamp(smoothstep(4.4,5.0,t)*0.7+smoothstep(8.5,8.9,t)*0.3, 0, 1);
+  sun.intensity=(0.18+1.05*sunI)*(1-0.45*rainK);
+  hemi.intensity=0.32+0.55*sunI;
+  moonAmb.intensity=0.42-0.22*sunI;
+  skyCur.copy(skyNight).lerp(skyDay, sunI).lerp(skyGrey, rainK*0.45*sunI);
+  scene.background=skyCur; scene.fog.color.copy(skyCur);
+  scene.fog.far=290-110*rainK;
+  const night = sunI<0.25;
+  rainMat.opacity=0.55*rainK;
+  SFX.setRain(rainK);
+
+  /* 部隊 */
+  for(const o of unitObjs){
+    const u=o.u;
+    let vis = t>=u.kf[0][0]-0.01;
+    if(u.embark!==undefined && t>u.embark+0.1) vis=false;
+    o.g.visible=vis;
+    if(!vis) continue;
+    const [x,z]=kfPos(u.kf,t);
+    o.g.position.set(x, groundY(x,z)+0.1, z);
+    const [px,pz]=kfPos(u.kf,t-0.02);
+    const vx=x-px, vz=z-pz;
+    if(vx*vx+vz*vz>1e-7 && !o.dead){
+      o.cone.visible=true;
+      const ang=Math.atan2(vx,vz);
+      o.cone.position.set(Math.sin(ang)*1.7,0.42,Math.cos(ang)*1.7);
+      o.cone.rotation.set(Math.PI/2,0,0); o.cone.rotateOnWorldAxis(new THREE.Vector3(0,1,0),ang);
+    } else o.cone.visible=false;
+    let inCombat=false;
+    for(const zn of ZONES)
+      if(t>=zn.from&&t<=zn.to&&Math.hypot(x-zn.x,z-zn.z)<zn.r+2.5){ inCombat=true; break; }
+    o.ring.visible=inCombat;
+    if(inCombat){ const s=1+0.35*Math.sin(performance.now()*0.006); o.ring.scale.set(s,s,1); }
+    if(u.dieAt!==undefined && t>=u.dieAt && !o.dead){
+      o.dead=true; o.bodyMat.color.set(0x4a4a4f); o.bodyMat.emissive.set(0x1a1a1c);
+      o.div.classList.add('dead'); o.div.querySelector('.sub').textContent=u.deadSub;
+    } else if(u.dieAt!==undefined && t<u.dieAt && o.dead){
+      o.dead=false; o.bodyMat.color.set(0x3f8fdd); o.bodyMat.emissive.set(0x1c5fae);
+      o.div.classList.remove('dead'); o.div.querySelector('.sub').textContent=u.sub;
+    }
+    if(u.embark!==undefined){
+      const k=1-clamp((t-(u.embark-0.15))/0.25,0,1);
+      o.bodyMat.opacity=k; o.coneMat.opacity=k; o.div.style.opacity=k;
+    }
+  }
+
+  /* 30軍推進軌跡 */
+  { let nn=0; const ts=trailData.times;
+    while(nn<ts.length && ts[nn]<=t) nn++;
+    trail.geometry.setDrawRange(0, nn>1?nn:0); }
+
+  /* 橋梁狀態 */
+  for(const b of BRIDGES){
+    const blue = b.cap!==null && t>=b.cap;
+    if(b.bailey){
+      const blown = t>=b.blownAt;
+      b.mesh.visible = !blown;
+      b.stubA.visible=b.stubB.visible = blown && t<1.6;
+      b.baileyMesh.visible = t>=1.6;
+      b.mesh.material.color.set(blue?0x4f86c8:0xb05548);
+    } else {
+      b.mesh.material.color.set(blue?0x4f86c8:0xb05548);
+    }
+  }
+
+  /* 德軍箭頭 */
+  for(const A of ARROWS){
+    const op=smoothstep(A.from-0.1,A.from+0.15,t)*(1-smoothstep(A.to-0.15,A.to+0.1,t));
+    A.a.mat.opacity=op*0.8; A.a.grp.visible=op>0.02;
+  }
+  /* 公路切斷閃爍 */
+  CUTS.forEach((cu,i)=>{
+    const on=t>=cu.from&&t<=cu.to;
+    cutLines[i].material.opacity=on?(0.5+0.5*Math.sin(performance.now()*0.012)):0;
+  });
+  /* 鍋爐收縮 */
+  {
+    const on=t>=4.5&&t<=9.05;
+    cauldronMat.opacity=on?(night?0.45+0.3*Math.sin(performance.now()*0.005):0.7):0;
+    const s=lerp(1,0.45,smoothstep(4.5,8.5,t));
+    cauldron.scale.set(s,1,s);
+  }
+
+  /* 運輸機流 */
+  let liftOn=false, liftU=0, liftIdx=0;
+  LIFTS.forEach((L,li)=>{
+    if(t>=L.t0&&t<=L.t1){ liftOn=true; liftU=(t-L.t0)/(L.t1-L.t0); liftIdx=li; }
+  });
+  planes.forEach((p,i)=>{
+    if(!liftOn){ p.visible=false; return; }
+    const u=fract(liftU*2.2+i/6);
+    p.visible=true;
+    p.position.lerpVectors(P_FROM,P_TO,u);
+    p.position.y+=1.5*Math.sin(u*Math.PI);
+    p.rotation.y=planeYaw;
+  });
+  /* 傘降 */
+  for(const c of chutes){
+    const ph=(t-c.t0)/0.05;
+    const on=ph>0&&ph<1;
+    c.sp.visible=on;
+    if(on){
+      c.sp.position.set(c.x, lerp(13, groundY(c.x,c.z)+0.5, ph), c.z);
+      c.sp.material.opacity=ph<0.85?0.95:0.95*(1-(ph-0.85)/0.15);
+    }
+  }
+
+  /* 格雷布納衝橋 */
+  {
+    const ph=(t-1.36)/0.06;
+    grabner.visible=ph>0&&ph<1;
+    if(grabner.visible){
+      grabner.position.set(-2, 1.0, lerp(-23.6,-26.2,ph));
+    }
+  }
+
+  /* 瓦爾河突擊舟(白晝強渡,雙程往返) */
+  waalBoats.forEach((b,i)=>{
+    const on=t>=3.3&&t<=3.55;
+    if(!on){ b.visible=false; return; }
+    const u=fract((t-3.3)/0.1+i*0.13);
+    b.visible=true;
+    b.position.set(-1.2+i*0.55, 0.32, lerp(-5.0,-7.4,u));
+  });
+  /* 柏林行動撤退舟(雨夜南渡) */
+  rhineBoats.forEach((b,i)=>{
+    const on=t>=8.85&&t<=9.18;
+    if(!on){ b.visible=false; return; }
+    const u=fract((t-8.85)/0.08+i*0.2);
+    b.visible=true;
+    b.position.set(-9.8+i*0.5, 0.3, lerp(-26.2,-23.9,u));
+  });
+
+  /* 戰區砲火 */
+  if(dt>0){
+    for(const zn of ZONES){
+      if(t<zn.from||t>zn.to) continue;
+      const p=zn.rate*dt*(night?1.5:0.7);
+      if(Math.random()<p)
+        spawnBoom(zn.x+(Math.random()-0.5)*zn.r*2, zn.z+(Math.random()-0.5)*zn.r*2,
+                  1.5+Math.random()*2.0, t, 0.008);
+    }
+  }
+  combatLight.intensity*=Math.pow(0.0008, dt*14+0.001);
+  for(const b of boomPool){
+    const ph=(t-b.t0)/b.dur;
+    if(ph<0||ph>1){ b.sp.visible=false; continue; }
+    b.sp.visible=true;
+    const s=b.size*(0.4+2.4*ph); b.sp.scale.set(s,s,1);
+    b.sp.material.opacity=(1-ph)*0.95;
+  }
+
+  /* 持續火場 */
+  FIRES.forEach((fi,i)=>{
+    const on=t>=fi.from&&t<=fi.to;
+    const fr=fireSp[i], sm=fireSm[i];
+    fr.visible=sm.visible=on;
+    if(!on) return;
+    const gy=groundY(fi.x,fi.z);
+    const fl=1+0.18*Math.sin(performance.now()*0.025+i*3);
+    fr.position.set(fi.x, gy+1.1, fi.z);
+    fr.scale.set(fi.s*fl, fi.s*0.8*fl, 1);
+    fr.material.opacity=0.8;
+    const sph=fract(t*8+i*0.37);
+    sm.position.set(fi.x, gy+1.6+5*sph, fi.z);
+    const ss=fi.s*(0.7+1.3*sph); sm.scale.set(ss,ss,1);
+    sm.material.opacity=0.4*(1-sph);
+  });
+
+  /* 孫橋起爆:定時火球+白閃(純時間函數,拖時間軸也看得到) */
+  { const ph=(t-0.648)/0.05;
+    flashEl.style.opacity=(ph>0&&ph<1)?0.5*(1-ph):0;
+    if(ph>0&&ph<1){
+      sonBlast.visible=true;
+      sonBlast.position.set(3, 1.5+3*ph, 30);
+      const s=9*(0.3+2.2*ph); sonBlast.scale.set(s,s,1);
+      sonBlast.material.opacity=1-ph;
+    } else sonBlast.visible=false; }
+
+  /* 空降航線小地圖 */
+  const insetOn = LIFTS.some(L=>t>=L.t0-0.04&&t<=L.t1+0.04);
+  insetEl.style.display = insetOn ? 'block' : 'none';
+  if(insetOn){
+    const u=fract(liftU*2.0), iu=1-u;
+    /* 北航線:機場(38,62)→ctrl(130,30)→安恆(200,42) */
+    ip1.setAttribute('cx', iu*iu*38+2*iu*u*130+u*u*200);
+    ip1.setAttribute('cy', iu*iu*62+2*iu*u*30+u*u*42);
+    /* 南航線:機場(34,96)→ctrl(120,118)→恩荷芬(192,80) */
+    ip2.setAttribute('cx', iu*iu*34+2*iu*u*120+u*u*192);
+    ip2.setAttribute('cy', iu*iu*96+2*iu*u*118+u*u*80);
+    ip2.style.display = liftIdx===2 ? 'none' : '';   // 波蘭旅僅北航線
+  }
+
+  /* 時刻標記 */
+  MOMENTS.forEach((m,i)=>{ momentObjs[i].visible = t>=m.from && t<=m.to; });
+
+  /* 降雨 */
+  if(rainK>0.02){
+    const pa=rainGeo.attributes.position, ct=controls.target;
+    for(let i=0;i<RAIN_N;i++){
+      let y=pa.array[i*3+1]-rainVel[i]*dt*140;
+      if(y<0){ y=36+Math.random()*5;
+        pa.array[i*3]=ct.x+(Math.random()-0.5)*140;
+        pa.array[i*3+2]=ct.z+(Math.random()-0.5)*140; }
+      pa.array[i*3+1]=y;
+    }
+    pa.needsUpdate=true;
+  }
+
+  /* 定時音效 */
+  {
+    const cr=(tt)=> audioPrevT>=0 && t-audioPrevT>0 && t-audioPrevT<0.04 && audioPrevT<tt && t>=tt;
+    if(cr(0.47)||cr(0.55)||cr(1.51)||cr(1.58)||cr(4.66)) SFX.drone();   // 機群
+    if(cr(0.65)) SFX.boom(26, 40);                                      // 孫橋起爆
+    if(cr(1.37)||cr(1.40)) SFX.boom(18, 35);                            // 格雷布納
+    if(cr(3.3)) SFX.boom(16, 35);                                       // 渡河彈幕
+    if(cr(3.56)) SFX.boom(14, 35);                                      // 奈梅亨橋未爆(德軍按鈕)→近衛砲聲
+    audioPrevT=t;
+  }
+
+  updateCaption(t);
+  dateEl.textContent=fmtDate(Math.min(t,9.79));
+}
+
+/* ════════════════════════════════ 主迴圈 ════════════════════════════════ */
+let lastReal=performance.now(), lastSimT=0;
+flyTo(SHOTS[0].pos, SHOTS[0].tgt, 3.5);
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  const rdt=Math.min(0.05,(now-lastReal)/1000); lastReal=now;
+  let dt=0;
+  if(playing){
+    dt=rdt*speed/14;                                 // 1 天 = 14 秒(1×),全程約137秒
+    simT=clamp(simT+dt,0,T_MAX);
+    slider.value=simT;
+    if(simT>=T_MAX){ playing=false; playBtn.textContent='↻ 重播'; }
+    if(cinemaCk.checked)
+      for(const c of CINEMA_CUTS)
+        if(lastSimT<c.at && simT>=c.at) flyTo(SHOTS[c.shot].pos, SHOTS[c.shot].tgt, 2.4);
+  }
+  lastSimT=simT;
+  if(fly){
+    fly.u=Math.min(1, fly.u+rdt/fly.dur);
+    const e=fly.u*fly.u*(3-2*fly.u);
+    camera.position.lerpVectors(fly.p0,fly.p1,e);
+    controls.target.lerpVectors(fly.t0,fly.t1,e);
+    if(fly.u>=1) fly=null;
+  }
+  update(simT, dt);
+  controls.update();
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  labelRenderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fable5 著名戰史 3D 詳解系列</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { min-height:100vh; background:#0a0f16 radial-gradient(ellipse at 50% -10%, #1a2c44 0%, #0a0f16 60%);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:#e8edf4;
+    display:flex; flex-direction:column; align-items:center; padding:7vh 20px 40px; }
+  .badge { background:#a31621; color:#fff; font-size:12px; padding:3px 14px; border-radius:2px;
+    letter-spacing:3px; margin-bottom:14px; }
+  h1 { font-size:clamp(26px,4.5vw,40px); letter-spacing:6px; font-weight:700;
+    text-shadow:0 2px 12px #000; text-align:center; }
+  .sub { color:#9fb4c8; font-size:14px; letter-spacing:3px; margin:10px 0 6px; text-align:center; }
+  .desc { color:#7d8fa2; font-size:13px; max-width:640px; text-align:center; line-height:1.7;
+    margin-bottom:38px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr));
+    gap:18px; width:min(1080px, 94vw); }
+  a.card { display:block; text-decoration:none; color:inherit; position:relative;
+    background:rgba(14,22,36,.85); border:1px solid rgba(120,160,200,.25); border-radius:10px;
+    padding:22px 22px 18px; transition:transform .18s, border-color .18s, box-shadow .18s; }
+  a.card:hover { transform:translateY(-4px); border-color:rgba(255,217,138,.6);
+    box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  .ep { color:#ffd98a; font-size:12px; letter-spacing:3px; margin-bottom:8px; }
+  .card h2 { font-size:20px; letter-spacing:1px; margin-bottom:4px; }
+  .card .en { color:#7d8fa2; font-size:10.5px; letter-spacing:1px; margin-bottom:10px; }
+  .card p { color:#c2cedb; font-size:13px; line-height:1.7; margin-bottom:12px; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .tag { font-size:10.5px; color:#9fc4e8; background:rgba(60,100,150,.25);
+    border:1px solid rgba(120,160,200,.3); padding:1px 8px; border-radius:9px; }
+  .go { position:absolute; right:18px; bottom:14px; color:#ffd98a; font-size:13px; }
+  .card.soon { opacity:.55; pointer-events:none; }
+  .card.soon .go { color:#7d8fa2; }
+  .howto { margin-top:36px; width:min(1080px,94vw); background:rgba(14,22,36,.6);
+    border:1px solid rgba(120,160,200,.18); border-radius:10px; padding:16px 22px;
+    color:#aebfd1; font-size:12.5px; line-height:1.9; }
+  .howto b { color:#dce8f4; }
+  footer { margin-top:26px; color:#5d6e80; font-size:11.5px; text-align:center; line-height:1.8; }
+  footer a { color:#7d9fc0; }
+</style>
+</head>
+<body>
+  <div class="badge">歷 史 特 別 企 劃</div>
+  <h1>著名戰史 3D 詳解系列</h1>
+  <div class="sub">FABLE5 — INTERACTIVE 3D BATTLE HISTORY THEATER</div>
+  <div class="desc">
+    以電視歷史節目的運鏡,重現經典會戰的全局視角:3D 地形、敵我態勢、時間軸推演、
+    事件字幕、晝夜與天候、砲火與音效——滑鼠自由旋轉縮放,親臨每一個決定性時刻。
+  </div>
+
+  <div class="grid">
+    <a class="card" href="chosin_1950/">
+      <div class="ep">第 一 集 ・ 韓戰 1950</div>
+      <h2>長津湖戰役與興南大撤退</h2>
+      <div class="en">CHOSIN RESERVOIR &amp; HUNGNAM EVACUATION</div>
+      <p>零下40度的蓋馬高原,陸戰一師被十二萬大軍分割包圍——「我們不是撤退,是換個方向進攻。」水門橋三炸三修,興南港十萬軍民蹈海南渡。</p>
+      <div class="tags"><span class="tag">❄ 嚴寒突圍</span><span class="tag">🌉 水門橋</span><span class="tag">⚓ 海上撤退</span><span class="tag">💥 港口爆破</span></div>
+      <div class="go">▶ 進入戰場</div>
+    </a>
+
+    <a class="card" href="chipyong_1951/">
+      <div class="ep">第 二 集 ・ 韓戰 1951</div>
+      <h2>砥平里戰役 — 死守與轉捩點</h2>
+      <div class="en">BATTLE OF CHIPYONG-NI</div>
+      <p>直徑1.6公里的環形陣地,5,600人對2.5萬人的三夜圍攻。法國營搖響警報器白刃反衝鋒,C-119自日本蘆屋基地跨海空投,戰車縱隊浴血馳援。</p>
+      <div class="tags"><span class="tag">⭕ 環形防禦</span><span class="tag">🇫🇷 法國營</span><span class="tag">🪂 空投補給</span><span class="tag">📯 夜間衝鋒</span></div>
+      <div class="go">▶ 進入戰場</div>
+    </a>
+
+    <a class="card" href="market_garden_1944/">
+      <div class="ep">第 三 集 ・ 二戰西線 1944</div>
+      <h2>市場花園作戰 — 多走了一座橋</h2>
+      <div class="en">OPERATION MARKET GARDEN</div>
+      <p>史上最大空降:3.5萬傘兵沿100公里「地獄公路」鋪開五座橋。孫橋眼前炸毀、弗羅斯特死守安恆81小時、瓦爾河白晝強渡——戰車卻停在最後18公里。</p>
+      <div class="tags"><span class="tag">🪂 萬人空降</span><span class="tag">🌉 五座橋</span><span class="tag">🚤 瓦爾河強渡</span><span class="tag">🌧 雨夜撤退</span></div>
+      <div class="go">▶ 進入戰場</div>
+    </a>
+
+    <a class="card soon" href="#">
+      <div class="ep">第 四 集 ・ 對日抗戰 1938</div>
+      <h2>台兒莊大捷</h2>
+      <div class="en">BATTLE OF TAIERZHUANG</div>
+      <p>滕縣王銘章殉城、臨沂張自忠盡棄前嫌、運河畔逐屋血戰、大刀敢死隊夜襲奪城角、湯恩伯鐵壁合圍——抗戰首次正面戰場大捷。</p>
+      <div class="tags"><span class="tag">🗡 大刀敢死隊</span><span class="tag">🏯 運河巷戰</span><span class="tag">🔒 鐵壁合圍</span></div>
+      <div class="go">⏳ 製作中</div>
+    </a>
+  </div>
+
+  <div class="howto">
+    <b>操作說明</b> — 滑鼠拖曳旋轉視角・滾輪縮放・右鍵平移|底部<b>時間軸</b>可拖動、調速(0.5–4×)|
+    右側<b>特寫鏡頭</b>一鍵飛往關鍵時刻|「運鏡」開啟自動電影鏡頭|🔊 音效為 Web Audio 即時合成,
+    首次點擊頁面後啟用|A−/A＋ 調整字體大小|桌面瀏覽器(Chrome / Safari / Edge)體驗最佳。
+  </div>
+
+  <footer>
+    兵力與傷亡數字採通行估計值,各方史料有差異,各集面板內已註明範圍。<br>
+    CMini × Claude (Fable 5) ・ <a href="https://github.com/TLAN1012/Fable5">GitHub: TLAN1012/Fable5</a>
+    ・ 🤖 Generated with Claude Code
+  </footer>
+</body>
+</html>
