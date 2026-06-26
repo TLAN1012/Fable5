@@ -33,8 +33,11 @@ header .src a{color:#f4dd8c;text-decoration:underline}
 .locbtn:hover{background:#fbf4df}
 .locbtn.on{background:var(--gold);color:#3a2e08;border-color:var(--gold)}
 .locbtn.loading{opacity:.6;pointer-events:none}
-.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff;margin-bottom:10px}
+.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff;margin-bottom:8px}
 .search:focus{outline:2px solid var(--accent2)}
+.selrow{display:flex;gap:8px;margin-bottom:2px}
+.sel{flex:1;min-width:0;padding:11px 12px;border:1.5px solid var(--green2);border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;color:var(--ink);font-weight:600}
+.sel:focus{outline:2px solid var(--gold)}
 .row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px;align-items:center}
 .row .lbl{font-size:.8rem;color:var(--muted);font-weight:700;margin-right:2px}
 .chip{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 13px;font-size:.85rem;color:#5a4d3f;transition:.15s;user-select:none;white-space:nowrap}
@@ -100,12 +103,13 @@ footer a{color:var(--accent)}
 <div class="controls">
 <div class="toolbar">
   <div class="seg"><button id="vList" class="segbtn on" type="button">📋 清單</button><button id="vMap" class="segbtn" type="button">🗺️ 地圖</button></div>
-  <button id="locBtn" class="locbtn" type="button">📍 找我附近・最近排序</button>
+  <button id="locBtn" class="locbtn" type="button">📍 找附近</button>
 </div>
 <input class="search" id="search" type="text" placeholder="🔍 搜尋店名 / 地址 / 介紹關鍵字…">
-<div class="row" id="cityRow"><span class="lbl">城市</span></div>
-<div class="row" id="lvRow"><span class="lbl">碗數</span></div>
-<div class="row" id="catRow"><span class="lbl">類別</span></div>
+<div class="selrow">
+  <select id="citySel" class="sel" aria-label="選擇城市"></select>
+  <select id="catSel" class="sel" aria-label="選擇類別"></select>
+</div>
 </div>
 <div class="count" id="count"></div>
 <div class="grid" id="grid"></div>
@@ -141,13 +145,14 @@ function haversine(a,b,c,d){const R=6371,r=Math.PI/180;const x=(c-a)*r,y=(d-b)*r
 function distOf(s){if(!userLoc||s.lat==null)return null;return haversine(userLoc.lat,userLoc.lng,s.lat,s.lng);}
 function distText(km){if(km==null)return"";return km<1?Math.round(km*1000)+" m":km.toFixed(km<10?1:0)+" km";}
 
-function buildChips(){
-  const cityRow=document.getElementById("cityRow");
-  CITIES.forEach(c=>{if(!DATA.some(d=>d.city==c))return;const n=DATA.filter(d=>d.city==c).length;const e=document.createElement("div");e.className="chip city";e.textContent=c+" "+n;e.onclick=()=>{fCity=fCity==c?"":c;render();};e.dataset.city=c;cityRow.appendChild(e);});
-  const lvRow=document.getElementById("lvRow");
-  ["2碗","1碗"].forEach(l=>{if(!DATA.some(d=>d.level==l))return;const n=DATA.filter(d=>d.level==l).length;const e=document.createElement("div");e.className="chip lv";e.textContent=lvText(l)+" "+n;e.onclick=()=>{fLv=fLv==l?"":l;render();};e.dataset.lv=l;lvRow.appendChild(e);});
-  const catRow=document.getElementById("catRow");
-  CATS.forEach(c=>{const n=DATA.filter(d=>d.category==c).length;if(!n)return;const e=document.createElement("div");e.className="chip cat";e.textContent=(EMOJI[c]||"")+" "+c+" "+n;e.onclick=()=>{fCat=fCat==c?"":c;render();};e.dataset.cat=c;catRow.appendChild(e);});
+function fillSel(sel,opts,allLabel){
+  sel.innerHTML='<option value="">'+allLabel+'</option>'+opts.map(o=>`<option value="${o.v}">${o.t}</option>`).join("");
+}
+function buildSelects(){
+  const cityOpts=CITIES.filter(c=>DATA.some(d=>d.city==c)).map(c=>({v:c,t:`${c}（${DATA.filter(d=>d.city==c).length}）`}));
+  fillSel(document.getElementById("citySel"),cityOpts,"🏙️ 全部城市（"+DATA.length+"）");
+  const catOpts=CATS.filter(c=>DATA.some(d=>d.category==c)).map(c=>({v:c,t:`${EMOJI[c]||""} ${c}（${DATA.filter(d=>d.category==c).length}）`}));
+  fillSel(document.getElementById("catSel"),catOpts,"🍽️ 全部類別");
 }
 function buildStats(){
   const s=document.getElementById("stats");
@@ -156,14 +161,9 @@ function buildStats(){
     `<div class="stat">兩碗 <span>${DATA.filter(d=>d.level=="2碗").length}</span></div>`+
     `<div class="stat">一碗 <span>${DATA.filter(d=>d.level=="1碗").length}</span></div>`;
 }
-function syncChips(){
-  document.querySelectorAll(".chip.city").forEach(e=>e.classList.toggle("on",e.dataset.city==fCity));
-  document.querySelectorAll(".chip.lv").forEach(e=>e.classList.toggle("on",e.dataset.lv==fLv));
-  document.querySelectorAll(".chip.cat").forEach(e=>e.classList.toggle("on",e.dataset.cat==fCat));
-}
 function filtered(){
   const q=fQ.trim().toLowerCase();
-  let list=DATA.filter(d=>(!fCity||d.city==fCity)&&(!fLv||d.level==fLv)&&(!fCat||d.category==fCat)&&(!q||(d.name+d.address+d.intro+d.district).toLowerCase().includes(q)));
+  let list=DATA.filter(d=>(!fCity||d.city==fCity)&&(!fCat||d.category==fCat)&&(!q||(d.name+d.address+d.intro+d.district).toLowerCase().includes(q)));
   if(sortDist&&userLoc){list=list.slice().sort((a,b)=>{const da=distOf(a),db=distOf(b);if(da==null)return 1;if(db==null)return -1;return da-db;});}
   return list;
 }
@@ -182,9 +182,8 @@ function cardHTML(s){
       Google 地圖導航</a>${note}</div>`;
 }
 function render(){
-  syncChips();
   const list=filtered();
-  document.getElementById("count").textContent="顯示 "+list.length+" 家店"+((fCity||fLv||fCat||fQ||sortDist)?"（已篩選"+(sortDist?"・依距離排序":"")+"）":"");
+  document.getElementById("count").textContent="顯示 "+list.length+" 家店"+((fCity||fCat||fQ||sortDist)?"（已篩選"+(sortDist?"・依距離排序":"")+"）":"");
   document.getElementById("empty").style.display=(list.length||view=="map")?"none":"block";
   document.getElementById("grid").innerHTML=list.map(cardHTML).join("");
   if(view=="map")renderMap(list);
@@ -233,23 +232,25 @@ function locate(){
   btn.classList.add("loading");btn.textContent="📡 定位中…";
   navigator.geolocation.getCurrentPosition(pos=>{
     userLoc={lat:pos.coords.latitude,lng:pos.coords.longitude};sortDist=true;
-    btn.classList.remove("loading");btn.classList.add("on");btn.textContent="📍 已定位・最近優先（再按取消）";
+    btn.classList.remove("loading");btn.classList.add("on");btn.textContent="📍 最近優先 ✓（取消）";
     if(mapInited)placeUser();
     render();
   },err=>{
-    btn.classList.remove("loading");btn.textContent="📍 找我附近・最近排序";
+    btn.classList.remove("loading");btn.textContent="📍 找附近";
     alert("無法取得您的位置："+(err.code==1?"您拒絕了定位權限。請在瀏覽器允許定位後再試。":"定位失敗，請稍後再試。"));
   },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
 document.getElementById("search").addEventListener("input",e=>{fQ=e.target.value;render();});
+document.getElementById("citySel").addEventListener("change",e=>{fCity=e.target.value;render();});
+document.getElementById("catSel").addEventListener("change",e=>{fCat=e.target.value;render();});
 document.getElementById("vList").onclick=()=>setView("list");
 document.getElementById("vMap").onclick=()=>setView("map");
 document.getElementById("locBtn").onclick=function(){
-  if(this.classList.contains("on")){this.classList.remove("on");sortDist=false;this.textContent="📍 找我附近・最近排序";render();return;}
-  if(userLoc){sortDist=true;this.classList.add("on");this.textContent="📍 已定位・最近優先（再按取消）";render();return;}
+  if(this.classList.contains("on")){this.classList.remove("on");sortDist=false;this.textContent="📍 找附近";render();return;}
+  if(userLoc){sortDist=true;this.classList.add("on");this.textContent="📍 最近優先 ✓（取消）";render();return;}
   locate();
 };
-buildStats();buildChips();render();
+buildStats();buildSelects();render();
 </script>
 </body>
 </html>
