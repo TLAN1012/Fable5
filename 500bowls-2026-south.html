@@ -11,7 +11,9 @@
 :root{--bg:#f3f0e4;--card:#fff;--ink:#1d2922;--muted:#6f7d72;--line:#e1dbca;--accent:#15522f;--accent2:#b8901f;--gold:#c9a227;--green-dk:#0d3b20;--green2:#1e6b3e;--gold2:#e6c560;--gold-dk:#8a6b14;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%}
-header{background:linear-gradient(150deg,#0d3b20,#15522f 52%,#1e6b3e);color:#fff;padding:30px 20px 26px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);border-bottom:4px solid var(--gold)}
+header{position:relative;background:linear-gradient(150deg,#0d3b20,#15522f 52%,#1e6b3e);color:#fff;padding:30px 20px 26px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);border-bottom:4px solid var(--gold)}
+.hmark{position:absolute;right:24px;top:50%;transform:translateY(-50%);height:122px;width:auto;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+@media(max-width:760px){header{padding:22px 96px 20px 16px}.hmark{height:74px;right:10px}}
 header h1{font-size:1.9rem;letter-spacing:1px;margin-bottom:8px;color:#f4dd8c;text-shadow:0 1px 6px rgba(0,0,0,.35)}
 header .sub{font-size:1rem;opacity:.95}
 header .src{font-size:.8rem;opacity:.85;margin-top:10px}
@@ -89,10 +91,10 @@ footer a{color:var(--accent)}
 </head>
 <body>
 <header>
+<img class="hmark" src="assets/kcma-80.png" alt="社團法人高雄縣醫師公會 80 週年紀念徽章" width="240" height="249">
 <h1>🍜 2026 五百碗 · 南台灣美食地圖</h1>
 <div class="sub">台南 · 高雄 · 屏東 ｜ 依小吃類別與碗數查找・地圖模式・GPS 找附近</div>
 <div class="src">資料來源：<a href="https://500times.udn.com/wtimes/story/123497/9547367" target="_blank" rel="noopener">udn 500 Times・2026 五百碗名單</a></div>
-<div class="anniv">🏅 社團法人高雄縣醫師公會 <span class="yr">80 週年</span> SINCE 1946</div>
 </header>
 <div class="wrap">
 <div class="intro">
