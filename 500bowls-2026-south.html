@@ -8,14 +8,16 @@
 <link rel="stylesheet" href="vendor/leaflet/MarkerCluster.css"/>
 <link rel="stylesheet" href="vendor/leaflet/MarkerCluster.Default.css"/>
 <style>
-:root{--bg:#fdf6ec;--card:#fff;--ink:#2b2118;--muted:#8a7a68;--line:#ece0d0;--accent:#c0392b;--accent2:#e67e22;--gold:#b8860b;}
+:root{--bg:#f3f0e4;--card:#fff;--ink:#1d2922;--muted:#6f7d72;--line:#e1dbca;--accent:#15522f;--accent2:#b8901f;--gold:#c9a227;--green-dk:#0d3b20;--green2:#1e6b3e;--gold2:#e6c560;--gold-dk:#8a6b14;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%}
-header{background:linear-gradient(135deg,#c0392b,#e67e22);color:#fff;padding:34px 20px 30px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-header h1{font-size:1.9rem;letter-spacing:1px;margin-bottom:8px}
+header{background:linear-gradient(150deg,#0d3b20,#15522f 52%,#1e6b3e);color:#fff;padding:30px 20px 26px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);border-bottom:4px solid var(--gold)}
+header h1{font-size:1.9rem;letter-spacing:1px;margin-bottom:8px;color:#f4dd8c;text-shadow:0 1px 6px rgba(0,0,0,.35)}
 header .sub{font-size:1rem;opacity:.95}
 header .src{font-size:.8rem;opacity:.85;margin-top:10px}
-header .src a{color:#fff;text-decoration:underline}
+header .src a{color:#f4dd8c;text-decoration:underline}
+.anniv{display:inline-flex;align-items:center;gap:9px;margin-top:14px;background:rgba(0,0,0,.22);border:1.5px solid var(--gold);color:#f4dd8c;font-weight:800;font-size:.9rem;letter-spacing:1.5px;padding:7px 18px;border-radius:30px;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.anniv .yr{background:var(--gold);color:#0d3b20;font-weight:900;border-radius:20px;padding:1px 9px;font-size:.82rem}
 .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
 .intro{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:18px 0;font-size:.95rem;color:#52463a;box-shadow:0 2px 8px rgba(0,0,0,.04)}
 .intro b{color:var(--accent)}
@@ -27,9 +29,9 @@ header .src a{color:#fff;text-decoration:underline}
 .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .segbtn{border:0;background:#fff;color:#5a4d3f;font-size:.92rem;font-weight:700;padding:9px 16px;cursor:pointer;font-family:inherit}
 .segbtn.on{background:var(--accent);color:#fff}
-.locbtn{border:1px solid var(--accent2);background:#fff;color:#c0451d;font-weight:700;font-size:.9rem;padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit;transition:.15s}
-.locbtn:hover{background:#fff3e8}
-.locbtn.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.locbtn{border:1px solid var(--gold);background:#fff;color:var(--gold-dk);font-weight:700;font-size:.9rem;padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit;transition:.15s}
+.locbtn:hover{background:#fbf4df}
+.locbtn.on{background:var(--gold);color:#3a2e08;border-color:var(--gold)}
 .locbtn.loading{opacity:.6;pointer-events:none}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff;margin-bottom:10px}
 .search:focus{outline:2px solid var(--accent2)}
@@ -39,7 +41,7 @@ header .src a{color:#fff;text-decoration:underline}
 .chip:hover{border-color:var(--accent2)}
 .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .chip.lv.on{background:var(--gold);border-color:var(--gold)}
-.chip.city.on{background:#2c3e50;border-color:#2c3e50}
+.chip.city.on{background:var(--green-dk);border-color:var(--green-dk)}
 .count{font-size:.84rem;color:var(--muted);margin:6px 2px 12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;box-shadow:0 2px 8px rgba(0,0,0,.05);display:flex;flex-direction:column;transition:.15s}
@@ -48,18 +50,18 @@ header .src a{color:#fff;text-decoration:underline}
 .cname{font-size:1.12rem;font-weight:800;color:var(--ink);line-height:1.35}
 .badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0}
 .lv{font-size:.78rem;font-weight:800;padding:3px 9px;border-radius:8px;color:#fff;white-space:nowrap}
-.lv3{background:#c0392b}.lv2{background:#d68910}.lv1{background:#7d6608}
-.dist{font-size:.74rem;font-weight:800;color:#1a73e8;background:#e8f0fe;border:1px solid #c9ddfb;padding:2px 8px;border-radius:8px;white-space:nowrap}
+.lv3{background:#15522f}.lv2{background:#b8901f}.lv1{background:#2e6b43}
+.dist{font-size:.74rem;font-weight:800;color:#15522f;background:#e8f1eb;border:1px solid #cde0d3;padding:2px 8px;border-radius:8px;white-space:nowrap}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 9px}
-.tag{font-size:.76rem;padding:2px 9px;border-radius:14px;background:#f3ebde;color:#7a644a;border:1px solid #ece0d0}
-.tag.cat{background:#fbeee6;color:#b9531f;border-color:#f3d9c6}
-.tag.city{background:#eaf0f4;color:#2c3e50;border-color:#d6e0e8}
+.tag{font-size:.76rem;padding:2px 9px;border-radius:14px;background:#f1ece0;color:#6f6450;border:1px solid #e6dfce}
+.tag.cat{background:#fbf3df;color:#8a6b14;border-color:#ecdcae}
+.tag.city{background:#e8f1eb;color:#15522f;border-color:#cde0d3}
 .intro2{font-size:.88rem;color:#52463a;flex:1;margin-bottom:12px}
 .addr{font-size:.8rem;color:var(--muted);margin-bottom:10px;display:flex;gap:5px;align-items:flex-start}
-.map-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#1a73e8;color:#fff;text-decoration:none;padding:9px 12px;border-radius:10px;font-size:.9rem;font-weight:700;transition:.15s}
-.map-link:hover{background:#1558b0}
+.map-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#15522f;color:#fff;text-decoration:none;padding:9px 12px;border-radius:10px;font-size:.9rem;font-weight:700;transition:.15s}
+.map-link:hover{background:#0d3b20}
 .map-link svg{width:16px;height:16px;fill:#fff}
-.note{font-size:.72rem;color:#b07d2b;margin-top:6px}
+.note{font-size:.72rem;color:#8a6b14;margin-top:6px}
 .empty{text-align:center;color:var(--muted);padding:40px;font-size:1rem}
 #mapwrap{display:none}
 #map{height:72vh;min-height:460px;border-radius:14px;border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.06)}
@@ -68,10 +70,14 @@ header .src a{color:#fff;text-decoration:underline}
 .pop-meta{font-size:.78rem;color:var(--muted);margin-bottom:6px}
 .pop-lv{display:inline-block;font-size:.72rem;font-weight:800;color:#fff;padding:1px 7px;border-radius:6px;margin-right:5px}
 .pop-intro{font-size:.82rem;color:#52463a;margin-bottom:9px;line-height:1.5}
-.pop-btn{display:inline-flex;align-items:center;gap:6px;background:#1a73e8;color:#fff !important;text-decoration:none;padding:7px 11px;border-radius:8px;font-size:.84rem;font-weight:700}
+.pop-btn{display:inline-flex;align-items:center;gap:6px;background:#15522f;color:#fff !important;text-decoration:none;padding:7px 11px;border-radius:8px;font-size:.84rem;font-weight:700}
 .mapnote{font-size:.78rem;color:var(--muted);margin:8px 2px 0}
-footer{text-align:center;color:var(--muted);font-size:.8rem;padding:24px 16px 50px;border-top:1px solid var(--line);margin-top:30px}
-footer a{color:#b9531f}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:26px 16px 50px;border-top:3px solid var(--gold);margin-top:30px;background:linear-gradient(180deg,#fbfaf4,#f3f0e4)}
+footer a{color:var(--accent)}
+.kcma{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;color:#15522f;font-weight:800;font-size:.92rem;letter-spacing:.5px}
+.kcma .yr{background:var(--gold);color:#0d3b20;font-weight:900;border-radius:20px;padding:1px 9px;font-size:.82rem}
+.sign{margin-top:12px;font-size:.92rem;color:var(--gold-dk);font-weight:700}
+.sign .nm{font-family:"Brush Script MT","Snell Roundhand",cursive;font-style:italic;font-size:1.35rem;color:#15522f;letter-spacing:.5px;vertical-align:-2px;margin-left:4px}
 @media(max-width:600px){header h1{font-size:1.45rem}.grid{grid-template-columns:1fr}#map{height:66vh}}
 </style>
 </head>
@@ -80,6 +86,7 @@ footer a{color:#b9531f}
 <h1>🍜 2026 五百碗 · 南台灣美食地圖</h1>
 <div class="sub">台南 · 高雄 · 屏東 ｜ 依小吃類別與碗數查找・地圖模式・GPS 找附近</div>
 <div class="src">資料來源：<a href="https://500times.udn.com/wtimes/story/123497/9547367" target="_blank" rel="noopener">udn 500 Times・2026 五百碗名單</a></div>
+<div class="anniv">🏅 社團法人高雄縣醫師公會 <span class="yr">80 週年</span> SINCE 1946</div>
 </header>
 <div class="wrap">
 <div class="intro">
@@ -103,8 +110,11 @@ footer a{color:#b9531f}
 <div id="mapwrap"><div id="map"></div><div class="mapnote" id="mapnote">提示：點地圖上的圓點看店家資訊與導航；左上可放大縮小。數字圓圈代表該區聚集多家店，點擊展開。</div></div>
 </div>
 <footer>
+<div class="kcma">🏅 社團法人高雄縣醫師公會 <span class="yr">80 週年</span> 紀念　1946 – 2026</div><br>
 2026 五百碗 · 台南／高雄／屏東整理 ｜ 共 135 家店家<br>
+本頁主視覺配色取自高雄縣醫師公會 80 週年紀念徽章（祖母綠 × 金）。<br>
 資料整理自網路公開資訊，僅供參考，店家資訊以現場為準。｜ 地圖 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 貢獻者
+<div class="sign">✒ 設計・製作簽名<span class="nm">Claude Opus</span></div>
 </footer>
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="vendor/leaflet/markercluster.js"></script>
@@ -194,7 +204,7 @@ function renderMap(list){
   initMap();cluster.clearLayers();
   const pts=[];
   list.forEach(s=>{if(s.lat==null)return;
-    const color=s.level=="2碗"?"#d68910":"#c0392b";
+    const color=s.level=="2碗"?"#b8901f":"#15522f";
     const m=L.circleMarker([s.lat,s.lng],{radius:8,color:"#fff",weight:2,fillColor:color,fillOpacity:.95});
     m.bindPopup(popHTML(s),{maxWidth:280});cluster.addLayer(m);pts.push([s.lat,s.lng]);});
   if(userLoc){pts.push([userLoc.lat,userLoc.lng]);}
