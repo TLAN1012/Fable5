@@ -52,7 +52,11 @@ header .src a{color:#f4dd8c;text-decoration:underline}
 .locbtn{border:1px solid var(--gold);background:#fff;color:var(--gold-dk);font-weight:700;font-size:.9rem;padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit;transition:.15s}
 .locbtn:hover{background:#fbf4df}
 .locbtn.on{background:var(--gold);color:#3a2e08;border-color:var(--gold)}
+.locbtn.open{border-color:#2e7d4f;color:#1d6b3c}
+.locbtn.open.on{background:#2e7d4f;color:#fff;border-color:#2e7d4f}
 .locbtn.loading{opacity:.6;pointer-events:none}
+.opn{display:inline-block;font-size:.7rem;font-weight:800;color:#0f6b34;background:#dff3e6;border:1px solid #b6e0c4;border-radius:6px;padding:0 6px;margin-left:5px;white-space:nowrap}
+.cls{display:inline-block;font-size:.7rem;font-weight:800;color:#9a6a00;background:#f6ecd6;border:1px solid #e6d6ad;border-radius:6px;padding:0 6px;margin-left:5px;white-space:nowrap}
 .search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff;margin-bottom:8px}
 .search:focus{outline:2px solid var(--accent2)}
 .selrow{display:flex;gap:8px;margin-bottom:2px}
@@ -119,13 +123,14 @@ footer a{color:var(--accent)}
 <div class="wrap">
 <div class="intro">
 <b>關於 500 碗：</b>「500 碗」是聯合報系 udn 500 Times 推出的台灣小吃評鑑，由專家與評審團從全台尋訪、票選出最值得一嚐的庶民美食，依推薦強度分為 <b>三碗</b>（最高榮譽）、<b>兩碗</b>、<b>一碗</b> 三個級別。本頁收錄 2026 年（第四屆）<b>全台 18 縣市共 472 家</b>上榜店家，依小吃類別（鵝肉、牛肉湯、鱔魚、碗粿、肉圓⋯⋯彼此分流）與碗數分類查找；可切換 <b>🗺️ 地圖模式</b>，並按 <b>📍 找我附近</b> 以 GPS 定位、依距離由近到遠排序。每張卡片與地圖標記皆附招牌菜色、營業時間、電話與 Google Maps 一鍵導航。<br>
-<span style="font-size:.82rem;color:#8a7a68">※ 想專看南台灣？另有 <a href="500bowls-2026-south.html" style="color:#b9531f;font-weight:700">🍜 南台灣版（台南／高雄／屏東）</a>。店家資料整理自 udn 500 碗官方電子地圖；地圖座標為路段級定位，實際導航以 Google Maps 按鈕為準。</span>
+<span style="font-size:.82rem;color:#8a7a68">※ 想專看南台灣？另有 <a href="500bowls-2026-south.html" style="color:#b9531f;font-weight:700">🍜 南台灣版（台南／高雄／屏東）</a>。店家資料整理自 udn 500 碗官方電子地圖；地圖座標為路段級定位，實際導航以 Google Maps 按鈕為準。<b>「現在營業中」</b>依營業時間與台灣時間即時判斷，未含公休日，僅供參考。</span>
 </div>
 <div class="stats" id="stats"></div>
 <div class="controls">
 <div class="toolbar">
   <div class="seg"><button id="vList" class="segbtn on" type="button">📋 清單</button><button id="vMap" class="segbtn" type="button">🗺️ 地圖</button></div>
   <button id="locBtn" class="locbtn" type="button">📍 找附近</button>
+  <button id="openBtn" class="locbtn open" type="button">🟢 現在營業中</button>
 </div>
 <input class="search" id="search" type="text" placeholder="🔍 搜尋店名 / 地址 / 介紹關鍵字…">
 <div class="selrow">
@@ -154,7 +159,7 @@ const EMOJI = {"牛肉湯/牛肉麵": "🐂", "羊肉": "🐑", "鵝肉/鴨肉":
 const CITIES = ["基隆","台北","新北","桃園","新竹","苗栗","台中","彰化","南投","雲林","嘉義","台南","高雄","屏東","宜蘭","花蓮","台東","馬祖"];
 const LVMAP = {"3碗":"三碗","2碗":"兩碗","1碗":"一碗"};
 let fCity="", fLv="", fCat="", fQ="";
-let userLoc=null, sortDist=false, view="list";
+let userLoc=null, sortDist=false, view="list", openNow=false;
 let map=null, cluster=null, userMarker=null, mapInited=false;
 
 function mapsUrl(s){
@@ -166,6 +171,9 @@ function lvText(l){return LVMAP[l]||l;}
 function haversine(a,b,c,d){const R=6371,r=Math.PI/180;const x=(c-a)*r,y=(d-b)*r;const u=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(u));}
 function distOf(s){if(!userLoc||s.lat==null)return null;return haversine(userLoc.lat,userLoc.lng,s.lat,s.lng);}
 function distText(km){if(km==null)return"";return km<1?Math.round(km*1000)+" m":km.toFixed(km<10?1:0)+" km";}
+function parseHours(h){if(!h)return null;if(/24\s*小時|24h/i.test(h))return "24";const rx=/(\d{1,2}):(\d{2})\s*[–\-~至到]\s*(\d{1,2}):(\d{2})/g;let m,out=[];while(m=rx.exec(h)){out.push([(+m[1])*60+(+m[2]),(+m[3])*60+(+m[4])]);}return out.length?out:null;}
+function twNowMins(){const n=new Date();const tw=new Date(n.getTime()+n.getTimezoneOffset()*60000+8*3600000);return tw.getHours()*60+tw.getMinutes();}
+function isOpen(s){const r=parseHours(s.hours);if(r==null)return null;if(r==="24")return true;const m=twNowMins();for(const a of r){const st=a[0],en=a[1];if(en===st)return true;if(en>st){if(m>=st&&m<en)return true;}else{if(m>=st||m<en)return true;}}return false;}
 
 function fillSel(sel,opts,allLabel){
   sel.innerHTML='<option value="">'+allLabel+'</option>'+opts.map(o=>`<option value="${o.v}">${o.t}</option>`).join("");
@@ -187,7 +195,7 @@ function buildStats(){
 }
 function filtered(){
   const q=fQ.trim().toLowerCase();
-  let list=DATA.filter(d=>(!fCity||d.city==fCity)&&(!fCat||d.category==fCat)&&(!q||(d.name+d.address+d.intro+d.district).toLowerCase().includes(q)));
+  let list=DATA.filter(d=>(!fCity||d.city==fCity)&&(!fCat||d.category==fCat)&&(!openNow||isOpen(d)===true)&&(!q||(d.name+d.address+d.intro+d.district).toLowerCase().includes(q)));
   if(sortDist&&userLoc){list=list.slice().sort((a,b)=>{const da=distOf(a),db=distOf(b);if(da==null)return 1;if(db==null)return -1;return da-db;});}
   return list;
 }
@@ -201,7 +209,7 @@ function cardHTML(s){
     <div class="tags"><span class="tag cat">${EMOJI[s.category]||""} ${s.category}</span><span class="tag city">📍 ${s.city}${s.district?" "+s.district:""}</span></div>
     <div class="intro2">${s.intro}</div>
     <div class="addr">🏠 <span>${addr}</span></div>
-    ${s.hours?`<div class="addr">🕒 <span>${s.hours}</span></div>`:""}
+    ${s.hours?`<div class="addr">🕒 <span>${s.hours.replace(/\n/g,"、")}${(()=>{const o=isOpen(s);return o===true?'<span class="opn">營業中</span>':o===false?'<span class="cls">休息中</span>':'';})()}</span></div>`:""}
     ${s.phone?`<div class="addr">☎ <span><a class="tel" href="tel:${s.phone.replace(/[^0-9+]/g,"")}">${s.phone}</a></span></div>`:""}
     <a class="map-link" href="${mapsUrl(s)}" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
@@ -209,7 +217,7 @@ function cardHTML(s){
 }
 function render(){
   const list=filtered();
-  document.getElementById("count").textContent="顯示 "+list.length+" 家店"+((fCity||fCat||fQ||sortDist)?"（已篩選"+(sortDist?"・依距離排序":"")+"）":"");
+  document.getElementById("count").textContent="顯示 "+list.length+" 家店"+((fCity||fCat||fQ||sortDist||openNow)?"（已篩選"+(openNow?"・現在營業中":"")+(sortDist?"・依距離排序":"")+"）":"");
   document.getElementById("empty").style.display=(list.length||view=="map")?"none":"block";
   document.getElementById("grid").innerHTML=list.map(cardHTML).join("");
   if(view=="map")renderMap(list);
@@ -219,7 +227,7 @@ function popHTML(s){
   return `<div class="pop-name">${s.name}</div>
     <div class="pop-meta"><span class="pop-lv ${lvClass(s.level)}">${lvText(s.level)}</span>${EMOJI[s.category]||""} ${s.category} · ${s.city}${s.district?" "+s.district:""}${distB}</div>
     <div class="pop-intro">${s.intro}</div>
-    ${s.hours?`<div class="pop-meta">🕒 ${s.hours}</div>`:""}${s.phone?`<div class="pop-meta">☎ ${s.phone}</div>`:""}
+    ${s.hours?`<div class="pop-meta">🕒 ${s.hours.replace(/\n/g,"、")}${(()=>{const o=isOpen(s);return o===true?'<span class="opn">營業中</span>':o===false?'<span class="cls">休息中</span>':'';})()}</div>`:""}${s.phone?`<div class="pop-meta">☎ ${s.phone}</div>`:""}
     <a class="pop-btn" href="${mapsUrl(s)}" target="_blank" rel="noopener">🧭 Google 地圖導航</a>`;
 }
 function initMap(){
@@ -270,6 +278,7 @@ function locate(){
 document.getElementById("search").addEventListener("input",e=>{fQ=e.target.value;render();});
 document.getElementById("citySel").addEventListener("change",e=>{fCity=e.target.value;render();});
 document.getElementById("catSel").addEventListener("change",e=>{fCat=e.target.value;render();});
+document.getElementById("openBtn").addEventListener("click",function(){openNow=!openNow;this.classList.toggle("on",openNow);render();});
 document.getElementById("vList").onclick=()=>setView("list");
 document.getElementById("vMap").onclick=()=>setView("map");
 document.getElementById("locBtn").onclick=function(){
