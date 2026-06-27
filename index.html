@@ -39,12 +39,22 @@
   .howto b { color:#dce8f4; }
   footer { margin-top:26px; color:#5d6e80; font-size:11.5px; text-align:center; line-height:1.8; }
   footer a { color:#7d9fc0; }
+  h1 .more { display:block; font-size:clamp(15px,2.2vw,21px); font-weight:600; letter-spacing:4px;
+    color:#c9a227; margin-top:10px; text-shadow:0 1px 6px #000; }
+  .extra { margin-top:54px; width:min(1080px,94vw); }
+  .extra-h { text-align:center; color:#ffd98a; font-size:20px; letter-spacing:8px; font-weight:700; }
+  .extra-h span { display:block; color:#7d8fa2; font-size:11px; letter-spacing:3px; margin-top:6px; font-weight:400; }
+  .extra-sub { text-align:center; color:#7d8fa2; font-size:12.5px; line-height:1.8; margin:12px 0 26px; }
+  .extra .grid { width:100%; }
+  .extra .card { border-color:rgba(201,162,39,.35); }
+  .extra .card:hover { border-color:rgba(255,217,138,.7); }
+  .extra .ep { color:#c9a227; }
 </style>
 </head>
 <body>
   <div class="badge">歷 史 特 別 企 劃</div>
-  <h1>著名戰史 3D 詳解系列</h1>
-  <div class="sub">FABLE5 — INTERACTIVE 3D BATTLE HISTORY THEATER</div>
+  <h1>3D 戰史<span class="more">以及族繁不及備載</span></h1>
+  <div class="sub">FABLE5 — 3D BATTLE HISTORY THEATER &amp; ASSORTED CURIOSITIES</div>
   <div class="desc">
     以電視歷史節目的運鏡,重現經典會戰的全局視角:3D 地形、敵我態勢、時間軸推演、
     事件字幕、晝夜與天候、砲火與音效——滑鼠自由旋轉縮放,親臨每一個決定性時刻。
@@ -121,11 +131,25 @@
     首次點擊頁面後啟用|A−/A＋ 調整字體大小|桌面瀏覽器(Chrome / Safari / Edge)體驗最佳。
   </div>
 
+  <div class="extra">
+    <div class="extra-h">番 外 篇 <span>SIDE STORIES ・ 戰史以外，興之所至的短篇小作</span></div>
+    <div class="extra-sub">與戰史無關、做起來有趣、時間又短的小專案,都在這裡長成奇怪的分支。族繁不及備載,持續增生中。</div>
+    <div class="grid">
+      <a class="card" href="500bowls-2026-south.html">
+        <div class="ep">飲 食 ・ 2026</div>
+        <h2>🍜 2026 五百碗・南臺灣美食地圖</h2>
+        <div class="en">500 BOWLS · SOUTHERN TAIWAN FOOD MAP</div>
+        <p>聯合報「五百碗」榜單中,台南・高雄・屏東 135 家上榜小吃。依小吃類別與碗數查找、地圖模式、GPS 找附近、Google 地圖一鍵導航。獻給社團法人高雄縣醫師公會 80 週年。</p>
+        <div class="tags"><span class="tag">🗺️ 互動地圖</span><span class="tag">📍 GPS 找附近</span><span class="tag">🥢 135 家</span></div>
+        <div class="go">▶ 開始找吃的</div>
+      </a>
+    </div>
+  </div>
+
   <footer>
     兵力與傷亡數字採通行估計值,各方史料有差異,各集面板內已註明範圍。<br>
     CMini × Claude (Fable 5) ・ <a href="https://github.com/TLAN1012/Fable5">GitHub: TLAN1012/Fable5</a>
-    ・ 🤖 Generated with Claude Code<br>
-    <a href="500bowls-2026-south.html">🍜 番外特輯：2026 五百碗・台南／高雄／屏東美食地圖</a>
+    ・ 🤖 Generated with Claude Code
   </footer>
 </body>
 </html>
