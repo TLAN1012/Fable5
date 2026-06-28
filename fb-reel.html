@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FB Reel 下載器 · Fable5 番外</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { min-height:100vh; background:#0a0f16 radial-gradient(ellipse at 50% -10%, #1a2c44 0%, #0a0f16 60%);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; color:#e8edf4;
+    display:flex; flex-direction:column; align-items:center; padding:6vh 18px 50px; }
+  .badge { background:#a31621; color:#fff; font-size:12px; padding:3px 14px; border-radius:2px;
+    letter-spacing:3px; margin-bottom:14px; }
+  h1 { font-size:clamp(24px,4.5vw,36px); letter-spacing:4px; font-weight:700; text-shadow:0 2px 12px #000; text-align:center; }
+  .sub { color:#9fb4c8; font-size:13px; letter-spacing:2px; margin:10px 0 4px; text-align:center; }
+  .desc { color:#7d8fa2; font-size:13px; max-width:560px; text-align:center; line-height:1.7; margin-bottom:30px; }
+  .panel { width:min(620px,94vw); background:rgba(14,22,36,.85); border:1px solid rgba(120,160,200,.25);
+    border-radius:12px; padding:22px; margin-bottom:18px; }
+  label { display:block; color:#9fc4e8; font-size:12px; letter-spacing:1px; margin:0 0 6px; }
+  input[type=text], input[type=password] { width:100%; background:#0c141f; border:1px solid rgba(120,160,200,.3);
+    border-radius:8px; color:#e8edf4; font-size:14px; padding:11px 12px; outline:none; }
+  input:focus { border-color:rgba(255,217,138,.6); }
+  .row { margin-bottom:14px; }
+  button { cursor:pointer; border:none; border-radius:8px; font-size:14px; font-weight:600; letter-spacing:1px;
+    padding:11px 18px; transition:transform .12s, filter .12s; font-family:inherit; }
+  button:active { transform:translateY(1px); }
+  .primary { background:linear-gradient(180deg,#ffd98a,#c9a227); color:#241c05; }
+  .ghost { background:rgba(60,100,150,.25); border:1px solid rgba(120,160,200,.3); color:#cfe0f2; }
+  .btns { display:flex; gap:10px; flex-wrap:wrap; }
+  .hint { color:#7d8fa2; font-size:11.5px; line-height:1.7; margin-top:10px; }
+  .settings summary { cursor:pointer; color:#ffd98a; font-size:13px; letter-spacing:1px; list-style:none; }
+  .settings summary::-webkit-details-marker { display:none; }
+  .settings summary::before { content:"⚙ "; }
+  .settings[open] summary::before { content:"⚙ "; }
+  .preview { display:none; margin-top:6px; }
+  .preview.show { display:block; }
+  .pv-card { display:flex; gap:14px; background:#0c141f; border:1px solid rgba(120,160,200,.25);
+    border-radius:10px; padding:12px; align-items:flex-start; }
+  .pv-card img { width:96px; height:auto; max-height:150px; border-radius:6px; object-fit:cover; background:#1a2433; flex-shrink:0; }
+  .pv-meta { flex:1; min-width:0; }
+  .pv-title { font-size:14px; color:#e8edf4; line-height:1.5; margin-bottom:6px; word-break:break-word; }
+  .pv-info { color:#9fb4c8; font-size:12px; line-height:1.8; }
+  .status { font-size:12.5px; margin-top:12px; line-height:1.6; min-height:18px; }
+  .status.err { color:#ff9b9b; }
+  .status.ok { color:#9bffb0; }
+  .status.busy { color:#ffd98a; }
+  .spin { display:inline-block; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  footer { margin-top:30px; color:#5d6e80; font-size:11.5px; text-align:center; line-height:1.9; }
+  footer a { color:#7d9fc0; }
+  .back { color:#7d9fc0; font-size:12.5px; text-decoration:none; margin-bottom:20px; display:inline-block; }
+  code { background:rgba(60,100,150,.25); padding:1px 6px; border-radius:5px; font-size:12px; }
+</style>
+</head>
+<body>
+  <a class="back" href="./">← 回 Fable5 首頁</a>
+  <div class="badge">番 外 ・ 小 工 具</div>
+  <h1>FB Reel 下載器</h1>
+  <div class="sub">PASTE A FACEBOOK REEL URL · GET THE MP4</div>
+  <div class="desc">
+    把 Facebook reel／影片網址貼進來，預覽後一鍵下載 mp4。
+    iPad、手機、電腦的瀏覽器都能用——需要先設定你自己的後端服務（見下方齒輪）。
+  </div>
+
+  <!-- 主面板 -->
+  <div class="panel">
+    <div class="row">
+      <label for="url">Reel / 影片網址</label>
+      <input type="text" id="url" placeholder="https://www.facebook.com/reel/..." autocomplete="off" inputmode="url">
+    </div>
+    <div class="btns">
+      <button class="ghost" id="btnPreview">🔍 預覽</button>
+      <button class="primary" id="btnDownload">⬇ 下載 MP4</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="preview" id="preview">
+      <div class="pv-card">
+        <img id="pvThumb" alt="">
+        <div class="pv-meta">
+          <div class="pv-title" id="pvTitle"></div>
+          <div class="pv-info" id="pvInfo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定面板 -->
+  <div class="panel">
+    <details class="settings" id="settings">
+      <summary>後端設定（第一次使用先填，存在本機，不會上傳）</summary>
+      <div style="margin-top:14px">
+        <div class="row">
+          <label for="backend">後端網址 Backend URL</label>
+          <input type="text" id="backend" placeholder="https://your-server.example.com" autocomplete="off" inputmode="url">
+        </div>
+        <div class="row">
+          <label for="token">Token（後端的 FB_DL_TOKEN）</label>
+          <input type="password" id="token" placeholder="你在後端設定的密碼" autocomplete="off">
+        </div>
+        <div class="btns">
+          <button class="primary" id="btnSave">儲存</button>
+          <button class="ghost" id="btnTest">測試連線</button>
+        </div>
+        <div class="hint">
+          這兩個值只存在你這台裝置的瀏覽器（localStorage），不會寫進網站、也不會傳給別人。
+          後端怎麼架設見 <code>fb-reel-downloader/README.md</code>。
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <footer>
+    純前端介面，實際下載由你自架的後端完成。<br>
+    CMini × Claude (Fable 5) ・ <a href="https://github.com/TLAN1012/Fable5">GitHub: TLAN1012/Fable5</a>
+  </footer>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const LS = { backend:"fbdl_backend", token:"fbdl_token" };
+
+  // 載入已存設定
+  $("backend").value = localStorage.getItem(LS.backend) || "";
+  $("token").value   = localStorage.getItem(LS.token) || "";
+  if (!$("backend").value) $("settings").open = true;  // 沒設定就自動展開
+
+  function getCfg() {
+    const backend = (localStorage.getItem(LS.backend) || "").replace(/\/+$/,"");
+    const token   = localStorage.getItem(LS.token) || "";
+    return { backend, token };
+  }
+
+  function setStatus(msg, cls) {
+    const el = $("status");
+    el.className = "status" + (cls ? " " + cls : "");
+    el.innerHTML = msg;
+  }
+
+  function needCfg() {
+    const { backend } = getCfg();
+    if (!backend) {
+      setStatus("⚠ 還沒設定後端網址，請先點上面的「後端設定」填寫。", "err");
+      $("settings").open = true;
+      return false;
+    }
+    return true;
+  }
+
+  $("btnSave").onclick = () => {
+    localStorage.setItem(LS.backend, $("backend").value.trim());
+    localStorage.setItem(LS.token, $("token").value);
+    setStatus("✓ 設定已儲存到本機。", "ok");
+  };
+
+  $("btnTest").onclick = async () => {
+    const { backend } = getCfg();
+    if (!backend && $("backend").value) {  // 還沒按儲存就先暫用輸入框的值
+      localStorage.setItem(LS.backend, $("backend").value.trim());
+      localStorage.setItem(LS.token, $("token").value);
+    }
+    const b = (localStorage.getItem(LS.backend)||"").replace(/\/+$/,"");
+    if (!b) { setStatus("請先填後端網址。", "err"); return; }
+    setStatus('<span class="spin">⏳</span> 測試連線中…', "busy");
+    try {
+      const r = await fetch(b + "/health");
+      const j = await r.json();
+      setStatus("✓ 連線成功。" + (j.token_protected ? "（後端有 token 保護）" : "（後端未設 token）"), "ok");
+    } catch (e) {
+      setStatus("✗ 連不上後端：" + e.message + "（檢查網址、HTTPS、CORS、服務是否啟動）", "err");
+    }
+  };
+
+  $("btnPreview").onclick = async () => {
+    if (!needCfg()) return;
+    const url = $("url").value.trim();
+    if (!url) { setStatus("請先貼上 reel 網址。", "err"); return; }
+    const { backend, token } = getCfg();
+    setStatus('<span class="spin">⏳</span> 抓取資訊中…', "busy");
+    $("preview").classList.remove("show");
+    try {
+      const q = "?token=" + encodeURIComponent(token) + "&url=" + encodeURIComponent(url);
+      const r = await fetch(backend + "/info" + q);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+      $("pvThumb").src = j.thumbnail || "";
+      $("pvTitle").textContent = j.title || "(無標題)";
+      const dur = j.duration ? Math.floor(j.duration/60) + ":" + String(Math.round(j.duration%60)).padStart(2,"0") : "—";
+      $("pvInfo").innerHTML =
+        "👤 " + (j.uploader || "—") + "<br>" +
+        "⏱ " + dur + "　👁 " + (j.view_count?.toLocaleString() || "—");
+      $("preview").classList.add("show");
+      setStatus("✓ 預覽完成，按「下載 MP4」開始下載。", "ok");
+    } catch (e) {
+      setStatus("✗ 預覽失敗：" + e.message, "err");
+    }
+  };
+
+  $("btnDownload").onclick = () => {
+    if (!needCfg()) return;
+    const url = $("url").value.trim();
+    if (!url) { setStatus("請先貼上 reel 網址。", "err"); return; }
+    const { backend, token } = getCfg();
+    const dlUrl = backend + "/dl?token=" + encodeURIComponent(token) + "&url=" + encodeURIComponent(url);
+    setStatus('開始下載中…若沒有自動下載，<a href="' + dlUrl + '" target="_blank" style="color:#ffd98a">點此</a>。大檔可能要等十幾秒。', "busy");
+    // 直接導向後端的 /dl，回應帶 Content-Disposition: attachment，瀏覽器會存檔
+    window.location.href = dlUrl;
+  };
+
+  // Enter 鍵 = 預覽
+  $("url").addEventListener("keydown", e => { if (e.key === "Enter") $("btnPreview").click(); });
+</script>
+</body>
+</html>
