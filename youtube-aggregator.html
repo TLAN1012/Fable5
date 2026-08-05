@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YT 加強版關鍵字搜尋聚合｜YouTube Search Aggregator</title>
+<meta name="description" content="YouTube 加強版關鍵字搜尋聚合工具：多關鍵字一次搜尋、跨關鍵字去重聚合，依時長、讚數、字幕有無篩選排序，智慧推薦精選影片，一鍵 OAuth 登入建立新播放清單。">
+<link rel="canonical" href="https://tlan1012.github.io/Fable5/youtube-aggregator.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="YT 加強版關鍵字搜尋聚合">
+<meta property="og:description" content="多關鍵字聚合搜尋 YouTube：時長／讚數／字幕篩選排序，智慧推薦組成新播放清單，OAuth 一鍵加入你的帳戶。">
+<meta property="og:url" content="https://tlan1012.github.io/Fable5/youtube-aggregator.html">
+<meta property="og:locale" content="zh_TW">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --bg:#0d0f13; --bg2:#14181f; --card:#191e27; --card2:#1f2530;
+  --line:#2a3240; --line2:#3a4556;
+  --ink:#e8edf4; --muted:#8fa0b4; --dim:#5d6e80;
+  --red:#ff3b47; --red-dk:#c4232e; --gold:#ffd98a; --gold-dk:#c9a227;
+  --green:#3ecf8e; --blue:#5aa9e6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  background:var(--bg) radial-gradient(ellipse at 50% -10%, #1c2431 0%, var(--bg) 60%);
+  color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%;min-height:100vh}
+a{color:var(--blue)}
+button{font-family:inherit}
+
+header{text-align:center;padding:34px 16px 10px}
+.badge{display:inline-block;background:var(--red-dk);color:#fff;font-size:12px;padding:3px 14px;
+  border-radius:2px;letter-spacing:3px;margin-bottom:12px}
+h1{font-size:clamp(24px,4.2vw,36px);letter-spacing:3px;text-shadow:0 2px 12px #000}
+h1 .yt{color:var(--red)}
+.sub{color:var(--muted);font-size:13px;letter-spacing:2px;margin-top:8px}
+.desc{color:var(--dim);font-size:12.5px;max-width:680px;margin:10px auto 0;line-height:1.8}
+
+.wrap{max-width:1180px;margin:0 auto;padding:14px 16px 120px}
+
+/* ── auth bar ── */
+.authbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:16px 0 6px}
+.authstate{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:24px;padding:6px 16px 6px 8px;font-size:.88rem;color:var(--muted)}
+.authstate img{width:28px;height:28px;border-radius:50%;background:#333}
+.authstate .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);margin-left:4px}
+.authstate.on .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.authstate.on{color:var(--ink)}
+.btn{border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:700;
+  font-size:.9rem;padding:9px 18px;border-radius:10px;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.primary{background:var(--red-dk);border-color:var(--red-dk);color:#fff}
+.btn.primary:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn.gold{border-color:var(--gold-dk);color:var(--gold)}
+.btn.gold:hover{background:rgba(201,162,39,.15)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{font-size:.8rem;padding:6px 12px;border-radius:8px}
+
+/* ── search panel ── */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0;
+  box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.panel h2{font-size:1rem;letter-spacing:2px;color:var(--gold);margin-bottom:12px}
+.kwin{width:100%;background:var(--bg2);border:1.5px solid var(--line2);border-radius:10px;color:var(--ink);
+  font-size:1.05rem;padding:12px 14px;font-family:inherit}
+.kwin:focus{outline:2px solid var(--red-dk)}
+.kwhint{font-size:.76rem;color:var(--dim);margin:6px 2px 12px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:.76rem;color:var(--muted);letter-spacing:1px;font-weight:700}
+.f select,.f input{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;color:var(--ink);
+  font-size:.9rem;padding:8px 10px;font-family:inherit}
+.f select:focus,.f input:focus{outline:2px solid var(--red-dk)}
+.searchrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.quota{font-size:.74rem;color:var(--dim)}
+
+/* ── status / progress ── */
+.status{display:none;margin:10px 0;padding:12px 16px;border-radius:10px;font-size:.88rem;line-height:1.7}
+.status.show{display:block}
+.status.info{background:rgba(90,169,230,.12);border:1px solid rgba(90,169,230,.4);color:#bcd9f2}
+.status.err{background:rgba(255,59,71,.12);border:1px solid rgba(255,59,71,.5);color:#ffb3b8}
+.status.ok{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.4);color:#a9ecd0}
+
+/* ── results toolbar ── */
+.rtool{position:sticky;top:0;z-index:50;background:rgba(13,15,19,.94);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);padding:10px 2px;margin-bottom:14px;display:none}
+.rtool.show{display:block}
+.rrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rrow .lbl{font-size:.78rem;color:var(--muted);font-weight:700}
+.rrow select,.rrow input[type=number]{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;
+  color:var(--ink);font-size:.85rem;padding:6px 9px;font-family:inherit}
+.rrow input[type=number]{width:90px}
+.chip{cursor:pointer;border:1px solid var(--line2);background:var(--card);border-radius:20px;
+  padding:4px 13px;font-size:.8rem;color:var(--muted);transition:.15s;user-select:none;white-space:nowrap}
+.chip:hover{border-color:var(--gold)}
+.chip.on{background:var(--red-dk);color:#fff;border-color:var(--red-dk)}
+.rcount{font-size:.8rem;color:var(--muted);margin-left:auto}
+.rcount b{color:var(--gold)}
+
+/* ── results grid ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.vcard{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column;transition:.15s;position:relative}
+.vcard:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.vcard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 8px 24px rgba(0,0,0,.45)}
+.thumbwrap{position:relative;display:block;aspect-ratio:16/9;background:#000}
+.thumbwrap img{width:100%;height:100%;object-fit:cover;display:block}
+.dur{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.85);color:#fff;font-size:.74rem;
+  font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.5px}
+.capbadge{position:absolute;left:8px;bottom:8px;background:rgba(62,207,142,.9);color:#04291a;font-size:.7rem;
+  font-weight:800;padding:2px 7px;border-radius:5px}
+.pickbox{position:absolute;left:8px;top:8px;width:26px;height:26px;border-radius:7px;cursor:pointer;
+  background:rgba(0,0,0,.6);border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;
+  justify-content:center;color:transparent;font-weight:900;font-size:15px;transition:.12s;z-index:2}
+.vcard.sel .pickbox{background:var(--gold);border-color:var(--gold);color:#3a2e08}
+.recbadge{position:absolute;right:8px;top:8px;background:linear-gradient(135deg,#ffd98a,#c9a227);
+  color:#3a2e08;font-size:.7rem;font-weight:900;padding:2px 8px;border-radius:6px;z-index:2;display:none}
+.vcard.rec .recbadge{display:block}
+.vbody{padding:12px 14px 12px;display:flex;flex-direction:column;flex:1}
+.vtitle{font-size:.94rem;font-weight:700;line-height:1.45;margin-bottom:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vtitle a{color:var(--ink);text-decoration:none}
+.vtitle a:hover{color:var(--gold)}
+.vchan{font-size:.78rem;color:var(--muted);margin-bottom:8px}
+.vstats{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.78rem;color:var(--muted);margin-bottom:8px}
+.vstats b{color:var(--ink);font-weight:700}
+.vstats .likes b{color:var(--red)}
+.vkws{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto}
+.vkw{font-size:.7rem;color:#9fc4e8;background:rgba(60,100,150,.25);border:1px solid rgba(120,160,200,.3);
+  padding:1px 8px;border-radius:9px}
+.score{font-size:.72rem;color:var(--gold-dk);margin-top:6px}
+.empty{text-align:center;color:var(--dim);padding:50px 20px;font-size:.95rem}
+
+/* ── playlist bar ── */
+.plbar{position:fixed;left:0;right:0;bottom:0;z-index:100;background:rgba(20,24,31,.97);
+  border-top:1px solid var(--gold-dk);box-shadow:0 -6px 24px rgba(0,0,0,.5);padding:12px 16px;
+  transform:translateY(110%);transition:transform .25s}
+.plbar.show{transform:translateY(0)}
+.plinner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.plinner .n{font-size:.9rem;color:var(--gold);font-weight:800;letter-spacing:1px}
+.plinner input[type=text]{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--line2);
+  border-radius:8px;color:var(--ink);font-size:.92rem;padding:9px 12px;font-family:inherit}
+.plinner select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;color:var(--ink);
+  font-size:.88rem;padding:9px 10px;font-family:inherit}
+
+/* ── modal ── */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.72);display:none;
+  align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto}
+.modal.show{display:flex}
+.mbox{background:var(--card);border:1px solid var(--line2);border-radius:14px;max-width:640px;width:100%;
+  padding:24px 26px;box-shadow:0 16px 60px rgba(0,0,0,.6)}
+.mbox h3{color:var(--gold);letter-spacing:2px;font-size:1.05rem;margin-bottom:14px}
+.mbox .f{margin-bottom:14px}
+.mbox .f input{font-size:.92rem;padding:10px 12px;width:100%}
+.mhelp{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+  font-size:.8rem;color:var(--muted);line-height:1.9;margin:14px 0}
+.mhelp b{color:var(--ink)}
+.mhelp ol{padding-left:20px}
+.mhelp code{background:#000;padding:1px 6px;border-radius:4px;font-size:.76rem;color:var(--gold)}
+.mrow{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+/* ── howto ── */
+.howto{margin-top:40px;background:rgba(14,22,36,.6);border:1px solid var(--line);border-radius:10px;
+  padding:16px 22px;color:var(--muted);font-size:12.5px;line-height:1.9}
+.howto b{color:var(--ink)}
+footer{margin-top:26px;color:var(--dim);font-size:11.5px;text-align:center;line-height:1.8;padding-bottom:20px}
+footer a{color:#7d9fc0}
+@media(max-width:600px){ .filters{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">番 外 篇 ・ 工 具</div>
+  <h1><span class="yt">▶</span> YT 加強版關鍵字搜尋聚合</h1>
+  <div class="sub">YOUTUBE KEYWORD SEARCH AGGREGATOR</div>
+  <div class="desc">
+    多關鍵字一次搜尋、跨關鍵字去重聚合;依<b>時長・讚數・字幕有無</b>篩選與排序;
+    智慧推薦精選影片,OAuth 登入後一鍵組成<b>新播放清單</b>加入你的 YouTube 帳戶。
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- auth bar -->
+  <div class="authbar">
+    <div class="authstate" id="authState">
+      <img id="authAvatar" alt="" style="display:none">
+      <span class="dot"></span><span id="authText">未登入 — 僅可搜尋(需 API Key)</span>
+    </div>
+    <button class="btn primary" id="btnLogin">🔐 OAuth 登入 YouTube</button>
+    <button class="btn" id="btnLogout" style="display:none">登出</button>
+    <button class="btn gold" id="btnSettings">⚙️ 設定</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <!-- search panel -->
+  <div class="panel">
+    <h2>🔍 聚合搜尋</h2>
+    <input class="kwin" id="kwInput" type="text"
+      placeholder="輸入關鍵字,逗號分隔多組一次聚合搜尋,例:長津湖, 砥平里, 市場花園作戰">
+    <div class="kwhint">以「,」或「、」分隔可同時搜尋多組關鍵字;結果自動去重聚合,並標記每支影片命中的關鍵字。</div>
+    <div class="filters">
+      <div class="f"><label>時長(API 預篩)</label>
+        <select id="fDuration">
+          <option value="any">不限</option>
+          <option value="short">短片(&lt; 4 分鐘)</option>
+          <option value="medium">中等(4–20 分鐘)</option>
+          <option value="long">長片(&gt; 20 分鐘)</option>
+        </select></div>
+      <div class="f"><label>字幕</label>
+        <select id="fCaption">
+          <option value="any">不限</option>
+          <option value="closedCaption">必須有字幕(CC)</option>
+          <option value="none">無字幕</option>
+        </select></div>
+      <div class="f"><label>上傳時間</label>
+        <select id="fPublished">
+          <option value="">不限</option>
+          <option value="7">最近一週</option>
+          <option value="30">最近一個月</option>
+          <option value="365">最近一年</option>
+        </select></div>
+      <div class="f"><label>來源排序(API)</label>
+        <select id="fOrder">
+          <option value="relevance">關聯性</option>
+          <option value="viewCount">觀看數</option>
+          <option value="rating">評分</option>
+          <option value="date">最新上傳</option>
+        </select></div>
+      <div class="f"><label>每關鍵字抓取</label>
+        <select id="fPerKw">
+          <option value="25">25 支</option>
+          <option value="50" selected>50 支</option>
+          <option value="100">100 支(2 頁)</option>
+        </select></div>
+    </div>
+    <div class="searchrow">
+      <button class="btn primary" id="btnSearch">🚀 開始聚合搜尋</button>
+      <span class="quota">※ YouTube API 每次關鍵字搜尋約耗 100 配額單位(每日免費 10,000)</span>
+    </div>
+  </div>
+
+  <!-- results toolbar -->
+  <div class="rtool" id="rtool">
+    <div class="rrow">
+      <span class="lbl">排序</span>
+      <select id="sortBy">
+        <option value="score">綜合推薦分數</option>
+        <option value="likes">讚數 ↓</option>
+        <option value="views">觀看數 ↓</option>
+        <option value="ratio">讚/觀看比 ↓</option>
+        <option value="duration">時長 ↓</option>
+        <option value="durationAsc">時長 ↑</option>
+        <option value="date">最新 ↓</option>
+      </select>
+      <span class="lbl">最少讚數</span><input type="number" id="minLikes" min="0" value="0">
+      <span class="chip" id="chipCap">💬 只看有字幕</span>
+      <span class="lbl">時長(分)</span>
+      <input type="number" id="minMin" min="0" placeholder="min" style="width:70px">
+      <span class="lbl">–</span>
+      <input type="number" id="maxMin" min="0" placeholder="max" style="width:70px">
+      <span class="rcount" id="rcount"></span>
+    </div>
+    <div class="rrow" style="margin-top:8px">
+      <button class="btn gold sm" id="btnRecommend">🤖 智慧推薦組群組</button>
+      <select id="recN">
+        <option value="5">推薦 5 支</option>
+        <option value="8" selected>推薦 8 支</option>
+        <option value="12">推薦 12 支</option>
+      </select>
+      <button class="btn sm" id="btnSelAll">全選(目前篩選)</button>
+      <button class="btn sm" id="btnSelNone">清除選取</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyMsg" style="display:none">沒有符合篩選條件的影片</div>
+
+  <!-- howto -->
+  <div class="howto">
+    <b>使用說明</b> — ① 點 <b>⚙️ 設定</b> 填入你自己的 Google <b>API Key</b>(搜尋用)與 <b>OAuth Client ID</b>(建播放清單用,設定內附申請教學)|
+    ② 輸入多組關鍵字聚合搜尋,用工具列依<b>讚數/時長/字幕</b>細篩排序|
+    ③ 點 <b>🤖 智慧推薦</b> 由讚/觀看比、觀看數、字幕加權自動精選(每頻道最多 2 支、盡量涵蓋所有關鍵字),或手動勾選縮圖左上角|
+    ④ 底部命名群組 → <b>建立播放清單</b>,OAuth 授權後直接寫入你的 YouTube 帳戶。<br>
+    所有金鑰只存於你瀏覽器的 localStorage,本頁為純前端靜態頁,不經任何伺服器。
+  </div>
+
+  <footer>
+    非官方工具,與 YouTube / Google 無關;資料即時來自 YouTube Data API v3。<br>
+    CMini × Claude ・ <a href="https://github.com/TLAN1012/Fable5">GitHub: TLAN1012/Fable5</a>
+    ・ 🤖 Generated with Claude Code ・ <a href="index.html">← 回系列首頁</a>
+  </footer>
+</div>
+
+<!-- playlist bar -->
+<div class="plbar" id="plbar">
+  <div class="plinner">
+    <span class="n">已選 <span id="selCount">0</span> 支</span>
+    <input type="text" id="plName" placeholder="新群組(播放清單)名稱,例:精選・長津湖紀錄片">
+    <select id="plPrivacy">
+      <option value="private">🔒 私人</option>
+      <option value="unlisted">🔗 不公開(知道連結可看)</option>
+      <option value="public">🌐 公開</option>
+    </select>
+    <button class="btn primary" id="btnCreate">📂 建立播放清單並加入</button>
+  </div>
+</div>
+
+<!-- settings modal -->
+<div class="modal" id="modal">
+  <div class="mbox">
+    <h3>⚙️ API 設定</h3>
+    <div class="f"><label>API Key(未登入時搜尋用;已 OAuth 登入可留空)</label>
+      <input type="password" id="inApiKey" placeholder="AIza..." autocomplete="off"></div>
+    <div class="f"><label>OAuth Client ID(登入與建立播放清單必填)</label>
+      <input type="text" id="inClientId" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off"></div>
+    <div class="mhelp">
+      <b>如何申請(約 5 分鐘,免費):</b>
+      <ol>
+        <li>到 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> 建立專案</li>
+        <li>「API 和服務 → 程式庫」啟用 <b>YouTube Data API v3</b></li>
+        <li>「憑證 → 建立憑證 → API 金鑰」→ 貼到上方第一欄</li>
+        <li>「憑證 → 建立憑證 → OAuth 用戶端 ID」類型選<b>網頁應用程式</b>,
+          「已授權的 JavaScript 來源」加入 <code>https://tlan1012.github.io</code>
+          (本機測試另加 <code>http://localhost:8000</code>)→ 貼到上方第二欄</li>
+        <li>「OAuth 同意畫面」加入自己的 Google 帳號為<b>測試使用者</b>即可使用</li>
+      </ol>
+      金鑰只儲存在<b>你自己瀏覽器</b>的 localStorage,不會上傳到任何伺服器。
+    </div>
+    <div class="mrow">
+      <button class="btn" id="btnClearSettings">清除設定</button>
+      <button class="btn primary" id="btnSaveSettings">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ───────────────── state ───────────────── */
+const LS_KEY = 'yt-agg-settings-v1';
+const SCOPE  = 'https://www.googleapis.com/auth/youtube';
+const API    = 'https://www.googleapis.com/youtube/v3';
+
+let settings   = { apiKey:'', clientId:'' };
+let tokenClient = null;
+let accessToken = null;
+let tokenExpiry = 0;
+let videos   = [];            // aggregated results
+let selected = new Set();     // videoIds
+let recSet   = new Set();     // recommended videoIds (badge)
+
+try { Object.assign(settings, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch(e){}
+
+const $ = id => document.getElementById(id);
+
+/* ───────────────── helpers ───────────────── */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtNum(n){
+  if(n == null) return '—';
+  n = Number(n);
+  if(n >= 1e8) return (n/1e8).toFixed(1)+' 億';
+  if(n >= 1e4) return (n/1e4).toFixed(1)+' 萬';
+  return n.toLocaleString();
+}
+function parseDur(iso){ // ISO8601 PT#H#M#S → seconds
+  const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '');
+  if(!m) return 0;
+  return (+m[1]||0)*3600 + (+m[2]||0)*60 + (+m[3]||0);
+}
+function fmtDur(sec){
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return (h ? h+':'+String(m).padStart(2,'0') : m) + ':' + String(s).padStart(2,'0');
+}
+function fmtDate(iso){ return (iso||'').slice(0,10); }
+function status(msg, cls){
+  const el = $('status');
+  if(!msg){ el.className = 'status'; el.innerHTML = ''; return; }
+  el.className = 'status show ' + (cls||'info');
+  el.innerHTML = msg;
+}
+
+/* 綜合推薦分數 0–100:讚/觀看比 60 + 觀看規模 30 + 字幕 10 */
+function calcScore(v){
+  const ratio = v.views > 0 ? v.likes / v.views : 0;
+  const rScore = Math.min(ratio / 0.05, 1) * 60;           // 5% 讚比 = 滿分
+  const vScore = Math.min(Math.log10(v.views + 1) / 7, 1) * 30; // 1000 萬觀看 = 滿分
+  const cScore = v.caption ? 10 : 0;
+  return Math.round((rScore + vScore + cScore) * 10) / 10;
+}
+
+/* ───────────────── API core ───────────────── */
+async function ytFetch(path, params, opts){
+  opts = opts || {};
+  const usp = new URLSearchParams(params);
+  const headers = {};
+  const hasToken = accessToken && Date.now() < tokenExpiry;
+  if(hasToken) headers['Authorization'] = 'Bearer ' + accessToken;
+  else if(settings.apiKey && !opts.needAuth) usp.set('key', settings.apiKey);
+  else throw new Error(opts.needAuth ? 'NEED_AUTH' : 'NEED_KEY');
+  if(opts.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(API + '/' + path + '?' + usp.toString(), {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok){
+    const reason = data?.error?.errors?.[0]?.reason || '';
+    const msg = data?.error?.message || res.statusText;
+    if(res.status === 401) throw new Error('TOKEN_EXPIRED');
+    if(reason === 'quotaExceeded') throw new Error('QUOTA');
+    throw new Error(msg);
+  }
+  return data;
+}
+function friendlyErr(e){
+  switch(e.message){
+    case 'NEED_KEY':  return '請先到 ⚙️ 設定 填入 API Key,或先 OAuth 登入(登入後搜尋不需 API Key)。';
+    case 'NEED_AUTH': return '此操作需要 OAuth 登入 — 請先點「🔐 OAuth 登入 YouTube」。';
+    case 'TOKEN_EXPIRED': return '登入憑證已過期,請重新點「🔐 OAuth 登入 YouTube」。';
+    case 'QUOTA': return '今日 YouTube API 配額已用完(每日 10,000 單位,台灣時間下午 3–4 點左右重置)。';
+    default: return 'API 錯誤:' + esc(e.message);
+  }
+}
+
+/* ───────────────── OAuth (Google Identity Services) ───────────────── */
+function ensureTokenClient(){
+  if(!settings.clientId){ openSettings(); status('請先在 ⚙️ 設定 填入 OAuth Client ID(附申請教學)。','err'); return null; }
+  if(!window.google?.accounts?.oauth2){ status('Google 登入元件尚未載入,請稍候再試(或檢查網路/擋廣告外掛)。','err'); return null; }
+  if(!tokenClient){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: settings.clientId,
+      scope: SCOPE,
+      callback: onToken
+    });
+  }
+  return tokenClient;
+}
+function login(){ const tc = ensureTokenClient(); if(tc) tc.requestAccessToken(); }
+async function onToken(resp){
+  if(resp.error){ status('登入失敗:' + esc(resp.error), 'err'); return; }
+  accessToken = resp.access_token;
+  tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
+  status('');
+  try{
+    const me = await ytFetch('channels', { part:'snippet', mine:'true' });
+    const ch = me.items?.[0]?.snippet;
+    setAuthUI(true, ch?.title || '已登入', ch?.thumbnails?.default?.url || '');
+  }catch(e){ setAuthUI(true, '已登入', ''); }
+}
+function logout(){
+  if(accessToken && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(accessToken, ()=>{});
+  accessToken = null; tokenExpiry = 0;
+  setAuthUI(false);
+}
+function setAuthUI(on, name, avatar){
+  const st = $('authState');
+  st.classList.toggle('on', on);
+  $('authText').textContent = on ? ('已登入:' + name) : '未登入 — 僅可搜尋(需 API Key)';
+  const img = $('authAvatar');
+  if(on && avatar){ img.src = avatar; img.style.display = ''; } else { img.style.display = 'none'; }
+  $('btnLogin').style.display  = on ? 'none' : '';
+  $('btnLogout').style.display = on ? '' : 'none';
+}
+
+/* ───────────────── search & aggregate ───────────────── */
+async function doSearch(){
+  const raw = $('kwInput').value.trim();
+  if(!raw){ status('請輸入至少一組關鍵字。','err'); return; }
+  const keywords = [...new Set(raw.split(/[,，、;；\n]+/).map(s => s.trim()).filter(Boolean))].slice(0, 8);
+
+  const perKw   = +$('fPerKw').value;
+  const dur     = $('fDuration').value;
+  const cap     = $('fCaption').value;
+  const order   = $('fOrder').value;
+  const pubDays = $('fPublished').value;
+
+  $('btnSearch').disabled = true;
+  videos = []; selected.clear(); recSet.clear();
+  render();
+  try{
+    const idMap = new Map();  // videoId → Set(keywords)
+    for(let ki = 0; ki < keywords.length; ki++){
+      const kw = keywords[ki];
+      status(`🔍 搜尋中 (${ki+1}/${keywords.length}):「${esc(kw)}」…`, 'info');
+      let pageToken = '', got = 0;
+      while(got < perKw){
+        const params = {
+          part:'id', type:'video', q:kw,
+          maxResults: Math.min(50, perKw - got),
+          order, videoDuration:dur, videoCaption:cap,
+          safeSearch:'none'
+        };
+        if(pubDays) params.publishedAfter = new Date(Date.now() - pubDays*864e5).toISOString();
+        if(pageToken) params.pageToken = pageToken;
+        const data = await ytFetch('search', params);
+        for(const it of (data.items || [])){
+          const id = it.id?.videoId;
+          if(!id) continue;
+          if(!idMap.has(id)) idMap.set(id, new Set());
+          idMap.get(id).add(kw);
+        }
+        got += (data.items || []).length;
+        pageToken = data.nextPageToken || '';
+        if(!pageToken) break;
+      }
+    }
+    if(idMap.size === 0){ status('找不到任何影片,換組關鍵字試試。','err'); return; }
+
+    status(`📊 取得 ${idMap.size} 支影片的詳細數據(讚數/時長/字幕)…`, 'info');
+    const ids = [...idMap.keys()];
+    for(let i = 0; i < ids.length; i += 50){
+      const data = await ytFetch('videos', {
+        part:'snippet,contentDetails,statistics',
+        id: ids.slice(i, i+50).join(','),
+        maxResults: 50
+      });
+      for(const it of (data.items || [])){
+        const v = {
+          id: it.id,
+          title: it.snippet.title,
+          channel: it.snippet.channelTitle,
+          channelId: it.snippet.channelId,
+          publishedAt: it.snippet.publishedAt,
+          thumb: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url || '',
+          duration: parseDur(it.contentDetails?.duration),
+          caption: it.contentDetails?.caption === 'true',
+          views: +(it.statistics?.viewCount || 0),
+          likes: +(it.statistics?.likeCount || 0),
+          keywords: [...(idMap.get(it.id) || [])]
+        };
+        v.score = calcScore(v);
+        videos.push(v);
+      }
+    }
+    status(`✅ 聚合完成:${keywords.length} 組關鍵字,共 <b>${videos.length}</b> 支不重複影片。用下方工具列細篩,或直接 🤖 智慧推薦。`, 'ok');
+    $('rtool').classList.add('show');
+    render();
+    $('rtool').scrollIntoView({ behavior:'smooth' });
+  }catch(e){
+    status(friendlyErr(e), 'err');
+  }finally{
+    $('btnSearch').disabled = false;
+  }
+}
+
+/* ───────────────── filter / sort / render ───────────────── */
+function filteredSorted(){
+  const minLikes = +$('minLikes').value || 0;
+  const capOnly  = $('chipCap').classList.contains('on');
+  const minSec   = ($('minMin').value ? +$('minMin').value*60 : 0);
+  const maxSec   = ($('maxMin').value ? +$('maxMin').value*60 : Infinity);
+  let list = videos.filter(v =>
+    v.likes >= minLikes &&
+    (!capOnly || v.caption) &&
+    v.duration >= minSec && v.duration <= maxSec
+  );
+  const by = $('sortBy').value;
+  const cmp = {
+    score:       (a,b) => b.score - a.score,
+    likes:       (a,b) => b.likes - a.likes,
+    views:       (a,b) => b.views - a.views,
+    ratio:       (a,b) => (b.views ? b.likes/b.views : 0) - (a.views ? a.likes/a.views : 0),
+    duration:    (a,b) => b.duration - a.duration,
+    durationAsc: (a,b) => a.duration - b.duration,
+    date:        (a,b) => b.publishedAt.localeCompare(a.publishedAt)
+  }[by];
+  return list.sort(cmp);
+}
+function render(){
+  const list = filteredSorted();
+  const grid = $('grid');
+  grid.innerHTML = list.map(v => `
+    <div class="vcard ${selected.has(v.id)?'sel':''} ${recSet.has(v.id)?'rec':''}" data-id="${v.id}">
+      <a class="thumbwrap" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">
+        <img src="${esc(v.thumb)}" alt="" loading="lazy">
+        <span class="dur">${fmtDur(v.duration)}</span>
+        ${v.caption ? '<span class="capbadge">CC 字幕</span>' : ''}
+      </a>
+      <span class="pickbox" title="選取加入群組">✔</span>
+      <span class="recbadge">🤖 推薦</span>
+      <div class="vbody">
+        <div class="vtitle"><a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">${esc(v.title)}</a></div>
+        <div class="vchan">${esc(v.channel)} ・ ${fmtDate(v.publishedAt)}</div>
+        <div class="vstats">
+          <span>👁 <b>${fmtNum(v.views)}</b></span>
+          <span class="likes">👍 <b>${fmtNum(v.likes)}</b></span>
+          <span>❤️ <b>${v.views ? (v.likes/v.views*100).toFixed(1) : '0'}%</b></span>
+        </div>
+        <div class="vkws">${v.keywords.map(k => `<span class="vkw">${esc(k)}</span>`).join('')}</div>
+        <div class="score">綜合分數 ${v.score}</div>
+      </div>
+    </div>`).join('');
+  $('emptyMsg').style.display = (videos.length && !list.length) ? '' : 'none';
+  $('rcount').innerHTML = videos.length ? `顯示 <b>${list.length}</b> / 共 ${videos.length} 支` : '';
+  updateSelUI();
+}
+function updateSelUI(){
+  $('selCount').textContent = selected.size;
+  $('plbar').classList.toggle('show', selected.size > 0);
+}
+
+/* ───────────────── smart recommend ───────────────── */
+function recommend(){
+  const n = +$('recN').value;
+  const list = filteredSorted();
+  if(!list.length){ status('目前篩選下沒有影片可推薦。','err'); return; }
+  const allKws = new Set(videos.flatMap(v => v.keywords));
+  const perChannel = new Map();
+  const coveredKws = new Set();
+  const picked = [];
+  const pool = [...list].sort((a,b) => b.score - a.score);
+  // 第一輪:高分優先,每頻道最多 2 支,優先補足未涵蓋的關鍵字
+  for(const v of pool){
+    if(picked.length >= n) break;
+    if((perChannel.get(v.channelId) || 0) >= 2) continue;
+    const addsNewKw = v.keywords.some(k => !coveredKws.has(k));
+    if(coveredKws.size < allKws.size && !addsNewKw && picked.length >= Math.ceil(n/2)) continue;
+    picked.push(v);
+    perChannel.set(v.channelId, (perChannel.get(v.channelId) || 0) + 1);
+    v.keywords.forEach(k => coveredKws.add(k));
+  }
+  // 第二輪:補滿
+  for(const v of pool){
+    if(picked.length >= n) break;
+    if(!picked.includes(v)) picked.push(v);
+  }
+  selected = new Set(picked.map(v => v.id));
+  recSet   = new Set(selected);
+  if(!$('plName').value){
+    const kws = [...allKws].slice(0,3).join('・');
+    $('plName').value = `精選聚合:${kws}(${new Date().toISOString().slice(0,10)})`;
+  }
+  render();
+  status(`🤖 已推薦 <b>${picked.length}</b> 支(讚/觀看比+觀看數+字幕加權,每頻道≤2 支,涵蓋 ${coveredKws.size}/${allKws.size} 組關鍵字)。可再手動增減,底部命名後建立播放清單。`, 'ok');
+}
+
+/* ───────────────── create playlist ───────────────── */
+async function createPlaylist(){
+  if(selected.size === 0) return;
+  if(!(accessToken && Date.now() < tokenExpiry)){
+    status('建立播放清單需要 OAuth 登入 — 請先點「🔐 OAuth 登入 YouTube」。','err');
+    login();
+    return;
+  }
+  const name = $('plName').value.trim() || 'YT 聚合精選 ' + new Date().toISOString().slice(0,10);
+  const privacy = $('plPrivacy').value;
+  const btn = $('btnCreate');
+  btn.disabled = true;
+  try{
+    status('📂 建立播放清單「' + esc(name) + '」…','info');
+    const pl = await ytFetch('playlists', { part:'snippet,status' }, {
+      method:'POST', needAuth:true,
+      body:{ snippet:{ title:name, description:'由 YT 加強版關鍵字搜尋聚合工具建立' },
+             status:{ privacyStatus:privacy } }
+    });
+    const plId = pl.id;
+    // 依目前排序順序加入
+    const order = filteredSorted().map(v => v.id).filter(id => selected.has(id));
+    for(const id of selected) if(!order.includes(id)) order.push(id);
+    let ok = 0, fail = 0;
+    for(const vid of order){
+      status(`📥 加入影片中… ${ok + fail + 1}/${order.length}`,'info');
+      try{
+        await ytFetch('playlistItems', { part:'snippet' }, {
+          method:'POST', needAuth:true,
+          body:{ snippet:{ playlistId:plId, resourceId:{ kind:'youtube#video', videoId:vid } } }
+        });
+        ok++;
+      }catch(e){
+        if(e.message === 'TOKEN_EXPIRED' || e.message === 'QUOTA') throw e;
+        fail++; // 個別影片失敗(如已下架)不中斷
+      }
+    }
+    status(`🎉 完成!播放清單「${esc(name)}」已建立,成功加入 <b>${ok}</b> 支` +
+      (fail ? `(${fail} 支失敗)` : '') +
+      ` — <a href="https://www.youtube.com/playlist?list=${plId}" target="_blank" rel="noopener">▶ 在 YouTube 開啟</a>`,'ok');
+    selected.clear(); recSet.clear();
+    render();
+  }catch(e){
+    status(friendlyErr(e),'err');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ───────────────── settings ───────────────── */
+function openSettings(){
+  $('inApiKey').value  = settings.apiKey;
+  $('inClientId').value = settings.clientId;
+  $('modal').classList.add('show');
+}
+function saveSettings(){
+  settings.apiKey  = $('inApiKey').value.trim();
+  settings.clientId = $('inClientId').value.trim();
+  localStorage.setItem(LS_KEY, JSON.stringify(settings));
+  tokenClient = null; // client id 可能變了
+  $('modal').classList.remove('show');
+  status('✅ 設定已儲存(僅存於你的瀏覽器)。','ok');
+}
+
+/* ───────────────── events ───────────────── */
+$('btnSettings').onclick = openSettings;
+$('btnSaveSettings').onclick = saveSettings;
+$('btnClearSettings').onclick = () => {
+  localStorage.removeItem(LS_KEY);
+  settings = { apiKey:'', clientId:'' };
+  $('inApiKey').value = ''; $('inClientId').value = '';
+  status('設定已清除。','info');
+};
+$('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('show'); };
+$('btnLogin').onclick  = login;
+$('btnLogout').onclick = logout;
+$('btnSearch').onclick = doSearch;
+$('kwInput').addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
+$('btnRecommend').onclick = recommend;
+$('btnCreate').onclick = createPlaylist;
+$('btnSelAll').onclick = () => { filteredSorted().forEach(v => selected.add(v.id)); render(); };
+$('btnSelNone').onclick = () => { selected.clear(); recSet.clear(); render(); };
+$('chipCap').onclick = e => { e.target.classList.toggle('on'); render(); };
+['sortBy','minLikes','minMin','maxMin'].forEach(id => $(id).addEventListener('input', render));
+$('grid').addEventListener('click', e => {
+  const box = e.target.closest('.pickbox');
+  if(!box) return;
+  const id = box.closest('.vcard').dataset.id;
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
+  render();
+});
+if(!settings.apiKey && !settings.clientId){
+  status('👋 第一次使用:先點右上 <b>⚙️ 設定</b>,依教學填入你自己的 API Key 與 OAuth Client ID(免費,約 5 分鐘)。','info');
+}
+</script>
+</body>
+</html>
