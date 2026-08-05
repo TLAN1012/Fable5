@@ -620,10 +620,14 @@ function recommend(){
     perChannel.set(v.channelId, (perChannel.get(v.channelId) || 0) + 1);
     v.keywords.forEach(k => coveredKws.add(k));
   }
-  // 第二輪:補滿
+  // 第二輪:補滿(同樣遵守每頻道 ≤2 支;寧可推薦不足額也不破壞承諾)
   for(const v of pool){
     if(picked.length >= n) break;
-    if(!picked.includes(v)) picked.push(v);
+    if(picked.includes(v)) continue;
+    if((perChannel.get(v.channelId) || 0) >= 2) continue;
+    picked.push(v);
+    perChannel.set(v.channelId, (perChannel.get(v.channelId) || 0) + 1);
+    v.keywords.forEach(k => coveredKws.add(k));
   }
   selected = new Set(picked.map(v => v.id));
   recSet   = new Set(selected);
