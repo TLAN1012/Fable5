@@ -769,7 +769,8 @@ const terrain=new THREE.Mesh(tGeo, terrainMat);
 terrain.receiveShadow=true; scene.add(terrain);
 { // 圖外延伸地面(遠景由霧氣吞沒)
   const m=new THREE.MeshStandardMaterial({color:0x56643c, roughness:1});
-  for(const [w,d,x,z] of [[1400,600,0,ZMIN-300+0.3],[1400,600,0,ZMAX+300-0.3],[600,TD+2,XMAX+300-0.3,(ZMIN+ZMAX)/2]]){
+  const cN=coastX(ZMIN)+1.5, cS=coastX(ZMAX)+1.5;
+  for(const [w,d,x,z] of [[700-cN,600,(cN+700)/2,ZMIN-300+0.3],[700-cS,600,(cS+700)/2,ZMAX+300-0.3],[600,TD+2,XMAX+300-0.3,(ZMIN+ZMAX)/2]]){
     const g=new THREE.PlaneGeometry(w,d); g.rotateX(-Math.PI/2);
     const p=new THREE.Mesh(g,m); p.position.set(x,0.55,z); p.receiveShadow=true; scene.add(p);
   }
@@ -1920,9 +1921,9 @@ const MOMENTS=[
 ];
 const momentObjs=MOMENTS.map(m=>{ const o=makeLabel(m.h,'mlabel'+(m.c?' '+m.c:'')); o.position.set(m.x,groundY(m.x,m.z)+3.6,m.z); o.visible=false; scene.add(o); return o; });
 /* 義元討死之處:光柱 */
-const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.45,14,20,1,true), new THREE.ShaderMaterial({transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.2,14,16,1,true), new THREE.ShaderMaterial({transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
   uniforms:{uOp:{value:0}, uTime:U.time}, vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-  fragmentShader:`uniform float uOp,uTime; varying vec2 vUv; void main(){ float a=pow(1.0-vUv.y,2.2)*uOp*(0.75+0.25*sin(vUv.x*40.0+uTime*2.0)); gl_FragColor=vec4(vec3(1.0,0.82,0.45)*1.6,a*0.55); }`}));
+  fragmentShader:`uniform float uOp,uTime; varying vec2 vUv; void main(){ float a=pow(1.0-vUv.y,2.2)*uOp*(0.75+0.25*sin(vUv.x*40.0+uTime*2.0)); gl_FragColor=vec4(vec3(1.0,0.82,0.45)*1.1,a*0.3); }`}));
 beam.position.set(28.2, groundY(28.2,22.6)+7, 22.6); beam.visible=false; scene.add(beam);
 
 /* ════════════════════════════════ 態勢小圖 ════════════════════════════════ */
@@ -2030,8 +2031,17 @@ const CUTS=[[0.02,SHOTS[0]],[0.95,XSHOTS.marune],[2.45,XSHOTS.washizu],[3.3,XSHO
 const unitById=Object.fromEntries(UNITS.map(u=>[u.id,u]));
 let fly=null, follow=null, lastUser=-1e9;
 controls.addEventListener('start',()=>{ lastUser=performance.now(); follow=null; fly=null; });
-function shotTarget(s){ if(s.follow){ const u=unitById[s.follow]; const y=groundY(u.hx,u.hz)+1; return {tgt:new THREE.Vector3(u.hx,y,u.hz), pos:new THREE.Vector3(u.hx+s.off[0],y+s.off[1],u.hz+s.off[2])}; }
-  return {pos:new THREE.Vector3(...s.pos), tgt:new THREE.Vector3(...s.tgt)}; }
+function clearLine(pos,tgt){           // 視線被地形擋住時,自動抬高機位
+  tgt.y=Math.max(tgt.y, groundY(tgt.x,tgt.z)+0.5);
+  let lift=Math.max(0, groundY(pos.x,pos.z)+1.2-pos.y);
+  for(let k=1;k<12;k++){ const u=k/12, x=lerp(pos.x,tgt.x,u), z=lerp(pos.z,tgt.z,u), y=lerp(pos.y+lift,tgt.y,u);
+    const need=groundY(x,z)+0.6-y; if(need>0) lift+=need/(1-u); }
+  pos.y+=lift; return pos;
+}
+function shotTarget(s){ let r;
+  if(s.follow){ const u=unitById[s.follow]; const y=groundY(u.hx,u.hz)+1; r={tgt:new THREE.Vector3(u.hx,y,u.hz), pos:new THREE.Vector3(u.hx+s.off[0],y+s.off[1],u.hz+s.off[2])}; }
+  else r={pos:new THREE.Vector3(...s.pos), tgt:new THREE.Vector3(...s.tgt)};
+  clearLine(r.pos,r.tgt); return r; }
 function flyTo(s,dur){
   const e=shotTarget(s); const dist=camera.position.distanceTo(e.pos);
   fly={p0:camera.position.clone(), t0:controls.target.clone(), s, u:0, dur:dur||clamp(1.6+dist*0.02,1.8,3.4), arc:clamp(dist*0.18,0,14)};
@@ -2104,9 +2114,9 @@ function updateInset(t){
   setTimeout(()=>{ $('insetTitle').textContent=INSETS[idx].title; $('insetBody').innerHTML=INSETS[idx].svg; insetEl.classList.add('show'); },300);
 }
 /* 幕間 */
-let ilActive=null, ilUntil=0;
+let ilActive=null, ilUntil=0; const ilLog=[];
 function openInterlude(il){
-  ilActive=il; ilUntil=performance.now()+il.dur*1000;
+  ilActive=il; ilUntil=performance.now()+il.dur*1000; ilLog.push(il.t);
   ilEl.innerHTML=il.html+'<div class="skip">點擊畫面繼續 ▸</div>';
   ilEl.classList.toggle('light',!!il.light);
   requestAnimationFrame(()=>requestAnimationFrame(()=>ilEl.classList.add('show')));
@@ -2270,7 +2280,7 @@ function update(t, dt, rdt, now){
     const fu=smoothstep(11.1,11.3,t);
     for(const p of jinmaku.panels){ p.pv.rotation.x = -fu*(0.4+p.r*1.1); p.p.position.y=0.3-fu*p.r*0.12; }
     const ku=smoothstep(10.53,10.68,t); kusu.rotation.z=-(Math.PI/2-0.1)*ku*ku;
-    const bo=win(t,11.5,13.2,0.05,0.4); beam.visible=bo>0.01; beam.material.uniforms.uOp.value=bo;
+    const bo=win(t,11.5,13.2,0.05,0.4)*smoothstep(8,20,camera.position.distanceTo(beam.position)); beam.visible=bo>0.01; beam.material.uniforms.uOp.value=bo;
   }
 
   /* 特效 */
@@ -2434,7 +2444,7 @@ function updateUnits(t, sec){
     if(u.label.visible){
       const ly=groundY(hx,hz)+(u.cap>60?2.2:1.9);
       u.label.position.set(hx, ly, hz);
-      let state=dieU>0.5?'dead':(routU>0.5?'rout':'');
+      let state=(u.dieAt!==undefined&&t>=u.dieAt)?'dead':(routU>0.5?'rout':'');
       let sub=u.sub||'';
       if(u.subFn) sub=u.subFn(t, strAt(u,t));
       if(u.changeAt && t>=u.changeAt[0]) sub=u.changeAt[1];
@@ -2544,7 +2554,7 @@ if(QS.has('t')){
   if(QS.has('noui')) for(const id of ['left','right','bottom','title','hint','inset']) $(id).style.display='none';
 }
 $('loadMsg').textContent='戰場已就緒'; goBtn.disabled=false;
-window.__oke={setT:(v)=>{ setT(v); }, get t(){ return simT; }, camera, controls, AU};
+window.__oke={groundY, ilLog, setT:(v)=>{ setT(v); }, get t(){ return simT; }, camera, controls, AU};
 animate();
 </script>
 </body>
