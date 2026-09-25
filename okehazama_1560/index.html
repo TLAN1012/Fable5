@@ -1535,7 +1535,7 @@ const AU=(()=>{
   function shime(dst,t,v=1){ const o=osc('triangle',400,t,0.2); o.frequency.exponentialRampToValueAtTime(300,t+0.08);
     const g=gn(0); perc(g,t,v*0.5,0.14,0.002); o.connect(g).connect(dst);
     const n=nz(t,0.05), f=flt('bandpass',2400,1.2), g2=gn(0); perc(g2,t,v*0.55,0.045,0.001); n.connect(f).connect(g2).connect(dst); }
-  function kane(dst,t,v=1){ for(const [m,d,a] of [[1,0.9,1],[2.41,0.6,0.6],[3.93,0.45,0.45],[5.6,0.3,0.3]]){
+  function kane(dst,t,v=1){ for(const [m,d,a] of [[1,0.9,1],[2.41,0.6,0.6],[3.93,0.45,0.45],[5.6,0.3,0.3]]){ if(880*m>ctx.sampleRate*0.45) continue;
       const o=osc('sine',880*m,t,d+0.1), g=gn(0); perc(g,t,v*0.09*a,d,0.002); o.connect(g).connect(dst); } }
   function tsuzumi(dst,t,v=1,type='pon'){
     if(type==='pon'){ const o=osc('sine',285,t,0.6); o.frequency.linearRampToValueAtTime(318,t+0.05); o.frequency.exponentialRampToValueAtTime(270,t+0.5);
@@ -1772,7 +1772,7 @@ const AU=(()=>{
 
   /* ───── 事件音效 ───── */
   function clash(x,z,t){ const s=spat(x,0.5,z,22); if(s.g<0.03) return; const dst=panner(sfxBus,s.pan), base=1600+R()*1400;
-    for(const [m,dd,a] of [[1,0.35,1],[2.76,0.22,0.6],[5.4,0.14,0.4],[8.9,0.08,0.25]]){ const o=osc('sine',base*m*(1+(R()-0.5)*0.02),t,dd), g=gn(0); perc(g,t,0.05*a*s.g,dd,0.001); o.connect(g).connect(dst); }
+    for(const [m,dd,a] of [[1,0.35,1],[2.76,0.22,0.6],[5.4,0.14,0.4],[8.9,0.08,0.25]]){ if(base*m>ctx.sampleRate*0.45) continue; const o=osc('sine',base*m*(1+(R()-0.5)*0.02),t,dd), g=gn(0); perc(g,t,0.05*a*s.g,dd,0.001); o.connect(g).connect(dst); }
     const n=nz(t,0.03), f=flt('highpass',3000), g=gn(0); perc(g,t,0.2*s.g,0.02,0.001); n.connect(f).connect(g).connect(dst); }
   function crowd(dst,t,dur,v,shape,vowels){
     const out=gn(0), mix=gn(1); out.connect(dst);
