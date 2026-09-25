@@ -1,0 +1,2504 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>長篠之戰 1575 — 3D 戰史劇場</title>
+<meta name="description" content="天正三年五月二十一日,設樂原。武田勝頼一萬五千人一波接一波衝向織田・德川的馬防柵與鐵炮。3D 地形、晨霧硝煙、程序配樂與音效重現長篠之戰。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Yuji+Syuku&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ui:1; --lb:3.2vh;
+    --ink:#0b0907; --gold:#d6b25e; --gold-hi:#f4dea4; --verm:#c3402b; --paper:#efe5cd; --dim:#a4957a;
+    --oda:#f0c23c; --ima:#e0463c; --panel:rgba(16,12,9,.78); --line:rgba(214,178,94,.26);
+    --serif:"Noto Serif TC","Noto Serif JP","Songti TC","PMingLiU","MingLiU",serif;
+    --brush:"Yuji Syuku","Noto Serif TC","Noto Serif JP",serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; color:var(--paper);
+    font-family:var(--serif); -webkit-font-smoothing:antialiased; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  .bar { position:fixed; left:0; right:0; height:var(--lb); background:#000; z-index:30;
+    transition:height 1.2s cubic-bezier(.6,0,.2,1); }
+  #barTop{top:0} #barBottom{bottom:0}
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:6; background:#dfe8ff; opacity:0; mix-blend-mode:screen; }
+  #grainFx { position:fixed; inset:0; pointer-events:none; z-index:7; opacity:.0; transition:opacity 1s; }
+
+  /* ── 標題 ── */
+  #title { position:fixed; top:calc(var(--lb) + 10px); left:50%; transform:translateX(-50%); z-index:40;
+    text-align:center; text-shadow:0 2px 10px #000, 0 0 2px #000; pointer-events:none; transition:opacity .8s; }
+  #title .badge { display:inline-block; border:1px solid rgba(195,64,43,.9); color:#f3c7b8; background:rgba(120,24,14,.55);
+    font-size:calc(10px*var(--ui)); padding:1px 10px; letter-spacing:4px; margin-bottom:5px; }
+  #title h1 { font-size:calc(25px*var(--ui)); font-weight:900; letter-spacing:8px;
+    background:linear-gradient(180deg,#fff4d0 0%,#e8c26a 55%,#a97b2c 100%); -webkit-background-clip:text; background-clip:text;
+    color:transparent; filter:drop-shadow(0 2px 6px rgba(0,0,0,.9)); }
+  #title .sub { font-size:calc(10.5px*var(--ui)); color:#c9b994; letter-spacing:2px; margin-top:3px; }
+
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:3px;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    box-shadow:0 6px 24px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,240,200,.03); }
+  .panel::before { content:""; position:absolute; inset:0; pointer-events:none; border-radius:3px; opacity:.07;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .panel { position:relative; }
+
+  /* ── 左欄 ── */
+  #left { position:fixed; left:12px; top:calc(var(--lb) + 12px); z-index:40; width:268px; font-size:calc(11.5px*var(--ui));
+    max-height:calc(100vh - var(--lb)*2 - 190px); overflow-y:auto; scrollbar-width:thin; transition:opacity .6s, transform .6s; }
+  #left .panel { padding:9px 11px; margin-bottom:8px; }
+  .legend-row { display:flex; align-items:center; gap:7px; margin:3px 0; line-height:1.4; }
+  .sw { width:13px; height:13px; flex:none; border-radius:2px; }
+  .forces { display:grid; grid-template-columns:auto 1fr auto; gap:3px 7px; align-items:center; margin-top:6px;
+    font-variant-numeric:tabular-nums; }
+  .fbar { height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+  .fbar i { display:block; height:100%; width:0; transition:width .4s; }
+  details summary { cursor:pointer; color:var(--gold-hi); font-weight:600; font-size:calc(12.5px*var(--ui)); letter-spacing:1px;
+    list-style:none; }
+  details summary::-webkit-details-marker { display:none; }
+  details summary::before { content:"▸ "; color:var(--gold); }
+  details[open] summary::before { content:"▾ "; }
+  details .body { margin-top:7px; line-height:1.65; color:#d8ccb0; }
+  details .body b { color:#fff5dc; }
+  details .body .q { font-family:var(--brush); color:#f1dba0; }
+  details .body hr { border:none; border-top:1px dashed var(--line); margin:7px 0; }
+  .oda-t { color:var(--oda); font-weight:700; } .ima-t { color:#ff7a6c; font-weight:700; }
+  .note { color:#9c8f74; font-size:.92em; }
+  label.opt { display:flex; gap:6px; align-items:center; margin-top:6px; cursor:pointer; color:#e7d9b6; }
+
+  /* ── 右欄 名場面 ── */
+  #right { position:fixed; right:12px; top:calc(var(--lb) + 12px); z-index:40; width:186px; transition:opacity .6s, transform .6s; }
+  #right .panel { padding:8px; }
+  #right h3 { font-size:calc(11px*var(--ui)); color:var(--gold); letter-spacing:4px; margin:2px 0 6px; font-weight:600; }
+  .shotBtn { display:flex; justify-content:space-between; align-items:baseline; gap:6px; width:100%; margin:3px 0;
+    padding:6px 8px; font-size:calc(12px*var(--ui)); background:linear-gradient(90deg,rgba(60,40,18,.55),rgba(30,20,10,.35));
+    color:#f2e8d0; border:1px solid rgba(214,178,94,.28); border-left:3px solid rgba(195,64,43,.75);
+    border-radius:2px; cursor:pointer; text-align:left; font-family:inherit; transition:all .15s; }
+  .shotBtn:hover { background:linear-gradient(90deg,rgba(120,70,25,.7),rgba(60,35,15,.5)); border-left-color:#f06a4c; transform:translateX(-2px); }
+  .shotBtn.active { border-left-color:var(--gold-hi); box-shadow:0 0 12px rgba(240,194,60,.25); }
+  .shotBtn .t { color:#a99673; font-size:calc(10px*var(--ui)); white-space:nowrap; }
+
+  /* ── 態勢小圖 ── */
+  #inset { position:fixed; left:12px; bottom:calc(var(--lb) + 118px); z-index:41; width:290px; padding:8px 9px;
+    opacity:0; transform:translateY(8px); transition:opacity .7s, transform .7s; pointer-events:none; }
+  #inset.show { opacity:1; transform:none; }
+  #inset .it { font-size:calc(11.5px*var(--ui)); color:var(--gold-hi); font-weight:600; margin-bottom:6px; line-height:1.4; }
+  #inset svg { width:100%; display:block; border-radius:2px; }
+  #inset text { font-family:var(--serif); font-size:9.5px; fill:#efe3c4; }
+  #inset .sea { fill:#7d98ae; font-style:italic; letter-spacing:3px; font-size:9px; }
+
+  /* ── 下方 字幕+時間軸 ── */
+  #bottom { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(var(--lb) + 8px); z-index:40;
+    width:min(980px, 94vw); text-align:center; }
+  #caption { margin-bottom:10px; text-shadow:0 2px 8px #000, 0 0 3px #000; transition:opacity .45s, transform .45s; }
+  #caption.fade { opacity:0; transform:translateY(6px); }
+  #caption .ct { font-size:calc(18px*var(--ui)); font-weight:900; letter-spacing:2px; color:var(--gold-hi);
+    display:inline-flex; align-items:center; gap:10px; }
+  #caption .koku { font-size:calc(11px*var(--ui)); font-weight:600; color:#fff; background:var(--verm);
+    padding:2px 7px; border-radius:2px; letter-spacing:2px; box-shadow:0 0 0 1px rgba(255,200,180,.35) inset; }
+  #caption .cd { font-size:calc(13.5px*var(--ui)); color:#f1e9d6; margin-top:5px; line-height:1.65; max-width:900px;
+    margin-left:auto; margin-right:auto; }
+  #caption .cd .q { font-family:var(--brush); color:#ffe2a0; }
+  #tl { padding:8px 14px 10px; }
+  #tlRow { display:flex; align-items:center; gap:12px; }
+  #date { font-size:calc(12.5px*var(--ui)); font-weight:600; color:#ffecc0; min-width:188px; text-align:left;
+    font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.3; }
+  #date small { display:block; color:#a99673; font-size:.8em; font-weight:400; }
+  #trackWrap { position:relative; flex:1; height:22px; }
+  #trackBg { position:absolute; left:0; right:0; top:8px; height:6px; border-radius:3px; opacity:.9;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 8px rgba(0,0,0,.4) inset; }
+  #slider { width:100%; height:22px; cursor:pointer; -webkit-appearance:none; appearance:none; background:transparent;
+    position:relative; z-index:2; margin:0; }
+  #slider::-webkit-slider-runnable-track { height:6px; background:transparent; }
+  #slider::-moz-range-track { height:6px; background:transparent; }
+  #slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; margin-top:-5px; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%,#fff6d8,#e2b556 60%,#8a5d1c); border:1px solid #2a1c08;
+    box-shadow:0 0 10px rgba(255,210,120,.8); }
+  #slider::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:#e2b556; border:1px solid #2a1c08; }
+  .tick { position:absolute; top:4px; width:2px; height:14px; margin-left:-1px; background:rgba(255,236,190,.55); z-index:1;
+    pointer-events:none; }
+  .tick.major { background:#ff8a6a; width:3px; margin-left:-1.5px; box-shadow:0 0 6px #ff6a4a; }
+  #btns { display:flex; align-items:center; gap:6px; }
+  .cbtn { background:rgba(70,48,22,.55); color:#fff4dc; border:1px solid rgba(214,178,94,.4); border-radius:2px;
+    padding:4px 9px; font-size:calc(12px*var(--ui)); cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .cbtn:hover { background:rgba(125,82,32,.75); }
+  .cbtn.off { opacity:.45; }
+  #play { min-width:64px; font-weight:700; }
+  label.ck { font-size:calc(11.5px*var(--ui)); color:#dccfae; display:flex; gap:4px; align-items:center; cursor:pointer; white-space:nowrap; }
+
+  /* ── 3D 標籤 ── */
+  .ulabel { font-size:calc(11.5px*var(--ui)); line-height:1.25; padding:2px 8px 3px; border-radius:2px;
+    background:linear-gradient(90deg,rgba(12,9,6,.86),rgba(12,9,6,.62)); white-space:nowrap; transform:translateY(-140%);
+    text-shadow:0 1px 2px #000; transition:opacity .4s; font-weight:600; }
+  .ulabel.oda { border-left:3px solid var(--oda); color:#fff1c6; }
+  .ulabel.ima { border-left:3px solid var(--ima); color:#ffe0da; }
+  .ulabel.tok { border-left:3px solid #f0ead8; color:#fbf5e4; }
+  .ulabel.tak { border-left:3px solid var(--ima); color:#ffe0da; }
+  .ulabel .sub { display:block; font-size:calc(9.5px*var(--ui)); color:#bfae8a; font-weight:400; }
+  .ulabel.dead { opacity:.8; border-left-color:#666; color:#aaa; }
+  .ulabel.dead .name { text-decoration:line-through; text-decoration-color:rgba(255,120,100,.8); }
+  .ulabel.dead .sub { color:#e39a90; }
+  .ulabel.rout .sub { color:#ffb28a; }
+  .ulabel.far .sub { display:none; }
+  .ulabel.hid { opacity:0; }
+  .plabel { font-size:calc(11px*var(--ui)); color:#f8f0dc; text-shadow:0 1px 3px #000,0 0 7px #000;
+    transform:translateY(-150%); white-space:nowrap; letter-spacing:1px; font-weight:600; transition:opacity .4s; }
+  .plabel .ic { display:inline-block; width:9px; height:9px; margin-right:4px; border:1.5px solid currentColor; transform:rotate(45deg) translateY(-1px); }
+  .plabel.oda .ic { color:var(--oda); } .plabel.ima .ic, .plabel.tak .ic { color:var(--ima); } .plabel.tok .ic { color:#f0ead8; } .plabel.shr .ic { color:#e9e2cf; border-radius:50%; transform:none; }
+  .plabel.oda.fallen .ic { color:var(--ima); } .plabel.tak.fallen .ic { color:#f0ead8; }
+  .tlabel { font-size:calc(12px*var(--ui)); color:#cfc3a3; font-style:italic; letter-spacing:5px; text-shadow:0 1px 3px #000, 0 0 8px #000;
+    white-space:nowrap; opacity:.85; transition:opacity .4s; }
+  .tlabel.water { color:#9fc0d8; }
+  .mlabel { font-size:calc(11.5px*var(--ui)); font-weight:600; color:#ffe1bd; background:rgba(70,22,10,.86);
+    border:1px solid rgba(255,150,90,.55); padding:3px 10px; border-radius:2px; white-space:nowrap; transform:translateY(-100%);
+    text-shadow:0 1px 2px #000; box-shadow:0 0 14px rgba(255,90,40,.3); animation:mIn .5s ease-out; }
+  .mlabel.gold { color:#fff0c4; background:rgba(70,48,8,.88); border-color:rgba(255,215,110,.7); box-shadow:0 0 14px rgba(255,200,80,.35); }
+  .mlabel.blue { color:#dcecff; background:rgba(14,30,52,.86); border-color:rgba(140,190,255,.5); box-shadow:0 0 14px rgba(120,170,255,.3); }
+  @keyframes mIn { from { opacity:0; transform:translateY(-60%); } }
+  .far-hide.far { opacity:0; }
+
+  #hint { position:fixed; right:14px; bottom:calc(var(--lb) + 6px); z-index:39; font-size:calc(10px*var(--ui));
+    color:#8f836a; text-align:right; line-height:1.6; text-shadow:0 1px 2px #000; pointer-events:none; }
+  #err { position:fixed; inset:0; display:none; place-items:center; z-index:99; background:#120d08;
+    font-size:15px; color:#fbb; text-align:center; padding:30px; }
+
+  /* ── 序幕 ── */
+  #opening { position:fixed; inset:0; z-index:90; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 55%, rgba(20,10,4,.35) 0%, rgba(4,3,2,.92) 70%), rgba(0,0,0,.35);
+    transition:opacity 1.6s ease; text-align:center; padding:20px; }
+  #opening.gone { opacity:0; pointer-events:none; }
+  #opening .seal { border:1px solid rgba(195,64,43,.85); color:#f0b9a8; padding:3px 14px; letter-spacing:6px; font-size:12px;
+    background:rgba(110,20,10,.4); margin-bottom:26px; opacity:0; animation:fadeUp 1.4s .3s forwards; }
+  #opening h1 { font-size:clamp(46px, 9vw, 104px); font-weight:900; letter-spacing:.18em; margin-right:-.18em; line-height:1.1;
+    background:linear-gradient(180deg,#fff6da 0%,#ecc56c 50%,#9c6d24 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 20px rgba(0,0,0,.9)); opacity:0; animation:inkIn 2.4s .6s forwards; }
+  #opening .en { color:#b8a57c; letter-spacing:.5em; font-size:clamp(10px,1.4vw,13px); margin-top:12px; opacity:0; animation:fadeUp 1.4s 1.4s forwards; }
+  #opening .date { color:#e8dcc0; letter-spacing:.3em; font-size:clamp(12px,1.8vw,16px); margin-top:22px; opacity:0; animation:fadeUp 1.4s 1.8s forwards; }
+  #opening .tag { font-family:var(--brush); color:#f3dfae; font-size:clamp(15px,2.3vw,22px); margin-top:26px; letter-spacing:.12em;
+    opacity:0; animation:fadeUp 1.6s 2.3s forwards; line-height:1.7; }
+  #opening .go { margin-top:34px; font-family:var(--serif); font-size:clamp(18px,2.4vw,22px); font-weight:900; letter-spacing:.6em;
+    padding:14px 30px 14px calc(30px + .6em); color:#fff3e0; cursor:pointer; border:none;
+    background:radial-gradient(circle at 50% 40%, #d8492f, #8e2412 75%); box-shadow:0 0 0 2px rgba(255,190,160,.25) inset, 0 8px 30px rgba(180,40,20,.45);
+    border-radius:2px; opacity:0; animation:fadeUp 1.4s 2.9s forwards; transition:transform .15s, box-shadow .2s; }
+  #opening .go:hover { transform:scale(1.04); box-shadow:0 0 0 2px rgba(255,210,180,.45) inset, 0 8px 40px rgba(230,70,30,.6); }
+  #opening .go[disabled] { filter:grayscale(.7); cursor:wait; }
+  #opening .fine { margin-top:18px; color:#8d7f64; font-size:12px; letter-spacing:1px; line-height:1.8; opacity:0; animation:fadeUp 1.4s 3.2s forwards; }
+  #opening .load { margin-top:8px; color:#6f644e; font-size:11px; height:14px; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes inkIn { 0% { opacity:0; filter:blur(18px) drop-shadow(0 4px 20px rgba(0,0,0,.9)); letter-spacing:.5em; }
+    100% { opacity:1; filter:blur(0) drop-shadow(0 4px 20px rgba(0,0,0,.9)); letter-spacing:.18em; } }
+
+  /* ── 幕間(名句卡) ── */
+  #interlude { position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; gap:5vw;
+    pointer-events:none; opacity:0; transition:opacity 1.1s ease;
+    background:radial-gradient(ellipse at center, rgba(8,5,3,.55) 0%, rgba(3,2,1,.9) 75%); }
+  #interlude.show { opacity:1; pointer-events:auto; cursor:pointer; }
+  #interlude.light { background:radial-gradient(ellipse at center, rgba(8,5,3,.15) 0%, rgba(3,2,1,.55) 80%); }
+  #interlude .vert { writing-mode:vertical-rl; font-family:var(--brush); font-size:clamp(22px,4.2vh,40px); line-height:1.9;
+    color:#f6ead0; text-shadow:0 0 18px rgba(0,0,0,.9), 0 2px 4px #000; letter-spacing:.14em; max-height:78vh; }
+  #interlude .vert span { display:inline-block; opacity:0; filter:blur(8px); transition:opacity 1.2s, filter 1.2s; }
+  #interlude.show .vert span { opacity:1; filter:blur(0); }
+  #interlude .side { max-width:min(420px, 40vw); text-align:left; opacity:0; transform:translateY(10px);
+    transition:opacity 1.2s 1.2s, transform 1.2s 1.2s; }
+  #interlude.show .side { opacity:1; transform:none; }
+  #interlude .side .h { color:var(--gold); letter-spacing:.4em; font-size:13px; margin-bottom:10px; }
+  #interlude .side .tr { color:#efe4c8; font-size:clamp(14px,1.7vw,17px); line-height:1.9; }
+  #interlude .side .src { color:#9d8e70; font-size:12px; margin-top:12px; line-height:1.7; }
+  #interlude .big { font-family:var(--brush); font-size:clamp(54px,12vw,150px); color:#fff; letter-spacing:.1em; line-height:1.1;
+    text-shadow:0 0 30px rgba(255,120,60,.6), 0 0 4px #000, 0 6px 30px #000; transform:scale(1.25); opacity:0;
+    transition:transform 1.6s cubic-bezier(.2,.7,.2,1), opacity .5s; text-align:center; }
+  #interlude.show .big { transform:scale(1); opacity:1; }
+  #interlude .big small { display:block; font-family:var(--serif); font-size:clamp(13px,1.6vw,17px); color:#f2dcae; letter-spacing:.3em;
+    margin-top:18px; text-shadow:0 2px 6px #000; }
+  #interlude .skip { position:absolute; bottom:calc(var(--lb) + 14px); right:22px; color:#8a7d62; font-size:11px; letter-spacing:2px; }
+
+  /* ── 終幕 ── */
+  #epilogue { position:fixed; inset:0; z-index:85; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none;
+    transition:opacity 1.6s; background:radial-gradient(ellipse at center, rgba(10,6,3,.55), rgba(2,1,0,.93) 75%); padding:20px; }
+  #epilogue.show { opacity:1; pointer-events:auto; }
+  #epilogue .box { max-width:720px; text-align:center; }
+  #epilogue h2 { font-size:clamp(28px,4.5vw,46px); font-weight:900; letter-spacing:.3em; color:var(--gold-hi); margin-bottom:6px; }
+  #epilogue .e1 { color:#b7a57d; letter-spacing:.3em; font-size:12px; margin-bottom:22px; }
+  #epilogue p { color:#e9dfc6; line-height:2; font-size:clamp(13px,1.6vw,15.5px); margin-bottom:10px; text-align:left; }
+  #epilogue .row { display:flex; gap:10px; justify-content:center; margin-top:22px; flex-wrap:wrap; }
+  #epilogue .cbtn { padding:8px 18px; font-size:14px; letter-spacing:3px; }
+  #epilogue a { color:#d6b25e; }
+
+  @media (max-width: 900px) {
+    #left { width:230px; }
+    #right { width:160px; }
+  }
+  @media (max-width: 760px) {
+    :root { --lb:0px; }
+    #title { top:6px; } #title .sub, #title .badge { display:none; } #title h1 { font-size:18px; letter-spacing:4px; }
+    #left { top:44px; left:8px; width:min(260px, 70vw); transform:translateX(-110%); opacity:0; }
+    body.showInfo #left { transform:none; opacity:1; }
+    #right { top:auto; bottom:auto; right:8px; top:44px; width:140px; transform:translateX(110%); opacity:0; }
+    body.showShots #right { transform:none; opacity:1; }
+    .shotBtn { font-size:11px; padding:5px 6px; }
+    #inset { display:none; }
+    #bottom { width:98vw; bottom:4px; }
+    #caption .ct { font-size:15px; } #caption .cd { font-size:12px; max-height:5.2em; overflow:hidden; }
+    #tlRow { flex-wrap:wrap; gap:6px; } #date { min-width:0; order:1; font-size:11.5px; } #trackWrap { order:3; flex-basis:100%; }
+    #btns { order:2; margin-left:auto; flex-wrap:wrap; gap:4px; } .cbtn { padding:3px 6px; font-size:11px; }
+    label.ck { font-size:11px; }
+    #hint { display:none; }
+    #mobileBtns { display:flex !important; }
+    #interlude { flex-direction:column; gap:18px; } #interlude .side { max-width:88vw; }
+    #interlude .vert { font-size:22px; max-height:52vh; }
+  }
+  #title, #bottom, #hint { transition:opacity .8s; }
+  body.playing #title { opacity:0; }
+  body.pre #left, body.pre #right, body.pre #bottom, body.pre #title, body.pre #inset, body.pre #hint, body.pre #labels, body.pre #mobileBtns { opacity:0 !important; pointer-events:none; }
+  #labels { transition:opacity 1s; }
+  body.il #left, body.il #right, body.il #bottom, body.il #title, body.il #inset, body.il #hint, body.il #mobileBtns { opacity:0 !important; pointer-events:none; }
+  #mobileBtns { display:none; position:fixed; top:8px; left:8px; right:8px; justify-content:space-between; z-index:42; pointer-events:none; }
+  #mobileBtns .cbtn { pointer-events:auto; }
+</style>
+</head>
+<body class="pre">
+<div id="app"></div>
+<div id="labels"></div>
+<div id="flash"></div>
+<div class="bar" id="barTop"></div>
+<div class="bar" id="barBottom"></div>
+
+<div id="title">
+  <div class="badge">3D 戰史劇場 ・ 第八集 ・ 戰國</div>
+  <h1>長篠之戰</h1>
+  <div class="sub">BATTLE OF NAGASHINO ・ 天正三年五月二十一日(1575.6.29 儒略曆)・ 三河國 設樂原・長篠城</div>
+</div>
+
+<div id="mobileBtns"><button class="cbtn" id="mInfo">ℹ 資料</button><button class="cbtn" id="mShots">🎬 名場面</button></div>
+
+<div id="left">
+  <div class="panel">
+    <div class="legend-row"><span class="sw" style="background:var(--oda)"></span><b class="oda-t">織田軍</b>&nbsp;織田信長・約 30,000</div>
+    <div class="legend-row"><span class="sw" style="background:#f0ead8"></span><b style="color:#fbf5e4">德川軍</b>&nbsp;德川家康・約 8,000</div>
+    <div class="legend-row"><span class="sw" style="background:var(--ima)"></span><b class="ima-t">武田軍</b>&nbsp;武田勝頼・約 15,000</div>
+    <div class="forces">
+      <span class="oda-t">織・德</span><div class="fbar"><i id="fOda" style="background:var(--oda)"></i></div><span id="nOda">0</span>
+      <span class="ima-t">武田</span><div class="fbar"><i id="fIma" style="background:var(--ima)"></i></div><span id="nIma">0</span>
+    </div>
+    <div class="legend-row" style="margin-top:6px"><span class="ima-t">☠ 武田方損失</span>&nbsp;<b id="nLoss" style="color:#ffb4a8">0</b></div>
+    <div class="note" style="margin-top:3px">▲ 地圖上各部隊兵力(估計,示意)</div>
+  </div>
+  <div class="panel"><details>
+    <summary>⚔ 戰鬥序列</summary>
+    <div class="body">
+      <b class="ima-t">武田軍</b>(甲斐 武田勝頼,30歲)<br>
+      左翼:山縣昌景(赤備)・武田信豐(黑武者)<br>
+      中央:武田信廉・小幡信貞(赤武者)・內藤昌秀<br>
+      右翼:馬場信春・真田信綱/昌輝・土屋昌續・穴山信君<br>
+      本陣:勝頼(才ノ神)・鳶ヶ巣山砦:武田信實<br>
+      <hr>
+      <b class="oda-t">織田軍</b>(信長,42歲・茶臼山)<br>
+      佐久間信盛・瀧川一益・羽柴秀吉・丹羽長秀<br>
+      鐵炮奉行:佐々成政・前田利家・野々村正成・福富秀勝・塙直政<br>
+      <b style="color:#fbf5e4">德川軍</b>(家康,34歲・高松山)<br>
+      石川數正・鳥居元忠・本多忠勝・榊原康政・大久保忠世/忠佐<br>
+      別働隊:酒井忠次(鳶ヶ巣山)・長篠城:奧平信昌<br>
+      <span class="note">兵力為通說;各隊布陣位置依通說示意,史料並無精確記載。</span>
+    </div>
+  </details></div>
+  <div class="panel"><details>
+    <summary>📜 史料與爭議</summary>
+    <div class="body">
+      主要依據太田牛一『<b>信長公記</b>』卷八。武田方的戰況與人物細節,多出自武田家臣系統的軍學書『<b>甲陽軍鑑</b>』(江戶初期成書,史料價值有爭議)。<hr>
+      <b>三千挺・三段擊</b>:『信長公記』記鐵炮「千挺ばかり」(部分抄本作三千);三隊輪番射擊的「三段擊」出自小瀨甫庵『信長記』,現代學界多視為後世潤色。<br><br>
+      <b>武田騎馬隊</b>:武田軍是否以騎馬集團衝鋒,學界有爭論——當時騎馬武者多下馬作戰之說亦有力。本片以騎馬與徒步混合示意。<br><br>
+      <b>馬防柵</b>:「三重柵」為後世通說;本片以一道主柵加局部第二道柵示意。攻破第一重柵的記載見於『甲陽軍鑑』。<br><br>
+      <b>武田四名臣</b>:馬場・內藤・山縣・高坂。高坂昌信當日在海津城防備上杉,並未參戰。<br><br>
+      <b>戰死者</b>:『信長公記』記武田方「一萬ばかり」,現代推估差異很大。柵前遺骸的堆疊為視覺化呈現。
+    </div>
+  </details></div>
+  <div class="panel"><details>
+    <summary>🏯 戰後影響</summary>
+    <div class="body">
+      武田家失去信玄時代的宿將群,軍事力大幅衰退。德川家康收復奧三河,奧平信昌獲家康長女龜姬為妻。<hr>
+      <b class="ima-t">武田勝頼</b>:此後重整家臣團、築新府城,但天正十年(1582)織田・德川聯軍攻入甲斐時,家臣紛紛離反,勝頼於天目山自盡,武田氏滅亡。<br>
+      <b class="oda-t">織田信長</b>:東方威脅解除,轉而全力經略北陸、畿內,以及與西國大名毛利氏的對抗。
+    </div>
+  </details></div>
+</div>
+
+<div id="right"><div class="panel">
+  <h3>🎬 名場面</h3>
+  <button class="shotBtn" data-shot="0">設樂原 黎明<span class="t">04:18</span></button>
+  <button class="shotBtn" data-shot="1">鳶ヶ巣山 奇襲<span class="t">05:06</span></button>
+  <button class="shotBtn" data-shot="2">赤備 一番衝鋒<span class="t">05:13</span></button>
+  <button class="shotBtn" data-shot="3">馬防柵 鐵炮齊射<span class="t">07:12</span></button>
+  <button class="shotBtn" data-shot="4">山縣昌景 戰死<span class="t">08:42</span></button>
+  <button class="shotBtn" data-shot="5">馬場 奪丸山<span class="t">09:07</span></button>
+  <button class="shotBtn" data-shot="6">第一重柵 被突破<span class="t">12:17</span></button>
+  <button class="shotBtn" data-shot="7">柵前 屍山<span class="t">13:12</span></button>
+  <button class="shotBtn" data-shot="8">全線崩潰 追擊<span class="t">13:54</span></button>
+  <button class="shotBtn" data-shot="9">馬場信春 殿軍<span class="t">14:54</span></button>
+</div></div>
+
+<div id="inset" class="panel">
+  <div class="it" id="insetTitle"></div>
+  <div id="insetBody"></div>
+</div>
+
+<div id="bottom">
+  <div id="caption"><div class="ct"></div><div class="cd"></div></div>
+  <div id="tl" class="panel">
+    <div id="tlRow">
+      <div id="date">永祿三年五月十九日</div>
+      <div id="trackWrap"><div id="trackBg"></div>
+        <input type="range" id="slider" min="0" max="15" step="0.005" value="0" aria-label="時間軸">
+      </div>
+      <div id="btns">
+        <button class="cbtn" id="play">▶ 播放</button>
+        <button class="cbtn" id="speed" title="播放速度">1×</button>
+        <button class="cbtn" id="mus" title="配樂開關">🎵</button>
+        <button class="cbtn" id="sfx" title="音效開關">🔊</button>
+        <button class="cbtn" id="fontMinus" title="縮小字體">A−</button>
+        <button class="cbtn" id="fontPlus" title="放大字體">A＋</button>
+        <button class="cbtn" id="quality" title="畫質">高畫質</button>
+        <label class="ck"><input type="checkbox" id="cinema" checked>運鏡</label>
+        <label class="ck"><input type="checkbox" id="cards" checked>名句卡</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hint">拖曳=旋轉・滾輪=縮放・右鍵=平移・空白鍵=播放/暫停<br>配樂與音效皆為 Web Audio 即時合成,無任何音檔</div>
+
+<div id="interlude"><div class="skip">點擊畫面繼續 ▸</div></div>
+
+<div id="epilogue"><div class="box">
+  <h2>長 篠</h2>
+  <div class="e1">天正三年五月二十一日 ・ 1575</div>
+  <p>一萬五千人,自日出到未刻,一波又一波衝向那道木柵。山縣、內藤、馬場——信玄一手栽培的宿將,在同一個夏日相繼倒下;真田家的兩兄弟、土屋昌續、原昌胤……柵前與連吾川畔,遺骸層層堆疊。</p>
+  <p>這一戰常被說成「鐵炮打敗了騎馬隊」,但勝負的關鍵更在於:織田・德川以兩倍以上的兵力據柵固守,不出一兵;而鳶ヶ巣山的失陷,讓武田軍失去退路,只能向前。</p>
+  <p>七年後,天目山。武田勝頼自盡,名門武田氏就此滅亡。而倒在六文錢旗下的真田兄弟,他們的姪子信繁,將在四十年後的大坂城下,為這個時代寫下最後的衝鋒。</p>
+  <div class="row">
+    <button class="cbtn" id="replay">↻ 重新觀看</button>
+    <button class="cbtn" id="freeView">🗺 自由檢視戰場</button>
+    <a class="cbtn" href="../" style="text-decoration:none">◂ 回系列首頁</a>
+  </div>
+</div></div>
+
+<div id="opening">
+  <div class="seal">3D 戰史劇場 ・ 第八集</div>
+  <h1>長篠之戰</h1>
+  <div class="en">BATTLE OF NAGASHINO ・ 1575</div>
+  <div class="date">天正三年 五月二十一日 ・ 三河國 設樂原</div>
+  <div class="tag">一道木柵,一排槍口——<br>武田的名將們,一個接一個衝了上去</div>
+  <button class="go" id="goBtn" disabled>出陣</button>
+  <div class="fine">🎧 建議開啟聲音或戴上耳機 ・ 配樂與音效為即時程序合成<br>滑鼠拖曳旋轉、滾輪縮放 ・ 建議使用桌面版 Chrome / Edge / Safari</div>
+  <div class="load" id="loadMsg">正在構築戰場……</div>
+</div>
+
+<div id="err">⚠ 無法初始化 WebGL,請改用新版 Chrome / Safari / Edge 開啟。</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ════════════════════════════════ 基礎工具 ════════════════════════════════ */
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,u)=>a+(b-a)*u;
+const fract=v=>v-Math.floor(v);
+function smoothstep(a,b,x){ const u=clamp((x-a)/(b-a),0,1); return u*u*(3-2*u); }
+function win(t,a,b,fi=0.15,fo=0.15){ return smoothstep(a-fi,a,t)*(1-smoothstep(b,b+fo,t)); }
+function hash2(ix,iz){
+  let h=Math.imul(ix|0,374761393)+Math.imul(iz|0,668265263);
+  h=Math.imul(h^(h>>>13),1274126177); h^=h>>>16; return (h>>>0)/4294967295;
+}
+function vnoise(x,z){
+  const ix=Math.floor(x), iz=Math.floor(z), fx=x-ix, fz=z-iz;
+  const ux=fx*fx*(3-2*fx), uz=fz*fz*(3-2*fz);
+  return lerp(lerp(hash2(ix,iz),hash2(ix+1,iz),ux), lerp(hash2(ix,iz+1),hash2(ix+1,iz+1),ux), uz)*2-1;
+}
+function fbm(x,z,o=4){ let s=0,a=0.5,f=1; for(let i=0;i<o;i++){ s+=a*vnoise(x*f+i*17.3,z*f-i*9.1); f*=2.03; a*=0.5; } return s; }
+let _seed=20260612;
+const rnd=()=>{ _seed=(_seed*16807)%2147483647; return (_seed-1)/2147483646; };
+const rr=(a,b)=>a+(b-a)*rnd();
+function distSeg(px,pz,ax,az,bx,bz){
+  const dx=bx-ax, dz=bz-az, L2=dx*dx+dz*dz||1e-9;
+  const u=clamp(((px-ax)*dx+(pz-az)*dz)/L2,0,1);
+  return Math.hypot(ax+dx*u-px, az+dz*u-pz);
+}
+function polyDist(pts,x,z){ let d=1e9; for(let i=0;i<pts.length-1;i++) d=Math.min(d,distSeg(x,z,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1])); return d; }
+function catmull(pts, perSeg){
+  const out=[];
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
+    for(let k=0;k<perSeg;k++){
+      const u=k/perSeg, u2=u*u, u3=u2*u;
+      const f=(a,b,c,d)=>0.5*((2*b)+(-a+c)*u+(2*a-5*b+4*c-d)*u2+(-a+3*b-3*c+d)*u3);
+      out.push([f(p0[0],p1[0],p2[0],p3[0]), f(p0[1],p1[1],p2[1],p3[1])]);
+    }
+  }
+  out.push(pts[pts.length-1].slice()); return out;
+}
+const QS=new URLSearchParams(location.search);
+
+/* ════════════════════════════════ 地理 ════════════════════════════════
+   x=東、z=南,1 單位 ≈ 60 m;高度誇張約 3 倍。原點 = 設樂原中段的連吾川。
+   連吾川南北貫穿設樂原;西岸台地(彈正山・高松山・茶臼山)為織田・德川軍,沿河西岸築馬防柵;
+   東岸台地(信玄台地・才ノ神)為武田軍。東方約 3.5 km,寒狹川與宇連川匯流處的斷崖上為長篠城,
+   隔宇連川南岸是鳶ヶ巣山砦群。布陣位置依通說示意。 */
+const XMIN=-34, XMAX=74, ZMIN=-42, ZMAX=40;
+function coastX(){ return -1e4; }
+const RIVERS=[
+ {name:'連 吾 川', w:0.3, pts:[[0.8,-44],[0.3,-32],[-0.5,-22],[0.4,-12],[-0.3,-2],[0.5,8],[-0.1,18],[-0.8,27],[-1.8,33.5]], floor:(x,z)=>0.62-0.008*z, vw:3.0},
+ {name:'寒 狹 川', w:0.8, pts:[[43,-44],[45.5,-30],[49.5,-16],[53,-4],[55.3,6],[56.8,12]], floor:()=>0.12, vw:2.2},
+ {name:'宇 連 川', w:0.75, pts:[[76,3],[69,6.5],[63,10.4],[58.6,12.8]], floor:()=>0.12, vw:2.0},
+ {name:'豐 川', w:1.0, pts:[[57.2,13],[53,18],[45,23],[35,27.5],[23,30.5],[11,32.5],[-1,34.2],[-15,36],[-36,38]], floor:()=>0.1, vw:2.6},
+];
+const ROADS=[
+ {name:'伊 那 街 道', pts:[[57,7],[49,4.5],[38,2.5],[27,0.5],[18,1.5],[9,2.2],[2,2.5],[-6,2],[-16,0.5],[-26,-0.5],[-36,-1]]},
+ {name:'', pts:[[54,3],[51,-10],[47.5,-26],[45,-44]]},
+ {name:'', pts:[[-6,2],[-9,10],[-12,20],[-14,34]]},
+];
+/* 丘(名稱, x, z, 高, 半徑) */
+const HILLS=[
+ ['茶 臼 山',-20,-2,1.5,3.4], ['彈 正 山',-9,-4,0.9,4.2], ['高 松 山',-8.5,8,0.9,3.4], ['',-9,-14,0.8,4], ['',-9,18,0.7,4],
+ ['丸 山',4.2,-17,0.85,1.9], ['才 ノ 神',20,-2,0.8,3.6], ['',14,-12,0.7,5], ['',14,12,0.6,5],
+ ['鳶 ヶ 巣 山',62.5,17.5,1.6,3.2], ['',52.5,1,0.6,3], ['',58,9.6,0.35,2.6], ['船 着 山',48,32,2.4,8],
+];
+function baseHeight(x,z){
+  let h=1.25+0.85*fbm(x*0.045+2,z*0.045-3,4)+0.3*fbm(x*0.16,z*0.16,3);
+  h+=0.55*Math.exp(-((x+9)**2)/40);                                     // 西岸台地(德川・織田)
+  h+=0.6*smoothstep(4,13,x)*(1-smoothstep(36,44,x));                   // 東岸 信玄台地
+  h+=2.6*smoothstep(-26,-42,z)*(0.6+0.4*fbm(x*0.08,z*0.08,2));          // 北方山地
+  h+=1.8*smoothstep(24,40,z)*smoothstep(30,50,x);                       // 南東 船着山系
+  for(const q of HILLS){ const d2=(x-q[1])**2+(z-q[2])**2; h+=q[3]*Math.exp(-d2/(q[4]*q[4])); }
+  const edge=Math.min(x-XMIN, XMAX-x, z-ZMIN, ZMAX-z);
+  h=lerp(1.4, h, smoothstep(0.5,8,edge));
+  /* 連吾川:寬淺的谷地與溼田 */
+  { const R=RIVERS[0], d=polyDist(R.pts,x,z), fl=R.floor(x,z), vw=R.vw+1.2*fbm(x*0.2,z*0.2,2);
+    h=lerp(h, Math.min(h,fl+0.12*smoothstep(0,vw,d)), 1-smoothstep(vw*0.6,vw+3.2,d));
+    h=lerp(h, fl-0.28, 1-smoothstep(R.w*0.5,R.w+0.3,d)); }
+  /* 豐川水系:切割台地的深谷 */
+  for(let i=1;i<RIVERS.length;i++){ const R=RIVERS[i], d=polyDist(R.pts,x,z), fl=R.floor(x,z);
+    if(d<R.vw+4){ h=lerp(h, fl+0.25, 1-smoothstep(R.w+0.2, R.w+R.vw, d)); h=lerp(h, fl-0.3, 1-smoothstep(R.w*0.5,R.w+0.3,d)); } }
+  return h;
+}
+/* 城・砦 */
+const FORTS=[
+ {id:'nagashino', name:'長篠城', x:58, z:9.4, r:2.0, side:'tok', castle:true},
+ {id:'tobinosu', name:'鳶ヶ巣山砦', x:62.5, z:17.5, r:1.2, side:'tak', fall:1.55},
+ {id:'nakayama', name:'中山砦', x:58.6, z:19.6, r:0.9, side:'tak', fall:1.45},
+ {id:'ubagafu', name:'姥ヶ懷砦', x:66.4, z:16.2, r:0.9, side:'tak', fall:1.7},
+];
+const VILLAGES=[[-14,14,5,2],[18,11,4,1.6],[51,-4,7,2.2],[61,3.5,5,1.8],[-26,8,5,2],[-22,-14,4,1.6],[26,20,4,1.6]];
+const TEMPLE={x:53.5,z:-0.6};   // 醫王寺(勝頼 圍城時本陣)
+/* 馬防柵:連吾川西岸,留有出擊口;第二道柵僅部分(三重柵之說不確) */
+const FENCE=[[-2.3,-25],[-2.9,-18.5],[-2.4,-11.5],[-3.0,-4.5],[-2.5,2.5],[-3.1,9.5],[-2.7,16.5],[-3.3,22.5]];
+const FENCE2=[[[-5.4,-21],[-5.9,-9]],[[-5.7,1],[-6.1,14]]];
+const FENCE_GAPS=[-14.8,-7.8,-0.6,6.2,13.4];
+function fenceX(z){ const F=FENCE; if(z<=F[0][1]) return F[0][0];
+  for(let i=0;i<F.length-1;i++) if(z<=F[i+1][1]) return lerp(F[i][0],F[i+1][0],(z-F[i][1])/(F[i+1][1]-F[i][1]));
+  return F[F.length-1][0]; }
+const JINS=[{x:-20,z:-2.2,W:2.4,D:1.8,crest:'mokko',ry:0.2},{x:20.4,z:-2.4,W:2.6,D:2.0,crest:'hishi',ry:-0.1},{x:-10.2,z:5.8,W:2.0,D:1.6,crest:'aoi',ry:0}];
+function nearStructure(x,z,pad){
+  for(const f of FORTS) if(Math.hypot(x-f.x,z-f.z)<f.r+pad) return true;
+  for(const v of VILLAGES) if(Math.hypot(x-v[0],z-v[1])<v[3]+pad*0.5) return true;
+  if(Math.hypot(x-TEMPLE.x,z-TEMPLE.z)<1.6+pad) return true;
+  for(const j of JINS) if(Math.hypot(x-j.x,z-j.z)<2.2+pad) return true;
+  return false;
+}
+function isPaddy(x,z,h,s){
+  const d=polyDist(RIVERS[0].pts,x,z);
+  return d<3.4+1.3*fbm(x*0.15,z*0.15,2) && s<0.2 && roadD(x,z)>0.4 && d>0.35;
+}
+/* 森林密度:山地與遠處茂密,決戰場(兩岸台地之間)開闊 */
+function forestDens(x,z,h){
+  const field = smoothstep(32,22,Math.abs(z-0))*smoothstep(-16,-11,x)*(1-smoothstep(22,28,x));
+  const route=smoothstep(3,9,distSeg(x,z,12,-14,47,-31));          // 敗走路線(至寒狹川渡口)較開闊
+  return clamp(smoothstep(1.35,2.3,h+0.5*fbm(x*0.2,z*0.2,3)) * (1-0.85*field) * (0.25+0.75*route), 0, 1);
+}
+
+/* 高度場預烘(0.5 單位格點)→ 雙線性取樣,供地形、部隊、植被共用 */
+const GS=0.5, GNX=Math.round((XMAX-XMIN)/GS)+1, GNZ=Math.round((ZMAX-ZMIN)/GS)+1;
+const HF=new Float32Array(GNX*GNZ), RDF=new Float32Array(GNX*GNZ), RVF=new Float32Array(GNX*GNZ);
+for(let j=0;j<GNZ;j++) for(let i=0;i<GNX;i++){
+  const x=XMIN+i*GS, z=ZMIN+j*GS, k=j*GNX+i;
+  let rd=1e9; for(const R of ROADS) rd=Math.min(rd,polyDist(R.pts,x,z));
+  let rv=1e9; for(const R of RIVERS) rv=Math.min(rv,polyDist(R.pts,x,z)-R.w);
+  RDF[k]=rd; RVF[k]=rv;
+  let h=baseHeight(x,z);
+  h=lerp(h, h*0.85+0.04, 1-smoothstep(0.3,1.2,rd));    // 道路稍微削平
+  HF[k]=h;
+}
+function sampleF(F,x,z){
+  const fx=clamp((x-XMIN)/GS,0,GNX-1.001), fz=clamp((z-ZMIN)/GS,0,GNZ-1.001);
+  const i=Math.floor(fx), j=Math.floor(fz), u=fx-i, v=fz-j, k=j*GNX+i;
+  return lerp(lerp(F[k],F[k+1],u), lerp(F[k+GNX],F[k+GNX+1],u), v);
+}
+const terrainH=(x,z)=>sampleF(HF,x,z);
+const groundY=(x,z)=>Math.max(terrainH(x,z),0.02);
+const roadD=(x,z)=>sampleF(RDF,x,z);
+const riverD=(x,z)=>sampleF(RVF,x,z);
+function slopeAt(x,z){ const e=0.5; return Math.hypot(terrainH(x+e,z)-terrainH(x-e,z), terrainH(x,z+e)-terrainH(x,z-e))/(2*e); }
+
+/* ════════════════════════════════ 渲染器 / 場景 ════════════════════════════════ */
+let renderer;
+try { renderer=new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance', preserveDrawingBuffer:QS.has('shot')}); }
+catch(e){ document.getElementById('err').style.display='grid'; throw e; }
+const IS_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth<760;
+let QUALITY = (()=>{ try{ return localStorage.getItem('oke_q') || (IS_MOBILE?'low':'high'); }catch(e){ return IS_MOBILE?'low':'high'; } })();
+if(QS.get('q')) QUALITY=QS.get('q');
+const PR = ()=> QUALITY==='high' ? Math.min(devicePixelRatio,1.75) : Math.min(devicePixelRatio,1);
+renderer.setPixelRatio(PR());
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
+renderer.shadowMap.enabled = QUALITY==='high';
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.getElementById('app').appendChild(renderer.domElement);
+const labelRenderer=new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.cssText='position:fixed;inset:0;pointer-events:none;';
+document.getElementById('labels').appendChild(labelRenderer.domElement);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x9aa4ad, 0.008);
+const camera=new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.2, 2000);
+camera.position.set(14,24,44);
+const controls=new OrbitControls(camera, renderer.domElement);
+controls.target.set(-6,1,12);
+controls.enableDamping=true; controls.dampingFactor=0.07;
+controls.maxPolarAngle=1.48; controls.minDistance=2.5; controls.maxDistance=190;
+controls.zoomSpeed=0.9;
+
+const hemi=new THREE.HemisphereLight(0xbfd3e6, 0x4a4234, 0.6); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff1dd, 2.4);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=1; sun.shadow.camera.far=260;
+Object.assign(sun.shadow.camera,{left:-34,right:34,top:34,bottom:-34});
+sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.03;
+scene.add(sun); scene.add(sun.target);
+const moon=new THREE.DirectionalLight(0x8fa6d8, 0.0); scene.add(moon); scene.add(moon.target);
+const boltLight=new THREE.PointLight(0xcfdcff, 0, 160, 1.2); scene.add(boltLight);
+const fireLights=[0,1].map(()=>{ const l=new THREE.PointLight(0xff8a3a, 0, 14, 1.6); scene.add(l); return l; });
+
+/* 全域 uniforms(給自訂 shader 共用) */
+const U={
+  time:{value:0}, wind:{value:0.3}, wet:{value:0}, rain:{value:0},
+  sunDir:{value:new THREE.Vector3(0,1,0)}, sunCol:{value:new THREE.Color(1,1,1)},
+  skyTop:{value:new THREE.Color()}, skyHor:{value:new THREE.Color()},
+};
+
+/* ════════════════════════════════ 天空穹頂(日月星雲、暴雨雲、閃電) ════════════════ */
+const skyMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide, depthWrite:false, fog:false,
+  uniforms:{ uSun:U.sunDir, uMoon:{value:new THREE.Vector3(0,1,0)}, uTime:U.time,
+    uTop:U.skyTop, uHor:U.skyHor, uSunCol:U.sunCol, uCloud:{value:0.3}, uStorm:{value:0}, uFlash:{value:0},
+    uNight:{value:0}, uCloudCol:{value:new THREE.Color(1,1,1)}, uCloudDark:{value:new THREE.Color(0.4,0.42,0.45)}, uSunVis:{value:1} },
+  vertexShader:`varying vec3 vDir; void main(){ vDir=normalize((modelMatrix*vec4(position,1.0)).xyz-cameraPosition);
+    vec4 p=projectionMatrix*viewMatrix*vec4((modelMatrix*vec4(position,1.0)).xyz,1.0); gl_Position=p.xyww; }`,
+  fragmentShader:`
+    uniform vec3 uSun,uMoon,uTop,uHor,uSunCol,uCloudCol,uCloudDark; uniform float uTime,uCloud,uStorm,uFlash,uNight,uSunVis;
+    varying vec3 vDir;
+    float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+      return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
+    float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<6;i++){ s+=a*n2(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return s; }
+    void main(){
+      vec3 d=normalize(vDir); float h=d.y;
+      vec3 col=mix(uHor,uTop,pow(clamp(h,0.,1.),0.55));
+      float sd=max(dot(d,uSun),0.);
+      col+=uSunCol*(pow(sd,6.)*0.18+pow(sd,48.)*0.35)*uSunVis;
+      /* 星 */
+      if(uNight>0.01 && h>0.){
+        vec2 sp=d.xz/(h+0.3)*260.; float st=h21(floor(sp)); float tw=0.6+0.4*sin(uTime*3.+st*80.);
+        col+=vec3(0.9,0.93,1.)*smoothstep(0.9965,1.,st)*tw*uNight*1.6*(1.-uCloud);
+        col+=vec3(0.07,0.08,0.12)*uNight*smoothstep(0.2,1.,fbm(d.xz*3.+vec2(3.,1.)))*(1.-uCloud)*smoothstep(0.,0.4,h);
+      }
+      /* 月(十九夜・寢待月) */
+      float md=dot(d,uMoon);
+      col+=vec3(1.,.97,.88)*smoothstep(0.99955,0.9997,md)*2.2*uNight;
+      col+=vec3(.35,.4,.55)*pow(max(md,0.),60.)*0.5*uNight;
+      /* 太陽圓盤 */
+      col+=uSunCol*smoothstep(0.99955,0.99975,sd)*18.*uSunVis*(1.-uCloud*0.9);
+      /* 雲層 */
+      if(h>-0.02){
+        vec2 uv=d.xz/(max(h,0.)+0.09);
+        vec2 w=vec2(uTime*0.012+uStorm*uTime*0.02, uTime*0.004);
+        float c=fbm(uv*0.55+w)*0.65+fbm(uv*1.6-w*1.7)*0.35;
+        float cov=mix(0.62,0.15,uCloud);
+        float a=smoothstep(cov,cov+0.28,c);
+        a=max(a, uStorm*smoothstep(0.1,0.5,c)*0.97);
+        float light=clamp(dot(normalize(vec3(uv.x,1.0,uv.y)*0.02+uSun),vec3(0,1,0)),0.,1.);
+        vec3 cc=mix(uCloudDark,uCloudCol,clamp(0.35+0.9*(c-cov)+0.35*light,0.,1.));
+        cc+=uSunCol*pow(sd,10.)*0.6*uSunVis*(1.-a*0.5);
+        cc=mix(cc, cc*0.35, uStorm*smoothstep(0.4,0.9,c));
+        cc+=vec3(0.75,0.8,1.0)*uFlash*(0.6+0.8*c);
+        col=mix(col,cc,a*smoothstep(-0.02,0.12,h));
+      }
+      col+=vec3(0.55,0.6,0.8)*uFlash*0.35;
+      col=mix(col, uHor*0.92, smoothstep(0.06,-0.08,h));
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(900,48,24), skyMat);
+skyDome.renderOrder=-10; skyDome.frustumCulled=false; scene.add(skyDome);
+
+/* ════════════════════════════════ 地形 ════════════════════════════════ */
+const TEX_W = QUALITY==='high' ? 2048 : 1280;
+const TEX_H = Math.round(TEX_W*(ZMAX-ZMIN)/(XMAX-XMIN));
+function bakeGround(){
+  const cv=document.createElement('canvas'); cv.width=TEX_W; cv.height=TEX_H;
+  const rc=document.createElement('canvas'); rc.width=TEX_W; rc.height=TEX_H;
+  const ctx=cv.getContext('2d'), rctx=rc.getContext('2d');
+  const img=ctx.createImageData(TEX_W,TEX_H), rim=rctx.createImageData(TEX_W,TEX_H);
+  const D=img.data, R=rim.data;
+  const C=(h)=>[(h>>16&255)/255,(h>>8&255)/255,(h&255)/255];
+  const cField=C(0x7d8a4c), cField2=C(0x9a9258), cGrass=C(0x6f8a45), cForest=C(0x33472a), cForest2=C(0x2a3a24),
+        cRock=C(0x7a6d5a), cRoad=C(0xb09a72), cSand=C(0xb8a47c), cMud=C(0x5f5a44), cWaterP=C(0x6d8584),
+        cSeed=C(0x86a24c), cLevee=C(0x8e8a5a), cTown=C(0x8b7a5e), cDeep=C(0x2a3c44), cBank=C(0x6b6a48);
+  const mix3=(o,a,b,u)=>{ o[0]=a[0]+(b[0]-a[0])*u; o[1]=a[1]+(b[1]-a[1])*u; o[2]=a[2]+(b[2]-a[2])*u; };
+  const c=[0,0,0], t=[0,0,0];
+  for(let py=0;py<TEX_H;py++){
+    const z=ZMIN+(py+0.5)/TEX_H*(ZMAX-ZMIN);
+    const cx=coastX(z);
+    for(let px=0;px<TEX_W;px++){
+      const x=XMIN+(px+0.5)/TEX_W*(XMAX-XMIN);
+      const h=terrainH(x,z);
+      const e=0.35, s=Math.hypot(terrainH(x+e,z)-terrainH(x-e,z), terrainH(x,z+e)-terrainH(x,z-e))/(2*e);
+      const n1=vnoise(x*0.9,z*0.9), n2=vnoise(x*3.1+7,z*3.1-2), n3=fbm(x*0.25,z*0.25,3);
+      let rough=0.93;
+      const sd=x-cx;
+      if(sd<0){                                  // 海底 / 干潟
+        mix3(c,cSand,cDeep,smoothstep(0,5,-sd)); mix3(c,c,cMud,0.3*(1-smoothstep(0,2,-sd)));
+        rough=0.6;
+      } else {
+        mix3(c,cField,cField2,0.5+0.5*n1);        // 畑・草地
+        if(n3>0.05) mix3(c,c,cGrass,0.6);
+        const forest = forestDens(x,z,h) * (roadD(x,z)<0.6?0:1);
+        mix3(t,cForest,cForest2,0.5+0.5*n2); mix3(c,c,t,clamp(forest*1.1,0,0.95));
+        mix3(c,c,cRock,smoothstep(0.45,0.9,s)*0.7);
+        if(isPaddy(x,z,h,s)){                      // 水田(五月・插秧後)
+          const a=0.3*Math.sin(x*0.07+z*0.05);
+          const ux=x*Math.cos(a)-z*Math.sin(a), uz=x*Math.sin(a)+z*Math.cos(a);
+          const gx=fract(ux/0.9), gz=fract(uz/0.62);
+          const cell=hash2(Math.floor(ux/0.9),Math.floor(uz/0.62));
+          const lev = (gx<0.07||gz<0.1)?1:0;
+          mix3(t,cWaterP,cSeed,clamp(cell*1.2-0.15+0.25*n2,0,1));
+          if(lev){ mix3(t,cLevee,cGrass,0.4); rough=0.9; } else rough=0.28+cell*0.35;
+          mix3(c,c,t,0.92);
+        }
+        for(const v of VILLAGES){ const dv=Math.hypot(x-v[0],z-v[1]); if(dv<v[3]) mix3(c,c,cTown,0.55*(1-smoothstep(v[3]*0.5,v[3],dv))); }
+        const rd=roadD(x,z);
+        if(rd<0.42){ mix3(c,c,cRoad,(1-smoothstep(0.18,0.42,rd))*0.85); rough=0.95; }
+        const rv=riverD(x,z);
+        if(rv<0.5) mix3(c,c,cBank,0.6*(1-smoothstep(0,0.5,rv)));
+        for(const f of FORTS){ const df=Math.hypot(x-f.x,z-f.z);
+          if(df<f.r+0.5){ mix3(c,c,cMud,0.45*(1-smoothstep(f.r-0.3,f.r+0.5,df))); }
+          if(Math.abs(df-f.r-0.35)<0.18) mix3(c,c,[0.2,0.19,0.14],0.7);      // 空堀
+        }
+      }
+      const sh=0.88+0.12*n2+0.05*vnoise(x*9,z*9);
+      const k=(py*TEX_W+px)*4;
+      D[k]=clamp(c[0]*sh,0,1)*255; D[k+1]=clamp(c[1]*sh,0,1)*255; D[k+2]=clamp(c[2]*sh,0,1)*255; D[k+3]=255;
+      R[k]=0; R[k+1]=rough*255; R[k+2]=0; R[k+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0); rctx.putImageData(rim,0,0);
+  const tx=new THREE.CanvasTexture(cv); tx.colorSpace=THREE.SRGBColorSpace; tx.anisotropy=8;
+  const rt=new THREE.CanvasTexture(rc);
+  return {tx,rt};
+}
+const ground=bakeGround();
+const detailTex=(()=>{   // 近景細節雜訊
+  const n=256, cv=document.createElement('canvas'); cv.width=cv.height=n;
+  const x=cv.getContext('2d'), im=x.createImageData(n,n);
+  for(let j=0;j<n;j++) for(let i=0;i<n;i++){
+    const a=0.5+0.5*(vnoise(i*0.25,j*0.25)*0.5+vnoise(i*0.0625*4,j*0.0625*4)*0.3+ (hash2(i,j)-0.5)*0.4);
+    const b=0.5+0.5*fbm(i/32,j/32,3);
+    const k=(j*n+i)*4; im.data[k]=a*255; im.data[k+1]=b*255; im.data[k+2]=128; im.data[k+3]=255;
+  }
+  // 使其可平鋪:四邊混合
+  x.putImageData(im,0,0);
+  const t=new THREE.CanvasTexture(cv); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
+})();
+const TW=XMAX-XMIN, TD=ZMAX-ZMIN;
+const tGeo=new THREE.PlaneGeometry(TW, TD, Math.round(TW/0.5), Math.round(TD/0.5));
+tGeo.rotateX(-Math.PI/2); tGeo.translate((XMIN+XMAX)/2, 0, (ZMIN+ZMAX)/2);
+{ const p=tGeo.attributes.position; for(let i=0;i<p.count;i++) p.setY(i, terrainH(p.getX(i),p.getZ(i))); tGeo.computeVertexNormals(); }
+const terrainMat=new THREE.MeshStandardMaterial({map:ground.tx, roughnessMap:ground.rt, roughness:1, metalness:0});
+terrainMat.onBeforeCompile=(sh)=>{
+  sh.uniforms.uDetail={value:detailTex}; sh.uniforms.uWet=U.wet;
+  sh.fragmentShader='uniform sampler2D uDetail; uniform float uWet;\n'+sh.fragmentShader
+    .replace('#include <map_fragment>',`#include <map_fragment>
+      float dn=texture2D(uDetail, vMapUv*vec2(${(TW/1.6).toFixed(1)},${(TD/1.6).toFixed(1)})).r;
+      float dn2=texture2D(uDetail, vMapUv*vec2(${(TW/9).toFixed(1)},${(TD/9).toFixed(1)})).g;
+      diffuseColor.rgb*=0.8+0.28*dn+0.22*(dn2-0.5);
+      diffuseColor.rgb*=1.0-0.38*uWet;`)
+    .replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+      roughnessFactor=mix(roughnessFactor, roughnessFactor*0.45, uWet);`);
+};
+const terrain=new THREE.Mesh(tGeo, terrainMat);
+terrain.receiveShadow=true; scene.add(terrain);
+{ // 圖外延伸地面(遠景由霧氣吞沒)
+  const m=new THREE.MeshStandardMaterial({color:0x4f5f38, roughness:1});
+  for(const [w,d,x,z] of [[1400,600,0,ZMIN-300+0.3],[1400,600,0,ZMAX+300-0.3],[600,TD+2,XMAX+300-0.3,(ZMIN+ZMAX)/2],[600,TD+2,XMIN-300+0.3,(ZMIN+ZMAX)/2]]){
+    const g=new THREE.PlaneGeometry(w,d); g.rotateX(-Math.PI/2);
+    const p=new THREE.Mesh(g,m); p.position.set(x,1.38,z); p.receiveShadow=true; scene.add(p);
+  }
+}
+
+/* ════════════════════════════════ 水面(河川) ════════════════════════════════ */
+const waterMat=new THREE.ShaderMaterial({
+  transparent:true, fog:true,
+  uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
+    uTime:{value:0}, uSun:{value:new THREE.Vector3()}, uSunCol:{value:new THREE.Color()},
+    uTop:{value:new THREE.Color()}, uHor:{value:new THREE.Color()}, uRain:{value:0}, uFlash:{value:0}, uDeep:{value:new THREE.Color(0x1d3440)} }]),
+  vertexShader:`#include <fog_pars_vertex>
+    varying vec3 vW; attribute float aShore; varying float vShore;
+    void main(){ vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; vShore=aShore;
+      vec4 mvPosition=viewMatrix*w; gl_Position=projectionMatrix*mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader:`#include <fog_pars_fragment>
+    uniform float uTime,uRain,uFlash; uniform vec3 uSun,uSunCol,uTop,uHor,uDeep; varying vec3 vW; varying float vShore;
+    float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+      return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
+    float hgt(vec2 p){ return n2(p*1.3+vec2(uTime*0.35,uTime*0.2))*0.5+n2(p*3.1-vec2(uTime*0.5,-uTime*0.3))*0.3
+      + uRain*n2(p*22.+uTime*4.)*0.35; }
+    void main(){
+      vec2 p=vW.xz; float e=0.08;
+      float h0=hgt(p), hx=hgt(p+vec2(e,0.)), hz=hgt(p+vec2(0.,e));
+      vec3 n=normalize(vec3((h0-hx)*0.9,1.0,(h0-hz)*0.9));
+      vec3 v=normalize(cameraPosition-vW);
+      float fr=0.04+0.96*pow(1.0-max(dot(n,v),0.0),5.0);
+      vec3 r=reflect(-v,n);
+      vec3 sky=mix(uHor,uTop,pow(clamp(r.y,0.,1.),0.5));
+      vec3 col=mix(uDeep*(0.55+0.45*length(uHor)), sky, clamp(fr*1.25,0.,1.));
+      float sp=pow(max(dot(r,uSun),0.0),260.0);
+      col+=uSunCol*sp*6.0 + uSunCol*pow(max(dot(r,uSun),0.0),24.0)*0.12;
+      col=mix(col, col*0.8+vec3(0.55,0.5,0.4)*0.15, vShore);
+      col+=vec3(0.7,0.75,0.9)*uFlash*0.4;
+      gl_FragColor=vec4(col, mix(0.9,0.55,vShore));
+      #include <fog_fragment>
+    }`
+});
+{ // 河川:沿谷底鋪水帶
+  for(const R of RIVERS){
+    const pts=catmull(R.pts,6);
+    const pos=[], sh=[], idx=[];
+    for(let i=0;i<pts.length;i++){
+      const a=pts[Math.max(0,i-1)], b=pts[Math.min(pts.length-1,i+1)];
+      let dx=b[0]-a[0], dz=b[1]-a[1]; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
+      const [x,z]=pts[i]; const w=R.w*(1+0.25*vnoise(x*0.4,z*0.4));
+      const vf=R.floor(x,z);
+      const y=Math.min(vf-0.1, terrainH(x,z)+0.2);
+      pos.push(x-dz*w, y, z+dx*w,  x+dz*w, y, z-dx*w); sh.push(1,1);
+      if(i<pts.length-1){ const k=i*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); }
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('aShore', new THREE.Float32BufferAttribute(sh.map(()=>0.35),1));
+    g.setIndex(idx);
+    scene.add(new THREE.Mesh(g, waterMat));
+  }
+}
+
+/* ════════════════════════════════ 幾何工具(頂點色合併) ════════════════════════════════ */
+const _m4=new THREE.Matrix4(), _q=new THREE.Quaternion(), _e=new THREE.Euler(), _v=new THREE.Vector3(), _s=new THREE.Vector3();
+function prep(geo, hex, x=0,y=0,z=0, rx=0,ry=0,rz=0, sx=1,sy=1,sz=1){
+  let g=geo.index?geo.toNonIndexed():geo;
+  g.deleteAttribute('uv');
+  _m4.compose(_v.set(x,y,z), _q.setFromEuler(_e.set(rx,ry,rz)), _s.set(sx,sy,sz));
+  g.applyMatrix4(_m4);
+  const c=new THREE.Color(hex), n=g.attributes.position.count, a=new Float32Array(n*3);
+  for(let i=0;i<n;i++){ a[i*3]=c.r; a[i*3+1]=c.g; a[i*3+2]=c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(a,3));
+  return g;
+}
+function place(g, x,y,z, ry=0, s=1){ const c=g.clone(); _m4.compose(_v.set(x,y,z), _q.setFromEuler(_e.set(0,ry,0)), _s.set(s,s,s)); c.applyMatrix4(_m4); return c; }
+function gableRoof(w,h,len){           // 三角稜柱屋頂(沿 z 方向)
+  const sh=new THREE.Shape(); sh.moveTo(-w/2,0); sh.lineTo(w/2,0); sh.lineTo(0,h); sh.closePath();
+  const g=new THREE.ExtrudeGeometry(sh,{depth:len, bevelEnabled:false}); g.translate(0,0,-len/2); return g;
+}
+const vcMat=new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.9, metalness:0});
+
+/* ════════════════════════════════ 植被(實例化 + 風中搖曳) ════════════════════════════════ */
+function swayMat(hex){
+  const m=new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.95, metalness:0, color:hex||0xffffff});
+  m.onBeforeCompile=(sh)=>{
+    sh.uniforms.uTime=U.time; sh.uniforms.uWind=U.wind;
+    sh.vertexShader='uniform float uTime; uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        float ph=instanceMatrix[3].x*0.61+instanceMatrix[3].z*0.37;
+        float sw=max(position.y,0.0)*uWind*(0.045*sin(uTime*1.9+ph)+0.02*sin(uTime*4.7+ph*2.3));
+        transformed.x+=sw; transformed.z+=sw*0.35;
+      #endif`);
+  };
+  return m;
+}
+const TREE_TYPES=[
+  mergeGeometries([ prep(new THREE.CylinderGeometry(0.035,0.05,0.4,5),0x4a3624,0,0.2,0),
+    prep(new THREE.ConeGeometry(0.3,0.5,7),0x2c4629,0,0.5,0), prep(new THREE.ConeGeometry(0.23,0.42,7),0x31502d,0,0.74,0),
+    prep(new THREE.ConeGeometry(0.14,0.34,7),0x375a31,0,0.96,0) ]),                                     // 杉・檜
+  mergeGeometries([ prep(new THREE.CylinderGeometry(0.03,0.05,0.42,5),0x4f3a28,0,0.21,0),
+    prep(new THREE.IcosahedronGeometry(0.3,0),0x3d5a2e,0,0.56,0,0,0,0,1,0.8,1), prep(new THREE.IcosahedronGeometry(0.22,0),0x48683a,0.16,0.66,0.08),
+    prep(new THREE.IcosahedronGeometry(0.2,0),0x365229,-0.14,0.62,-0.1) ]),                            // 闊葉(楠・椎)
+  mergeGeometries([ prep(new THREE.CylinderGeometry(0.025,0.04,0.7,5),0x6a4a30,0.04,0.35,0,0,0,-0.12),
+    prep(new THREE.IcosahedronGeometry(0.2,0),0x2f4a2a,0.1,0.72,0,0,0,0,1.3,0.45,1.1), prep(new THREE.IcosahedronGeometry(0.15,0),0x355330,-0.08,0.58,0.06,0,0,0,1.3,0.45,1.1),
+    prep(new THREE.IcosahedronGeometry(0.13,0),0x2c4527,0.02,0.86,-0.05,0,0,0,1.3,0.45,1.1) ]),         // 赤松
+];
+const treeMats=TREE_TYPES.map(()=>swayMat());
+const TREE_N = QUALITY==='high' ? 9000 : 3800;
+{
+  const buckets=[[],[],[]];
+  let tries=0, count=0;
+  while(count<TREE_N && tries<260000){
+    tries++;
+    const x=rr(XMIN+1,XMAX-1), z=rr(ZMIN+1,ZMAX-1);
+    const h=terrainH(x,z);
+    const s=slopeAt(x,z); if(s>1.1) continue;
+    if(roadD(x,z)<0.55 || riverD(x,z)<0.45) continue;
+    if(nearStructure(x,z,0.8)) continue;
+    if(Math.abs(x-fenceX(z))<2.2 && z>-27 && z<25) continue;
+    const dens=forestDens(x,z,h);
+    if(isPaddy(x,z,h,s)) continue;
+    if(rnd()>dens*0.95+0.015) continue;
+    const type = h>2.3 ? (rnd()<0.6?0:2) : (rnd()<0.45?1:(rnd()<0.5?2:0));
+    const sc=0.75+rnd()*0.6;
+    buckets[type].push([x, groundY(x,z)-0.03, z, rnd()*6.283, sc, 0.8+rnd()*0.35]);
+    count++;
+  }
+  buckets.forEach((b,ti)=>{
+    const im=new THREE.InstancedMesh(TREE_TYPES[ti], treeMats[ti], b.length);
+    const col=new THREE.Color();
+    b.forEach((d,i)=>{
+      _m4.compose(_v.set(d[0],d[1],d[2]), _q.setFromEuler(_e.set(0,d[3],0)), _s.set(d[4],d[4]*(0.9+0.2*((i*7)%10)/10),d[4]));
+      im.setMatrixAt(i,_m4); col.setScalar(d[5]); im.setColorAt(i,col);
+    });
+    im.castShadow=true; im.receiveShadow=true;
+    scene.add(im);
+  });
+}
+
+/* ════════════════════════════════ 建築(長篠城・砦・聚落・醫王寺) ════════════════════════════════ */
+const C_WOOD=0x6b4f33, C_DWOOD=0x3f2e1f, C_THATCH=0x8c7b52, C_THATCH2=0x756646, C_WALL=0xd9d0ba, C_BARK=0x4b3426;
+const staticParts=[];
+const stakes=[];
+function house(x,z,ry,s=1,rich=false){
+  const y=groundY(x,z);
+  const g=[prep(new THREE.BoxGeometry(0.5,0.22,0.36), rich?C_WALL:C_DWOOD, 0,0.11,0),
+           prep(gableRoof(0.66,0.3,0.46), rnd()<0.5?C_THATCH:C_THATCH2, 0,0.22,0, 0,Math.PI/2,0)];
+  for(const p of g) staticParts.push(place(p,x,y,z,ry,s));
+}
+function yagura(x,z,s=1){
+  const y=groundY(x,z);
+  for(const [dx,dz] of [[-0.18,-0.18],[0.18,-0.18],[-0.18,0.18],[0.18,0.18]])
+    staticParts.push(place(prep(new THREE.BoxGeometry(0.04,0.9,0.04),C_DWOOD,dx,0.45,dz),x,y,z,0,s));
+  staticParts.push(place(prep(new THREE.BoxGeometry(0.5,0.04,0.5),C_WOOD,0,0.78,0),x,y,z,0,s));
+  staticParts.push(place(prep(new THREE.BoxGeometry(0.5,0.12,0.02),C_WOOD,0,0.86,0.24),x,y,z,0,s));
+  staticParts.push(place(prep(new THREE.BoxGeometry(0.5,0.12,0.02),C_WOOD,0,0.86,-0.24),x,y,z,0,s));
+  staticParts.push(place(prep(new THREE.ConeGeometry(0.42,0.26,4),C_THATCH2,0,1.08,0,0,Math.PI/4,0),x,y,z,0,s));
+}
+function palisade(cx,cz,r,gateAng){
+  const n=Math.round(r*2*Math.PI/0.16);
+  for(let i=0;i<n;i++){
+    const a=i/n*Math.PI*2; if(Math.abs(Math.atan2(Math.sin(a-gateAng),Math.cos(a-gateAng)))<0.22) continue;
+    const x=cx+Math.cos(a)*r, z=cz+Math.sin(a)*r;
+    stakes.push([x,groundY(x,z),z,0.9+0.25*rnd()]);
+  }
+}
+for(const f of FORTS){
+  palisade(f.x,f.z,f.r,Math.PI);
+  if(f.castle){
+    palisade(f.x+0.3,f.z-0.2,f.r*0.55,Math.PI+0.4);
+    yagura(f.x+f.r*0.55,f.z-f.r*0.5,1.1); yagura(f.x-f.r*0.6,f.z+f.r*0.45,1.1);
+    house(f.x-0.1,f.z-0.2,0.2,1.5,true); house(f.x+0.6,f.z+0.5,1.4,1.2,true); house(f.x-0.8,f.z-0.8,0.9,1.1); house(f.x+0.9,f.z-0.9,0.4,1.0);
+  } else { yagura(f.x+f.r*0.4,f.z-f.r*0.35,0.9); house(f.x-0.3,f.z+0.3,0.5,0.8); }
+}
+for(const v of VILLAGES){
+  for(let i=0;i<v[2];i++){
+    const a=rnd()*6.283, r=Math.sqrt(rnd())*v[3], x=v[0]+Math.cos(a)*r, z=v[1]+Math.sin(a)*r;
+    if(riverD(x,z)<0.4 || roadD(x,z)<0.3) continue;
+    house(x,z,rnd()*3.14,0.8+rnd()*0.5, rnd()<0.15);
+  }
+}
+{ // 醫王寺
+  const {x:ax,z:az}=TEMPLE, y=groundY(ax,az);
+  staticParts.push(place(prep(new THREE.BoxGeometry(1.0,0.36,0.7),C_WALL,0,0.18,0),ax,y,az,0.3));
+  staticParts.push(place(prep(new THREE.ConeGeometry(0.95,0.5,4),C_BARK,0,0.6,0,0,Math.PI/4,0,1,1,0.75),ax,y,az,0.3));
+  house(ax+1.1,az+0.6,0.3,0.9,true);
+}
+const staticMesh=new THREE.Mesh(mergeGeometries(staticParts), vcMat);
+staticMesh.castShadow=true; staticMesh.receiveShadow=true; scene.add(staticMesh);
+{
+  const im=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.022,0.026,0.34,5),
+    new THREE.MeshStandardMaterial({color:0x5c4630, roughness:0.95}), stakes.length);
+  stakes.forEach((s,i)=>{ _m4.compose(_v.set(s[0],s[1]+0.15*s[3],s[2]),_q.identity(),_s.set(1,s[3],1)); im.setMatrixAt(i,_m4); });
+  im.castShadow=true; scene.add(im);
+}
+
+/* ════════════════════════════════ 馬防柵(可被衝破) ════════════════════════════════ */
+const BREACHES=[{z:-17.8,t:7.72,w:1.6},{z:-11.4,t:8.32,w:2.0}];   // 據『甲陽軍鑑』:馬場、真田等一度攻破第一重柵
+const fence=(()=>{
+  const posts=[], rails=[];
+  function line(pts, step, gaps){
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1], L=Math.hypot(b[0]-a[0],b[1]-a[1]), n=Math.max(1,Math.round(L/step));
+      for(let k=0;k<n;k++){
+        const u0=k/n, u1=(k+1)/n, x0=lerp(a[0],b[0],u0), z0=lerp(a[1],b[1],u0), x1=lerp(a[0],b[0],u1), z1=lerp(a[1],b[1],u1);
+        const zm=(z0+z1)/2; if(gaps && gaps.some(g=>Math.abs(zm-g)<0.55)) continue;
+        posts.push({x:x0,z:z0}); rails.push({x0,z0,x1,z1});
+      }
+    }
+  }
+  line(FENCE,0.55,FENCE_GAPS); for(const L of FENCE2) line(L,0.6,null);
+  const pm=new THREE.MeshStandardMaterial({color:0x6a5238, roughness:0.9});
+  const P=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03,0.036,0.62,5), pm, posts.length);
+  const R=new THREE.InstancedMesh(new THREE.BoxGeometry(1,0.025,0.025), pm, rails.length*2);
+  P.castShadow=R.castShadow=true; scene.add(P); scene.add(R);
+  for(const p of posts){ p.y=groundY(p.x,p.z); p.r=hash2(Math.round(p.x*100),Math.round(p.z*100)); }
+  for(const r of rails){ r.y0=groundY(r.x0,r.z0); r.y1=groundY(r.x1,r.z1); r.zm=(r.z0+r.z1)/2; r.r=hash2(Math.round(r.zm*97),3); }
+  const _a=new THREE.Vector3(), _b=new THREE.Vector3();
+  function update(t){
+    posts.forEach((p,i)=>{
+      let fall=0; for(const B of BREACHES) if(Math.abs(p.z-B.z)<B.w) fall=Math.max(fall,smoothstep(B.t,B.t+0.12,t));
+      _e.set(0,0,-fall*(1.1+0.4*p.r)); _q.setFromEuler(_e);
+      _m4.compose(_v.set(p.x+fall*0.25,p.y+0.28*(1-fall*0.7),p.z),_q,_s.set(1,1,1)); P.setMatrixAt(i,_m4);
+    });
+    rails.forEach((r,i)=>{
+      let fall=0; for(const B of BREACHES) if(Math.abs(r.zm-B.z)<B.w) fall=Math.max(fall,smoothstep(B.t,B.t+0.12,t));
+      for(let k=0;k<2;k++){
+        const hgt=(k?0.46:0.22)*(1-fall*0.8);
+        _a.set(r.x0+fall*0.4,r.y0+hgt,r.z0); _b.set(r.x1+fall*0.4*(0.5+r.r),r.y1+hgt*(1-fall*r.r),r.z1);
+        const L=_a.distanceTo(_b); _v.addVectors(_a,_b).multiplyScalar(0.5);
+        _q.setFromUnitVectors(new THREE.Vector3(1,0,0), _b.clone().sub(_a).normalize());
+        _m4.compose(_v,_q,_s.set(L,1,1)); R.setMatrixAt(i*2+k,_m4);
+      }
+    });
+    P.instanceMatrix.needsUpdate=R.instanceMatrix.needsUpdate=true;
+  }
+  update(0);
+  return {update};
+})();
+
+/* ════════════════════════════════ 家紋(Canvas 程序繪製) ════════════════════════════════ */
+function crestTex(type, opt={}){
+  const W=128, H=opt.tall?384:256, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const x=cv.getContext('2d');
+  x.fillStyle=opt.bg||'#efe7d2'; x.fillRect(0,0,W,H);
+  for(let i=0;i<900;i++){ x.fillStyle=`rgba(0,0,0,${Math.random()*0.05})`; x.fillRect(Math.random()*W,Math.random()*H,1+Math.random()*2,1); }
+  if(opt.band){ x.fillStyle=opt.band; x.fillRect(0,0,W,Math.round(H*0.1)); }
+  const cx=W/2, cy=opt.tall?H*0.3:H*0.52, ink=opt.ink||'#15110d', paper=opt.bg||'#efe7d2';
+  x.fillStyle=ink; x.strokeStyle=ink; x.lineCap='round'; x.lineJoin='round';
+  const circ=(px,py,r)=>{ x.beginPath(); x.arc(px,py,r,0,Math.PI*2); x.fill(); };
+  if(type==='mokko'){                 // 織田木瓜
+    for(let k=0;k<5;k++){ const a=-Math.PI/2+k*1.2566; circ(cx+Math.cos(a)*20,cy+Math.sin(a)*20,25); }
+    x.fillStyle=paper; for(let k=0;k<5;k++){ const a=-Math.PI/2+k*1.2566; circ(cx+Math.cos(a)*18,cy+Math.sin(a)*18,19.5); }
+    x.fillStyle=ink; for(let k=0;k<5;k++){ const a=-Math.PI/2+k*1.2566; circ(cx+Math.cos(a)*12,cy+Math.sin(a)*12,12); }
+    x.fillStyle=paper; circ(cx,cy,9);
+    x.fillStyle=ink; for(let k=0;k<5;k++){ const a=-Math.PI/2+k*1.2566+0.63; circ(cx+Math.cos(a)*5.5,cy+Math.sin(a)*5.5,2.6); }
+    circ(cx,cy,2.5);
+  } else if(type==='eiraku'){         // 永樂通寶(織田信長 旗印)
+    circ(cx,cy,47); x.fillStyle=paper; x.fillRect(cx-11,cy-11,22,22);
+    x.font='900 25px "Noto Serif TC","Songti TC",serif'; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText('永',cx,cy-29); x.fillText('樂',cx,cy+30); x.fillText('通',cx+29,cy); x.fillText('寶',cx-29,cy);
+  } else if(type==='hishi'){          // 武田菱(割菱)
+    const w=48, h=32, g=4;
+    for(const [ox,oy] of [[0,-h/2],[w/2,0],[0,h/2],[-w/2,0]]){
+      x.beginPath(); x.moveTo(cx+ox, cy+oy-h/2+g); x.lineTo(cx+ox+w/2-g*1.5, cy+oy); x.lineTo(cx+ox, cy+oy+h/2-g); x.lineTo(cx+ox-w/2+g*1.5, cy+oy); x.closePath(); x.fill(); }
+  } else if(type==='rokumon'){        // 六文錢(真田)
+    for(let r=0;r<2;r++) for(let c=0;c<3;c++){ const px=cx+(c-1)*38, py=cy+(r-0.5)*38;
+      x.fillStyle=ink; circ(px,py,16); x.fillStyle=opt.bg; x.fillRect(px-5,py-5,10,10); }
+  } else if(type==='aoi'){            // 三つ葉葵(德川)
+    x.lineWidth=7; x.beginPath(); x.arc(cx,cy,46,0,Math.PI*2); x.stroke();
+    for(let k=0;k<3;k++){ const a=-Math.PI/2+k*2.094;
+      x.save(); x.translate(cx,cy); x.rotate(a+Math.PI/2);
+      x.beginPath(); x.moveTo(0,-6); x.bezierCurveTo(20,-12,26,-36,0,-39); x.bezierCurveTo(-26,-36,-20,-12,0,-6); x.fill();
+      x.strokeStyle=paper; x.lineWidth=2.2; x.beginPath(); x.moveTo(0,-10); x.lineTo(0,-34); x.stroke();
+      for(const s of [-1,1]){ x.beginPath(); x.moveTo(0,-18); x.lineTo(s*10,-26); x.stroke(); x.beginPath(); x.moveTo(0,-26); x.lineTo(s*8,-32); x.stroke(); }
+      x.restore(); }
+    circ(cx,cy,5);
+  }
+  if(opt.text){
+    const ts=opt.textSize||34; x.fillStyle=ink; x.font=`900 ${ts}px "Noto Serif TC","Songti TC",serif`; x.textAlign='center'; x.textBaseline='middle';
+    const chars=[...opt.text], y0=type==='none'?H*0.1+ts*0.7:H*0.56;
+    chars.forEach((ch,i)=>x.fillText(ch,cx,y0+i*ts*1.05));
+  }
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t;
+}
+const BANNER_STYLE={
+  oda:{bg:'#e9b52e', ink:'#16110b', band:null},
+  tok:{bg:'#f1ecdf', ink:'#16110b', band:null},
+  tak:{bg:'#efe7d2', ink:'#16110b', band:'#b3261c'},
+  red:{bg:'#a8231a', ink:'#140c0a', band:null},
+  blk:{bg:'#1d1a18', ink:'#e8e0cc', band:null},
+};
+const flagMats={};
+function bannerMat(crest, style, text, textSize){
+  const k=crest+style+(text||''); if(flagMats[k]) return flagMats[k];
+  const st=BANNER_STYLE[style];
+  const tex=crestTex(crest,{...st, tall:true, text, textSize});
+  const m=new THREE.MeshStandardMaterial({map:tex, emissiveMap:tex, emissive:new THREE.Color(0.16,0.15,0.13), side:THREE.DoubleSide, roughness:0.85, transparent:true});
+  m.onBeforeCompile=(sh)=>{
+    sh.uniforms.uTime=U.time; sh.uniforms.uWind=U.wind;
+    sh.vertexShader='uniform float uTime; uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+      float ph=modelMatrix[3].x*1.3+modelMatrix[3].z*0.9;
+      float amp=(0.35+uWind)*0.09*uv.x;
+      transformed.z+=sin(uTime*(3.2+uWind*3.0)+uv.x*4.0+uv.y*2.5+ph)*amp;
+      transformed.x-=abs(sin(uTime*2.1+ph))*amp*0.35;`);
+  };
+  m.customProgramCacheKey=()=> 'banner';
+  m.userData={crest, style, text, textSize};
+  flagMats[k]=m; return m;
+}
+function makeNobori(mat){
+  const g=new THREE.Group();
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.016,1.75,5), new THREE.MeshStandardMaterial({color:0x2b2118, roughness:0.8}));
+  pole.position.y=0.875; g.add(pole);
+  const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.34,4), pole.material); bar.rotation.z=Math.PI/2; bar.position.set(0.17,1.7,0); g.add(bar);
+  const cloth=new THREE.Mesh(new THREE.PlaneGeometry(0.32,0.96,6,10), mat);
+  cloth.geometry.translate(0.17,1.2,0); cloth.castShadow=true; g.add(cloth);
+  pole.castShadow=true;
+  return g;
+}
+/* 本陣陣幕 */
+function makeJinmaku(J){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const x=cv.getContext('2d');
+  x.fillStyle='#f1eadb'; x.fillRect(0,0,256,64);
+  x.fillStyle='#17120e'; x.fillRect(0,4,256,6); x.fillRect(0,54,256,6);
+  const tex=crestTex(J.crest,{bg:'#f1eadb'}); const img=tex.image;
+  for(let i=0;i<4;i++) x.drawImage(img,0,40,128,176,14+i*64,12,36,40);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace;
+  const mat=new THREE.MeshStandardMaterial({map:t, side:THREE.DoubleSide, roughness:0.9});
+  const g=new THREE.Group(), W=J.W, D=J.D;
+  const edges=[[[-W/2,-D/2],[W/2,-D/2]],[[W/2,-D/2],[W/2,D/2]],[[W/2,D/2],[0.35,D/2]],[[-0.35,D/2],[-W/2,D/2]],[[-W/2,D/2],[-W/2,-D/2]]];
+  const c=Math.cos(J.ry), s=Math.sin(J.ry);
+  for(const [a,b] of edges){
+    const len=Math.hypot(b[0]-a[0],b[1]-a[1]), n=Math.max(1,Math.round(len/0.65));
+    for(let i=0;i<n;i++){
+      const x0=lerp(a[0],b[0],i/n), z0=lerp(a[1],b[1],i/n), x1=lerp(a[0],b[0],(i+1)/n), z1=lerp(a[1],b[1],(i+1)/n);
+      const wx0=J.x+x0*c+z0*s, wz0=J.z-x0*s+z0*c, wx1=J.x+x1*c+z1*s, wz1=J.z-x1*s+z1*c;
+      const p=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(wx1-wx0,wz1-wz0),0.26), mat);
+      const pv=new THREE.Group(); pv.position.set(wx0,groundY((wx0+wx1)/2,(wz0+wz1)/2),wz0); pv.rotation.y=-Math.atan2(wz1-wz0,wx1-wx0);
+      p.position.set(Math.hypot(wx1-wx0,wz1-wz0)/2,0.3,0); pv.add(p); g.add(pv);
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.46,4), new THREE.MeshStandardMaterial({color:0x2b2118})); post.position.set(0,0.23,0); pv.add(post);
+    }
+  }
+  scene.add(g); return g;
+}
+const jinGroups=JINS.map(makeJinmaku);
+
+/* ════════════════════════════════ 部隊資料 ════════════════════════════════
+   t = 0 為 04:00(寅の刻末),t = 12 為 16:00。『信長公記』:日の出より未の刻まで。
+   武田軍的出擊順序依『信長公記』:一番 山縣、二番 逍遙軒(信廉)、三番 西上野小幡(赤武者)、四番 典廄(信豐・黑武者)、五番 馬場。
+   其餘時刻為推估。 */
+const FX=(z)=>fenceX(z)+1.2;
+function chargeKf(home, cz, chs, tail){
+  const kf=[[0,home[0],home[1]]];
+  for(const c of chs){
+    const cp=[FX(cz),cz];
+    kf.push([c[0],home[0],home[1]], [c[1],cp[0],cp[1]], [c[2],cp[0]+0.15,cp[1]]);
+    if(c[3]!==undefined) kf.push([c[3],home[0]-0.8,home[1]]);
+  }
+  if(tail) for(const k of tail) kf.push(k);
+  return kf;
+}
+const A_RED=0xa8261c, A_BLK=0x1c1918, A_DEF=0x3a2a20, A_TOK=0x3b3228;
+const UNITS=[];
+function tak(o){ o.side='tak'; o.armor=o.armor??A_DEF; o.crest=o.crest||'hishi'; o.style=o.style||'tak';
+  if(o.charges){ o.kf=chargeKf(o.home,o.cz,o.charges,o.tail); o.combat=(o.combat||[]).concat(o.charges.map(c=>[c[1]-0.04,c[2]]));
+    o.fire=o.charges.map(c=>[c[0]+0.1,c[2],o.cz]); o.attr=(o.attr||[]).concat(o.charges.map((c,i)=>[c[1]-0.02,c[2],o.loss[i]])); }
+  UNITS.push(o); return o; }
+function oda(o){ o.side=o.side||'oda'; o.armor=o.armor??(o.side==='tok'?A_TOK:A_DEF); o.crest=o.crest||(o.side==='tok'?'aoi':'mokko'); o.style=o.style||o.side; UNITS.push(o); return o; }
+
+/* ── 武田軍(東岸) ── */
+tak({id:'yamagata', name:'山縣昌景(赤備)', sub:'左翼一番・約1,500', str:1500, riders:20, armor:A_RED, style:'red',
+  home:[12.5,15.5], cz:15, charges:[[1.0,1.28,1.75,2.15],[2.85,3.12,3.6,4.0],[4.2,4.45,4.8]], loss:[0.25,0.22,0.3],
+  dieAt:4.8, deadSub:'山縣昌景 中彈戰死・赤備潰退', casualty:0.25});
+tak({id:'nobukado', name:'武田信廉(逍遙軒)', sub:'二番・約1,500', str:1500, riders:14,
+  home:[11.5,5.5], cz:5, charges:[[1.8,2.08,2.55,2.95],[5.4,5.68,6.15,6.55]], loss:[0.16,0.18],
+  tail:[[9.7,10.7,5.5],[10.4,30,-12],[11.2,44,-42]], leave:11.2, attr:[[9.75,10.4,0.1]], routAt:9.72, routSub:'潰走・撤回信濃'});
+tak({id:'obata', name:'小幡信貞(赤武者)', sub:'三番・西上野衆 約1,500', str:1500, riders:18, armor:A_RED, style:'red',
+  home:[12,-1], cz:-1.5, charges:[[2.8,3.08,3.55,3.95],[6.35,6.62,7.1,7.5]], loss:[0.2,0.22],
+  tail:[[9.7,11.2,-1],[10.4,32,-14],[11.2,46,-42]], leave:11.2, attr:[[9.75,10.4,0.12]], routAt:9.72, routSub:'潰走'});
+tak({id:'nobutoyo', name:'武田信豐(黑武者)', sub:'四番・典廄 約1,000', str:1000, riders:12, armor:A_BLK, style:'blk',
+  home:[11.5,10], cz:10, charges:[[3.85,4.12,4.6,5.0],[6.95,7.22,7.7,8.1]], loss:[0.18,0.2],
+  tail:[[9.7,10.7,10],[10.4,30,-10],[11.2,44,-42]], leave:11.2, attr:[[9.75,10.4,0.1]], routAt:9.72, routSub:'隨勝頼 撤退'});
+tak({id:'baba', name:'馬場信春', sub:'五番・右翼 約1,500', str:1500, riders:14,
+  kf:[[0,11,-19.5],[4.8,11,-19.5],[5.12,5.4,-17.2],[7.3,5.4,-17.2],[7.62,FX(-17.8),-17.8],[8.1,FX(-17.8)+0.2,-17.8],[8.5,5.8,-17.4],
+      [9.75,5.8,-17.4],[10.1,14,-20],[10.55,38.5,-26],[11.0,39.2,-26.6]],
+  combat:[[5.0,5.15],[7.58,8.1],[10.6,11.0]], fire:[[7.4,8.1,-17.8]], attr:[[5.0,5.15,0.04],[7.6,8.1,0.24],[10.6,10.98,0.3]],
+  dieAt:11.0, deadSub:'殿軍護主・馬場信春戰死(出澤)', casualty:0.5,
+  changeAt:[[5.15,'奪取丸山・佐久間隊退入柵內'],[9.75,'殿軍・掩護勝頼撤退']]});
+tak({id:'sanada', name:'真田信綱・昌輝', sub:'右翼・約1,200', str:1200, riders:16, crest:'rokumon', style:'red',
+  home:[10.5,-12], cz:-11.4, charges:[[5.8,6.08,6.55,6.95],[8.0,8.28,8.62]], loss:[0.22,0.4],
+  dieAt:8.62, deadSub:'兄弟二人 一同戰死', casualty:0.4});
+tak({id:'tsuchiya', name:'土屋昌續', sub:'右翼・約1,000', str:1000, riders:10,
+  home:[11,-6.6], cz:-6.8, charges:[[6.5,6.78,7.25]], loss:[0.45], dieAt:7.25, deadSub:'攻柵時戰死', casualty:0.45});
+tak({id:'naito', name:'內藤昌秀', sub:'中央・約1,200', str:1200, riders:12,
+  home:[13.8,2.6], cz:2, charges:[[8.55,8.83,9.35,9.75]], loss:[0.3],
+  tail:[[9.95,16.5,-1.5],[10.3,19.2,-4.8]], attr:[[10.0,10.35,0.2]], dieAt:10.35, deadSub:'掩護撤退・內藤昌秀戰死', casualty:0.45});
+tak({id:'anayama', name:'穴山信君', sub:'一門衆・約1,000', str:1000, riders:10,
+  kf:[[0,14,-25],[9.15,14,-25],[9.9,30,-36],[10.5,40,-44]], leave:10.5, changeAt:[[9.15,'據傳 未戰先退']]});
+tak({id:'katsuyori', name:'武田勝頼 本陣', sub:'武田菱・約3,000', str:3000, riders:24, face:[-10,0],
+  kf:[[0,20.4,-2.4],[9.8,20.4,-2.4],[10.2,27,-12],[10.6,40,-24],[10.9,46.5,-29],[11.4,50,-44]], leave:11.4,
+  changeAt:[[9.8,'全軍崩潰・向信濃敗走']]});
+tak({id:'nobuzane', name:'武田信實', sub:'鳶ヶ巣山砦・約1,000', str:1000, riders:4, fort:0.9, face:[56,24],
+  kf:[[0,62.3,17.4]], combat:[[0.85,1.55]], attr:[[0.9,1.5,0.3]], dieAt:1.55, deadSub:'砦陷・武田信實戰死', casualty:0.4});
+/* ── 織田・德川軍(西岸・馬防柵後) ── */
+const LINE=[];
+function line(o){ o.face=[20,o.kf?o.kf[0][2]:0]; LINE.push(oda(o)); return o; }
+oda({id:'nobunaga', name:'織田信長 本陣', sub:'永樂錢・茶臼山 約5,000', str:5000, riders:10, crest:'eiraku', face:[20,-2], kf:[[0,-18,-2.4]]});
+line({id:'sakuma', name:'佐久間信盛', sub:'約3,000', str:3000, riders:4, kf:[[0,-5.4,-18.6]]});
+oda({id:'maruyama', name:'佐久間隊 丸山前哨', sub:'約300', str:300, riders:1, face:[14,-18],
+  kf:[[0,4.2,-17],[4.95,4.2,-17],[5.25,-4.6,-16.2]], combat:[[4.98,5.15]], attr:[[5.0,5.15,0.2]], changeAt:[[5.15,'丸山失守・退回柵內']]});
+line({id:'takigawa', name:'瀧川一益', sub:'約3,000', str:3000, riders:4, kf:[[0,-5.6,-11.6]]});
+line({id:'hashiba', name:'羽柴秀吉', sub:'約3,000', str:3000, riders:4, kf:[[0,-6,-4.6]]});
+line({id:'niwa', name:'丹羽長秀', sub:'約3,000', str:3000, riders:4, kf:[[0,-5.8,1.6]]});
+const GUN=oda({id:'teppo', name:'鐵炮隊(佐々成政・前田利家 等)', sub:'「鐵炮千挺ばかり」', str:1000, riders:0, figs:118, gun:true, lineShape:true, kf:[[0,FX(0)-2,0]]});
+oda({id:'ieyasu', name:'德川家康 本陣', sub:'厭離穢土欣求淨土・約2,000', str:2000, riders:8, side:'tok', text:'厭離穢土欣求淨土', textSize:24, crest:'none', face:[20,6], kf:[[0,-8.6,6.2]]});
+line({id:'ishikawa', name:'石川數正・鳥居元忠', sub:'約2,000', str:2000, riders:4, side:'tok', kf:[[0,-5.8,7.6]]});
+line({id:'honda', name:'本多忠勝・榊原康政', sub:'約2,000', str:2000, riders:6, side:'tok', kf:[[0,-5.6,12.6]]});
+line({id:'okubo', name:'大久保忠世・忠佐', sub:'約1,000・出柵迎戰', str:1000, riders:6, side:'tok',
+  kf:[[0,-5.4,18],[1.05,-5.4,18],[1.22,0.9,17],[1.72,0.9,17],[1.92,-5.4,18],[2.9,-5.4,18],[3.08,1.1,16.6],[3.55,1.1,16.6],[3.75,-5.4,18]],
+  combat:[[1.22,1.75],[3.08,3.58]], attr:[[1.25,1.75,0.04],[3.1,3.55,0.04]]});
+oda({id:'sakai', name:'酒井忠次 別働隊', sub:'約4,000・夜越船着山', str:4000, riders:10, side:'tok',
+  kf:[[0,49,31.5],[0.55,56,24.5],[0.85,60.6,20.4],[1.55,62,18.2],[2.1,59.8,14.4]], face:[62,17], combat:[[0.85,1.62]], attr:[[0.9,1.5,0.05]],
+  changeAt:[[1.6,'奪取鳶ヶ巣山砦群・解長篠城之圍']]});
+oda({id:'okudaira', name:'奧平信昌', sub:'長篠城守將・約500', str:500, riders:2, side:'tok', fort:1.1, face:[62,17],
+  kf:[[0,58,9.4],[1.6,58,9.4],[1.95,60,13],[2.6,58,9.4]], combat:[[1.62,1.95]]});
+/* 最後的追擊:柵內各隊出擊 */
+for(const u of LINE){ const k=u.kf[u.kf.length-1]; const x0=k[1], z0=k[2];
+  u.kf.push([9.6,x0,z0],[10.5,x0+13,z0*0.9],[11.2,x0+15,z0*0.9]); u.combat=(u.combat||[]).concat([[9.7,10.5]]); }
+/* 佐久間・瀧川兩隊一路追到出澤,與馬場的殿軍交戰 */
+for(const [id,dz] of [['sakuma',0.8],['takigawa',-1.2]]){ const u=UNITS.find(q=>q.id===id);
+  u.kf=u.kf.filter(k=>k[0]<10.5); u.kf.push([10.55,24,-21+dz],[10.95,36.8,-25.4+dz],[11.6,37.4,-25.8+dz]); u.combat.push([10.9,11.1]); }
+/* 柵前交戰:各武田隊攻擊時,對應柵段的織田・德川部隊一併交戰 */
+for(const t of UNITS.filter(u=>u.side==='tak' && u.fire)) for(const [a,b,z] of t.fire){
+  for(const u of LINE){ if(Math.abs(u.kf[0][2]-z)<5.5){ u.combat=(u.combat||[]).concat([[a+0.15,b]]); } } }
+
+const nFig=(s)=> s<=10 ? Math.round(s) : Math.min(124, Math.round(6+Math.sqrt(s)*1.62));
+function strAt(u,t){ if(!u.strKf) return u.str; const k=u.strKf; if(t<=k[0][0]) return k[0][1];
+  for(let i=0;i<k.length-1;i++) if(t<=k[i+1][0]) return lerp(k[i][1],k[i+1][1],(t-k[i][0])/(k[i+1][0]-k[i][0])); return k[k.length-1][1]; }
+function kfPos(kf,t){
+  if(t<=kf[0][0]) return [kf[0][1],kf[0][2]];
+  for(let i=0;i<kf.length-1;i++){ const a=kf[i], b=kf[i+1];
+    if(t<=b[0]){ const u=(t-a[0])/(b[0]-a[0]); return [lerp(a[1],b[1],u), lerp(a[2],b[2],u)]; } }
+  const l=kf[kf.length-1]; return [l[1],l[2]];
+}
+for(const u of UNITS){
+  u.cum=[0]; for(let i=1;i<u.kf.length;i++) u.cum.push(u.cum[i-1]+Math.hypot(u.kf[i][1]-u.kf[i-1][1],u.kf[i][2]-u.kf[i-1][2]));
+  u.cap=u.figs||nFig(u.str);
+}
+function sAt(u,t){ const kf=u.kf; if(t<=kf[0][0]) return 0;
+  for(let i=0;i<kf.length-1;i++) if(t<=kf[i+1][0]){ const w=(t-kf[i][0])/(kf[i+1][0]-kf[i][0]); return lerp(u.cum[i],u.cum[i+1],w); }
+  return u.cum[u.cum.length-1]; }
+function movingF(u,t){ const a=sAt(u,t), b=sAt(u,t-0.12); return smoothstep(0.05,0.6,a-b); }
+function inCombat(u,t){ if(!u.combat) return 0; let m=0; for(const c of u.combat) m=Math.max(m,win(t,c[0],c[1],0.04,0.05)); return m; }
+
+/* ════════════════════════════════ 士兵(實例化;甲冑與其餘分開著色) ════════════════════════════════ */
+const FOOT_ARMOR=mergeGeometries([
+  prep(new THREE.BoxGeometry(0.09,0.1,0.06),0x8a8580,0,0.05,0),
+  prep(new THREE.BoxGeometry(0.13,0.045,0.085),0xffffff,0,0.11,0),
+  prep(new THREE.BoxGeometry(0.12,0.12,0.075),0xffffff,0,0.17,0),
+  prep(new THREE.BoxGeometry(0.03,0.1,0.03),0xffffff,0.078,0.165,0.01), prep(new THREE.BoxGeometry(0.03,0.1,0.03),0xffffff,-0.078,0.165,0.01),
+]);
+const FOOT_REST=mergeGeometries([
+  prep(new THREE.IcosahedronGeometry(0.034,1),0xc9a27c,0,0.262,0),
+  prep(new THREE.ConeGeometry(0.078,0.036,8),0x1b1815,0,0.295,0),
+  prep(new THREE.CylinderGeometry(0.006,0.006,0.66,4),0x5a4830,0.085,0.3,0.02),
+  prep(new THREE.ConeGeometry(0.011,0.055,4),0xd8dde2,0.085,0.66,0.02),
+]);
+const GUN_REST=mergeGeometries([
+  prep(new THREE.IcosahedronGeometry(0.034,1),0xc9a27c,0,0.262,0),
+  prep(new THREE.ConeGeometry(0.078,0.036,8),0x1b1815,0,0.295,0),
+  prep(new THREE.BoxGeometry(0.014,0.016,0.26),0x3a2a1c,0.03,0.21,0.1,-0.12,0,0),
+  prep(new THREE.CylinderGeometry(0.004,0.004,0.12,4),0x2a2a2a,0.03,0.225,0.26,Math.PI/2-0.12,0,0),
+]);
+const MOUNT_ARMOR=mergeGeometries([
+  prep(new THREE.BoxGeometry(0.11,0.13,0.075),0xffffff,0,0.32,0),
+  prep(new THREE.BoxGeometry(0.13,0.03,0.12),0xdddddd,0,0.25,0),
+]);
+const MOUNT_REST=mergeGeometries([
+  prep(new THREE.BoxGeometry(0.09,0.1,0.27),0x4a3526,0,0.2,0),
+  prep(new THREE.BoxGeometry(0.06,0.13,0.07),0x4a3526,0,0.29,0.13,-0.55,0,0),
+  prep(new THREE.BoxGeometry(0.05,0.06,0.13),0x3f2d21,0,0.35,0.2,0.2,0,0),
+  ...[[-0.03,-0.09],[0.03,-0.09],[-0.03,0.09],[0.03,0.09]].map(([dx,dz])=>prep(new THREE.BoxGeometry(0.025,0.16,0.025),0x33251b,dx,0.08,dz)),
+  prep(new THREE.BoxGeometry(0.02,0.1,0.02),0x221a14,0,0.2,-0.14,0.5,0,0),
+  prep(new THREE.IcosahedronGeometry(0.033,1),0xc9a27c,0,0.415,0.005),
+  prep(new THREE.SphereGeometry(0.045,8,5,0,Math.PI*2,0,Math.PI/2),0x16120f,0,0.425,0),
+  prep(new THREE.BoxGeometry(0.06,0.035,0.008),0xe2b84e,0,0.465,0.04),
+  prep(new THREE.CylinderGeometry(0.006,0.006,0.7,4),0x5a4830,0.075,0.42,0.05,0.35,0,0),
+]);
+const FLAG_GEO=mergeGeometries([
+  prep(new THREE.CylinderGeometry(0.004,0.004,0.21,3),0x3a2e22,0,0.34,-0.045),
+  prep(new THREE.PlaneGeometry(0.06,0.11),0xffffff,0.031,0.385,-0.046),
+  prep(new THREE.PlaneGeometry(0.06,0.11),0xffffff,0.031,0.385,-0.047,0,Math.PI,0),
+]);
+const figMat=new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.72, metalness:0.06});
+const flagMatI=new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.8, side:THREE.DoubleSide});
+/* 柵線的位置(鐵砲隊橫排) */
+function fenceLinePos(j,C){ const u=(j%(C/2|0))/((C/2|0)-1), rank=j<(C/2|0)?0:1;
+  const z=lerp(-23.5,21,u)+(rank?0.25:0), x=fenceX(z)-0.55-rank*0.42; return [x,z]; }
+const FIGS=[];
+for(const u of UNITS){
+  const C=u.cap, R=Math.min(u.riders||0, C);
+  const cols=Math.max(3, Math.round(Math.sqrt(C*(u.side==='tak'?3.2:1.6))));
+  u.figs=[];
+  for(let j=0;j<C;j++){
+    let sx, sz;
+    if(j<R){ const rc=Math.max(1,Math.min(R,cols)); sx=((j%rc)-(rc-1)/2)*0.34; sz=0.35-Math.floor(j/rc)*0.36; }
+    else { const k=j-R, col=k%cols, row=Math.floor(k/cols); sx=(col-(cols-1)/2)*0.29; sz=-row*0.3-(R?Math.ceil(R/cols)*0.36:0); }
+    const f={u, j, mounted:j<R, r1:hash2(j,u.id.length*31+7), r2:hash2(j+99,u.id.length*13+3), r3:hash2(j*7+3,55+u.id.length), r4:hash2(j*3+11,77),
+      sx:sx+(hash2(j,5)-0.5)*0.1, sz:sz+(hash2(j,9)-0.5)*0.1, td:Infinity};
+    if(u.fort){ const a=j/C*Math.PI*2*2.3, r=u.fort*(0.35+0.65*Math.sqrt(hash2(j,21))); f.fx=Math.cos(a)*r; f.fz=Math.sin(a)*r; }
+    if(u.lineShape){ const p=fenceLinePos(j,C); f.lx=p[0]; f.lz=p[1]; }
+    u.figs.push(f); FIGS.push(f);
+  }
+  /* 消耗:依各攻勢窗口,預先為每名士兵排定陣亡時刻(純時間函數,可倒帶) */
+  if(u.attr){
+    const order=u.figs.slice(u.riders?1:0).sort((a,b)=>a.r4-b.r4); let k=0;
+    for(const [a,b,frac] of u.attr){ const n=Math.round(frac*C);
+      for(let i=0;i<n && k<order.length;i++,k++){ order[k].td=a+(b-a)*((i+hash2(k,13))/n); } }
+  }
+}
+const lists={foot:[],gun:[],mount:[]};
+for(const f of FIGS) (f.mounted?lists.mount:(f.u.gun?lists.gun:lists.foot)).push(f);
+function IM(geo,n){ const m=new THREE.InstancedMesh(geo,figMat,Math.max(1,n)); m.castShadow=true; m.frustumCulled=false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); return m; }
+const footArmIM=IM(FOOT_ARMOR,lists.foot.length+lists.gun.length), footRestIM=IM(FOOT_REST,lists.foot.length), gunRestIM=IM(GUN_REST,lists.gun.length);
+const mountArmIM=IM(MOUNT_ARMOR,lists.mount.length), mountRestIM=IM(MOUNT_REST,lists.mount.length);
+const flagIM=new THREE.InstancedMesh(FLAG_GEO, flagMatI, FIGS.length); flagIM.castShadow=true; flagIM.frustumCulled=false; scene.add(flagIM);
+lists.foot.forEach((f,i)=>{ f.arm=footArmIM; f.ai=i; f.rest=footRestIM; f.ri=i; });
+lists.gun.forEach((f,i)=>{ f.arm=footArmIM; f.ai=lists.foot.length+i; f.rest=gunRestIM; f.ri=i; });
+lists.mount.forEach((f,i)=>{ f.arm=mountArmIM; f.ai=i; f.rest=mountRestIM; f.ri=i; });
+FIGS.forEach((f,i)=>{ f.fi=i; });
+const SIDE_FLAG={oda:new THREE.Color(0xf0bf2a), tok:new THREE.Color(0xf2eee2), tak:new THREE.Color(0xc2291f)};
+const _col=new THREE.Color();
+function setFigColor(f,dead){
+  _col.set(f.u.armor).multiplyScalar(dead?0.5:(0.85+0.3*f.r3)); f.arm.setColorAt(f.ai,_col);
+  _col.setScalar(dead?0.45:0.82+0.3*f.r3); f.rest.setColorAt(f.ri,_col);
+  f.arm.instanceColor.needsUpdate=true; f.rest.instanceColor.needsUpdate=true;
+}
+FIGS.forEach(f=>{ setFigColor(f,false); flagIM.setColorAt(f.fi, f.u.style==='blk'?new THREE.Color(0x222020):SIDE_FLAG[f.u.side]); });
+const FLAG_MOUNT_OFF=new THREE.Matrix4().makeTranslation(0,0.16,-0.03);
+
+/* 幟旗、標籤 */
+for(const u of UNITS){
+  const mat=bannerMat(u.crest, u.style, u.text, u.textSize);
+  const n = u.lineShape?6:(u.cap>90?4:(u.cap>40?3:2));
+  u.nobori=[];
+  const offs=[[-0.75,-0.35],[0.75,-0.35],[-0.3,-1.2],[0.35,-1.25]];
+  for(let i=0;i<n;i++){ const g=makeNobori(mat); g.userData.off=u.lineShape?[0,0]:offs[i]; g.userData.lz=u.lineShape?lerp(-20,18,i/(n-1)):0; scene.add(g); u.nobori.push(g); }
+  const div=document.createElement('div');
+  div.className='ulabel '+u.side;
+  div.innerHTML=`<span class="name">${u.name}</span><span class="sub">${u.sub||''}</span>`;
+  u.div=div; u.subEl=div.querySelector('.sub');
+  u.label=new CSS2DObject(div); scene.add(u.label);
+  u.state='';
+}
+
+/* ════════════════════════════════ 粒子系統(單一 draw call) ════════════════════════════════ */
+function canvasTex(n, draw){ const cv=document.createElement('canvas'); cv.width=cv.height=n; draw(cv.getContext('2d'),n); const t=new THREE.CanvasTexture(cv); return t; }
+const TEX_SOFT=canvasTex(64,(x,n)=>{ const g=x.createRadialGradient(n/2,n/2,1,n/2,n/2,n/2);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.35,'rgba(255,255,255,.6)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,n,n); });
+const TEX_SMOKE=canvasTex(128,(x,n)=>{
+  for(let i=0;i<22;i++){ const r=n*(0.12+Math.random()*0.2), a=Math.random()*6.28, d=Math.random()*n*0.2;
+    const cx=n/2+Math.cos(a)*d, cy=n/2+Math.sin(a)*d, g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+    g.addColorStop(0,'rgba(255,255,255,.28)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,n,n); }
+  const im=x.getImageData(0,0,n,n); for(let i=0;i<im.data.length;i+=4){ const k=(i/4), px=k%n, py=(k/n)|0;
+    im.data[i+3]*=0.75+0.5*(0.5+0.5*vnoise(px*0.09,py*0.09)); } x.putImageData(im,0,0); });
+const TEX_FIRE=canvasTex(64,(x,n)=>{ const g=x.createRadialGradient(n/2,n*0.6,1,n/2,n*0.55,n*0.48);
+  g.addColorStop(0,'rgba(255,250,220,1)'); g.addColorStop(0.25,'rgba(255,190,90,.9)'); g.addColorStop(0.6,'rgba(230,80,20,.45)'); g.addColorStop(1,'rgba(120,20,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,n,n); });
+
+class Particles{
+  constructor(max, tex, additive){
+    this.max=max; this.n=0;
+    this.pos=new Float32Array(max*3); this.col=new Float32Array(max*4); this.size=new Float32Array(max); this.rot=new Float32Array(max);
+    this.vel=new Float32Array(max*3); this.age=new Float32Array(max); this.life=new Float32Array(max);
+    this.s0=new Float32Array(max); this.s1=new Float32Array(max); this.a0=new Float32Array(max); this.rc=new Float32Array(max*3);
+    this.grav=new Float32Array(max); this.drag=new Float32Array(max); this.spin=new Float32Array(max); this.fadeIn=new Float32Array(max);
+    this.alive=new Uint8Array(max); this.cursor=0;
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos,3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aCol', new THREE.BufferAttribute(this.col,4).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aSize', new THREE.BufferAttribute(this.size,1).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aRot', new THREE.BufferAttribute(this.rot,1).setUsage(THREE.DynamicDrawUsage));
+    this.geo=g;
+    this.mat=new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, fog:true, blending:additive?THREE.AdditiveBlending:THREE.NormalBlending,
+      uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{uTex:{value:tex}, uScale:{value:600}}]),
+      vertexShader:`#include <fog_pars_vertex>
+        attribute vec4 aCol; attribute float aSize; attribute float aRot; varying vec4 vCol; varying float vRot; uniform float uScale;
+        void main(){ vCol=aCol; vRot=aRot; vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+          gl_PointSize=clamp(aSize*uScale/max(-mvPosition.z,0.1),0.0,512.0); gl_Position=projectionMatrix*mvPosition;
+          if(aCol.a<0.002) gl_PointSize=0.0;
+          #include <fog_vertex>
+        }`,
+      fragmentShader:`#include <fog_pars_fragment>
+        uniform sampler2D uTex; varying vec4 vCol; varying float vRot;
+        void main(){ vec2 p=gl_PointCoord-0.5; float c=cos(vRot), s=sin(vRot); p=vec2(c*p.x-s*p.y, s*p.x+c*p.y)+0.5;
+          vec4 tx=texture2D(uTex,p); gl_FragColor=vec4(vCol.rgb*tx.rgb, vCol.a*tx.a); if(gl_FragColor.a<0.004) discard;
+          #include <fog_fragment>
+        }`
+    });
+    this.points=new THREE.Points(g,this.mat); this.points.frustumCulled=false; scene.add(this.points);
+  }
+  spawn(o){
+    let i=this.cursor; this.cursor=(this.cursor+1)%this.max;
+    this.alive[i]=1; this.age[i]=0; this.life[i]=o.life||1;
+    this.pos[i*3]=o.x; this.pos[i*3+1]=o.y; this.pos[i*3+2]=o.z;
+    this.vel[i*3]=o.vx||0; this.vel[i*3+1]=o.vy||0; this.vel[i*3+2]=o.vz||0;
+    this.s0[i]=o.s0||1; this.s1[i]=o.s1??o.s0??1; this.a0[i]=o.a??1;
+    const c=o.c||[1,1,1]; this.rc[i*3]=c[0]; this.rc[i*3+1]=c[1]; this.rc[i*3+2]=c[2];
+    this.grav[i]=o.g||0; this.drag[i]=o.drag||0; this.spin[i]=o.spin||0; this.rot[i]=Math.random()*6.28; this.fadeIn[i]=o.fadeIn||0.08;
+  }
+  update(dt){
+    for(let i=0;i<this.max;i++){
+      if(!this.alive[i]){ this.col[i*4+3]=0; continue; }
+      this.age[i]+=dt; const u=this.age[i]/this.life[i];
+      if(u>=1){ this.alive[i]=0; this.col[i*4+3]=0; continue; }
+      const d=Math.exp(-this.drag[i]*dt);
+      this.vel[i*3]*=d; this.vel[i*3+1]=this.vel[i*3+1]*d-this.grav[i]*dt; this.vel[i*3+2]*=d;
+      this.vel[i*3]+=WIND_X*dt*0.35*(this.drag[i]>0?1:0);
+      this.pos[i*3]+=this.vel[i*3]*dt; this.pos[i*3+1]+=this.vel[i*3+1]*dt; this.pos[i*3+2]+=this.vel[i*3+2]*dt;
+      this.size[i]=lerp(this.s0[i],this.s1[i],Math.sqrt(u)); this.rot[i]+=this.spin[i]*dt;
+      const a=this.a0[i]*Math.min(1,u/this.fadeIn[i])*(1-u)*(1-u*0.3);
+      this.col[i*4]=this.rc[i*3]; this.col[i*4+1]=this.rc[i*3+1]; this.col[i*4+2]=this.rc[i*3+2]; this.col[i*4+3]=a;
+    }
+    const g=this.geo.attributes; g.position.needsUpdate=g.aCol.needsUpdate=g.aSize.needsUpdate=g.aRot.needsUpdate=true;
+  }
+}
+let WIND_X=0.4;
+const SMOKE=new Particles(QUALITY==='high'?1400:700, TEX_SMOKE, false);
+const GLOW=new Particles(QUALITY==='high'?1600:800, TEX_FIRE, true);
+const SPARK=new Particles(600, TEX_SOFT, true);
+
+/* ════════════════════════════════ 雨・冰雹(GPU 動畫) ════════════════════════════════ */
+function makePrecip(N, len, isHail){
+  const seed=new Float32Array(N*2*4), end=new Float32Array(N*2);
+  for(let i=0;i<N;i++){ const a=Math.random(), b=Math.random(), c=Math.random(), d=Math.random();
+    for(let k=0;k<2;k++){ seed.set([a,b,c,d],(i*2+k)*4); end[i*2+k]=k; } }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N*2*3),3));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed,4)); g.setAttribute('aEnd', new THREE.BufferAttribute(end,1));
+  const m=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, fog:false,
+    uniforms:{uTime:U.time, uAmt:{value:0}, uC:{value:new THREE.Vector3()}, uWind:{value:1.6}, uLen:{value:len}, uCol:{value:new THREE.Color(isHail?0xf4f8ff:0xb9c6d2)}, uFlash:{value:0}},
+    vertexShader:`uniform float uTime,uAmt,uWind,uLen; uniform vec3 uC; attribute vec4 aSeed; attribute float aEnd; varying float vA;
+      void main(){
+        float B=46.0, H=26.0, sp=${isHail?'34.0':'26.0'}+aSeed.w*8.0;
+        float fall=mod(aSeed.y*H - uTime*sp, H);
+        vec3 p; p.x=uC.x+mod(aSeed.x*B-uC.x+B*0.5+ (H-fall)*uWind*0.28 ,B)-B*0.5;
+        p.z=uC.z+mod(aSeed.z*B-uC.z+B*0.5,B)-B*0.5; p.y=uC.y-6.0+fall;
+        vec3 dir=normalize(vec3(uWind*0.28,-1.0,0.05));
+        p-=dir*aEnd*uLen;
+        vA=step(aSeed.w,uAmt)*(1.0-aEnd*0.85);
+        vec4 mv=viewMatrix*vec4(p,1.0); gl_Position=projectionMatrix*mv;
+        vA*=smoothstep(60.0,8.0,-mv.z);
+        if(vA<0.001) gl_Position=vec4(2.0,2.0,2.0,1.0);
+      }`,
+    fragmentShader:`uniform vec3 uCol; uniform float uFlash; varying float vA; void main(){ gl_FragColor=vec4(uCol*(1.0+uFlash*2.0), vA*${isHail?'0.9':'0.42'}); }`
+  });
+  const o=isHail? new THREE.Points(g,m) : new THREE.LineSegments(g,m);
+  if(isHail){ m.vertexShader=m.vertexShader.replace('vA=step','gl_PointSize=3.0; vA=step'); }
+  o.frustumCulled=false; scene.add(o); return m;
+}
+const rainMat=makePrecip(QUALITY==='high'?22000:9000, 0.9, false);
+const hailMat=makePrecip(QUALITY==='high'?2600:1200, 0.001, true);
+
+/* ════════════════════════════════ 閃電 ════════════════════════════════ */
+const boltMat=new THREE.LineBasicMaterial({color:new THREE.Color(7,7.5,9), transparent:true, opacity:0, fog:false, toneMapped:false});
+const boltMesh=new THREE.LineSegments(new THREE.BufferGeometry(), boltMat); boltMesh.frustumCulled=false; scene.add(boltMesh);
+const boltGlowMat=new THREE.MeshBasicMaterial({color:new THREE.Color(3,3.3,4.2), transparent:true, opacity:0, fog:false, toneMapped:false, depthWrite:false, blending:THREE.AdditiveBlending});
+let boltGlow=null;
+const bolt={t0:-9, x:0, z:0, flicker:[]};
+function strikeLightning(cx,cz){
+  const x=cx+(Math.random()-0.5)*50, z=cz+(Math.random()-0.5)*40-6, top=34;
+  const seg=[], main=[];
+  let px=x+(Math.random()-0.5)*6, py=top, pz=z+(Math.random()-0.5)*4;
+  const gy=groundY(x,z);
+  main.push([px,py,pz]);
+  while(py>gy+0.2){ const nx=px+(Math.random()-0.5)*2.2, ny=py-(0.8+Math.random()*1.6), nz=pz+(Math.random()-0.5)*1.4;
+    main.push([nx,Math.max(ny,gy),nz]); px=nx; py=ny; pz=nz; }
+  const push=(a,b)=>seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);
+  for(let i=0;i<main.length-1;i++) push(main[i],main[i+1]);
+  for(let b=0;b<4;b++){ const s=main[2+Math.floor(Math.random()*Math.max(1,main.length-6))]; if(!s) continue;
+    let q=s.slice(); const dx=(Math.random()-0.5)*3; for(let k=0;k<5;k++){ const n=[q[0]+dx*0.5+(Math.random()-0.5)*1.2,q[1]-1-Math.random(),q[2]+(Math.random()-0.5)]; push(q,n); q=n; } }
+  boltMesh.geometry.dispose(); boltMesh.geometry=new THREE.BufferGeometry(); boltMesh.geometry.setAttribute('position',new THREE.Float32BufferAttribute(seg,3));
+  if(boltGlow){ scene.remove(boltGlow); boltGlow.geometry.dispose(); }
+  const curve=new THREE.CatmullRomCurve3(main.map(p=>new THREE.Vector3(...p)));
+  boltGlow=new THREE.Mesh(new THREE.TubeGeometry(curve, main.length*2, 0.07, 4), boltGlowMat); boltGlow.frustumCulled=false; scene.add(boltGlow);
+  bolt.t0=performance.now()/1000; bolt.x=x; bolt.z=z; bolt.y=top*0.5;
+  bolt.flicker=[0,0.07+Math.random()*0.05,0.16+Math.random()*0.08];
+  boltLight.position.set(x,14,z);
+  const d=camera.position.distanceTo(new THREE.Vector3(x,gy+6,z));
+  AU.thunder(d, x, z);
+  shake=Math.max(shake, clamp(1.2-d/60,0.1,1)*0.5);
+}
+let shake=0;
+
+/* ════════════════════════════════ 動態箭頭(流動箭紋) ════════════════════════════════ */
+const arrowMatBase=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:false,
+  uniforms:{uTime:U.time, uCol:{value:new THREE.Color()}, uOp:{value:0}, uDash:{value:0}},
+  vertexShader:`attribute vec2 aUv; attribute float aHead; varying vec2 vUv; varying float vHead; void main(){ vUv=aUv; vHead=aHead; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`uniform float uTime,uOp,uDash; uniform vec3 uCol; varying vec2 vUv; varying float vHead;
+    void main(){
+      float edge=smoothstep(0.0,0.18,vUv.y)*smoothstep(1.0,0.82,vUv.y);
+      float head=step(0.5,vHead);
+      float chev=fract(vUv.x*0.9 - abs(vUv.y-0.5)*0.9 - uTime*0.9);
+      float band=mix(0.55+0.45*smoothstep(0.35,0.5,chev)*smoothstep(0.9,0.65,chev), 1.0, head);
+      if(uDash>0.5 && fract(vUv.x*0.6)>0.55 && head<0.5) discard;
+      float a=uOp*mix(edge*band, 1.0, head);
+      gl_FragColor=vec4(uCol*(0.8+0.45*band), a*0.78);
+    }`
+});
+function makeFlowArrow(pts2, color, width=0.5, dashed=false){
+  const pts=catmull(pts2,8);
+  let L=0; const cum=[0]; for(let i=1;i<pts.length;i++){ L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); cum.push(L); }
+  const pos=[], uv=[], idx=[], hd=[];
+  const hl=Math.min(1.6, L*0.25);
+  let k=0;
+  for(let i=0;i<pts.length;i++){
+    if(cum[i]>L-hl && i<pts.length-1) continue;
+    const a=pts[Math.max(0,i-1)], b=pts[Math.min(pts.length-1,i+1)];
+    let dx=b[0]-a[0], dz=b[1]-a[1]; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
+    const [x,z]=pts[i]; const y=groundY(x,z)+0.45; const w=width*0.5;
+    const s = i===pts.length-1 ? L-hl : cum[i];
+    pos.push(x-dz*w,y,z+dx*w, x+dz*w,y,z-dx*w); uv.push(s,0, s,1); hd.push(0,0);
+    if(k>0){ const q=(k-1)*2; idx.push(q,q+1,q+2, q+1,q+3,q+2); } k++;
+  }
+  // 箭頭
+  const e=pts[pts.length-1], p=pts[pts.length-2]; let dx=e[0]-p[0], dz=e[1]-p[1]; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
+  const bx=e[0]-dx*hl, bz=e[1]-dz*hl, y=groundY(e[0],e[1])+0.45, w=width*1.25;
+  const base=pos.length/3;
+  pos.push(bx-dz*w,y,bz+dx*w, bx+dz*w,y,bz-dx*w, e[0],y,e[1]); uv.push(L+1,0, L+1,1, L+2,0.5); hd.push(1,1,1);
+  idx.push(base,base+1,base+2);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('aUv',new THREE.Float32BufferAttribute(uv,2)); g.setAttribute('aHead',new THREE.Float32BufferAttribute(hd,1)); g.setIndex(idx);
+  const m=arrowMatBase.clone(); m.uniforms.uTime=U.time; m.uniforms.uCol.value.set(color); m.uniforms.uDash.value=dashed?1:0;
+  const mesh=new THREE.Mesh(g,m); mesh.renderOrder=5; mesh.visible=false; scene.add(mesh);
+  const mid=pts[Math.floor(pts.length/2)];
+  return {mesh,m,mid:new THREE.Vector3(mid[0],groundY(mid[0],mid[1]),mid[1]), len:L};
+}
+const GOLD=0xffc23a, CRIM=0xff3b2a, CRIM2=0xd8604a, WHITE=0xf2ecdc;
+const ARROWS=[];
+/* 武田各隊的每一波衝鋒 */
+for(const u of UNITS.filter(u=>u.side==='tak' && u.charges)) for(const c of u.charges){
+  ARROWS.push({a:makeFlowArrow([[u.home[0]-1,u.home[1]],[lerp(u.home[0],FX(u.cz),0.5),lerp(u.home[1],u.cz,0.5)],[FX(u.cz)+0.4,u.cz]],CRIM,0.55), from:c[0], to:c[1]+0.1});
+}
+ARROWS.push({a:makeFlowArrow([[10.5,-19.3],[7.8,-18.2],[5.4,-17.3]],CRIM,0.55), from:4.8, to:5.15});
+ARROWS.push({a:makeFlowArrow([[49,31.5],[53,27.5],[57,23.5],[60.6,20.2]],WHITE,0.7), from:0.02, to:0.9});
+ARROWS.push({a:makeFlowArrow([[60,20],[61.5,18.5]],WHITE,0.5), from:0.85, to:1.55});
+ARROWS.push({a:makeFlowArrow([[58,10.5],[59.3,12.5],[60,13.4]],WHITE,0.45), from:1.6, to:1.95});
+for(const z of [-17,-10,-3,4,11,17]) ARROWS.push({a:makeFlowArrow([[fenceX(z)-1.5,z],[3,z*0.95],[8,z*0.9]],GOLD,0.6), from:9.6, to:10.5});
+ARROWS.push({a:makeFlowArrow([[20,-3],[27,-12],[40,-24],[47,-30]],CRIM2,0.7), from:9.8, to:11.2});
+ARROWS.push({a:makeFlowArrow([[6,-17.4],[14,-20],[27,-23.5],[38.2,-26]],CRIM,0.5), from:9.75, to:10.6});
+
+/* ════════════════════════════════ 地名標籤 ════════════════════════════════ */
+function makeLabel(html, cls){ const d=document.createElement('div'); d.className=cls; d.innerHTML=html; return new CSS2DObject(d); }
+const placeLabels=[];
+for(const f of FORTS){
+  const l=makeLabel(`<span class="ic"></span>${f.name}`,'plabel '+f.side);
+  l.position.set(f.x, groundY(f.x,f.z)+1.35, f.z); scene.add(l); placeLabels.push({l,f,far:120});
+}
+{ const l=makeLabel('<span class="ic"></span>醫王寺(勝頼 圍城本陣)','plabel shr'); l.position.set(TEMPLE.x,groundY(TEMPLE.x,TEMPLE.z)+1.4,TEMPLE.z); scene.add(l); placeLabels.push({l,far:100}); }
+{ const l=makeLabel('<span class="ic"></span>馬防柵','plabel oda'); l.position.set(fenceX(-24)-0.3,groundY(-2.3,-24)+1.2,-24.5); scene.add(l); placeLabels.push({l,far:140}); }
+{ const l=makeLabel('<span class="ic"></span>出澤(馬場信春 戰死地)','plabel tak'); l.position.set(39.4,groundY(39.4,-27)+1.3,-27); scene.add(l); placeLabels.push({l,far:120, from:10.5}); }
+const TERR_LABELS=[['設 樂 原',4,-27,''],['連 吾 川',1.2,24,'water'],['寒 狹 川',48,-20,'water'],['宇 連 川',68,6,'water'],['豐 川',30,29.5,'water'],
+  ['茶 臼 山',-20,1.2,''],['彈 正 山',-9,-7.5,''],['高 松 山',-9.5,10.8,''],['丸 山',4.2,-14.8,''],['才 ノ 神',20.5,1.4,''],['信 玄 台 地',16,8,''],
+  ['鳶 ヶ 巣 山',63,21,''],['船 着 山',47,33,''],['伊 那 街 道',34,3.8,'']];
+const terrLabels=TERR_LABELS.map(([n,x,z,c])=>{ const l=makeLabel(n,'tlabel '+c); l.position.set(x,groundY(x,z)+1.1,z); scene.add(l); return l; });
+
+/* ════════════════════════════════ 音響引擎 ════════════════════════════════
+   全部 Web Audio 即時合成:
+   配樂 — 大太鼓/締太鼓/鉦/小鼓・大鼓/篠笛/尺八/能管/箏・琵琶(Karplus-Strong)/笙/謡(共振峰合成)
+   音效 — 雷(依距離延遲)/豪雨/冰雹/風/蛙鳴/杜鵑/法螺貝/鬨聲/馬蹄/刀槍/鐵砲/火焰 */
+const AU=(()=>{
+  let ctx=null, master, musBus, sfxBus, ambBus, verb, noiseB, brownB, started=false;
+  let musOn=true, sfxOn=true;
+  const L={x:0,y:0,z:0, rx:1,rz:0};
+  const S={t:0, playing:false, rain:0, hail:0, wind:0.3, storm:0, night:1, frogs:0, birds:0, combat:0, combatPos:null,
+           fire:0, firePos:null, sea:0, murmur:0, interlude:false, dayPace:1};
+  const NOTE=(n)=>{ const m=/^([A-G])(b|#)?(-?\d)$/.exec(n); const base={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='b'?-1:m[2]==='#'?1:0);
+    return 440*Math.pow(2,(base+12*(+m[3]+1)-69)/12); };
+  const R=Math.random;
+
+  function makeNoise(sec){ const n=ctx.sampleRate*sec, b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=R()*2-1; return b; }
+  function makeBrown(sec){ const n=ctx.sampleRate*sec, b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0); let l=0;
+    for(let i=0;i<n;i++){ l=(l+0.02*(R()*2-1))/1.02; d[i]=l*3.5; } return b; }
+  function makeIR(dur,decay){ const sr=ctx.sampleRate, n=Math.floor(sr*dur), b=ctx.createBuffer(2,n,sr);
+    for(let c=0;c<2;c++){ const d=b.getChannelData(c); let y=0;
+      for(let i=0;i<n;i++){ const t=i/n; const x=(R()*2-1)*Math.pow(1-t,decay)*(i<sr*0.012?0:1);
+        y+= (0.18+0.5*(1-t))*(x-y); d[i]=y*(i<sr*0.09 && R()<0.004?3:1); } }
+    return b; }
+  function loopSrc(buf){ const s=ctx.createBufferSource(); s.buffer=buf; s.loop=true; s.start(ctx.currentTime, R()*2); return s; }
+  function nz(t,dur,buf){ const s=ctx.createBufferSource(); s.buffer=buf||noiseB; s.start(t, R()*2.5, dur+0.05); return s; }
+  function flt(type,f,q){ const b=ctx.createBiquadFilter(); b.type=type; b.frequency.value=f; if(q!==undefined) b.Q.value=q; return b; }
+  function gn(v){ const g=ctx.createGain(); g.gain.value=v; return g; }
+  function perc(g,t,v,dec,att=0.004){ g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(v,t+att); g.gain.exponentialRampToValueAtTime(0.0001,t+att+dec); }
+  function osc(type,f,t,dur){ const o=ctx.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t); o.start(t); o.stop(t+dur+0.05); return o; }
+  function panner(dst,p){ if(!ctx.createStereoPanner) return dst; const pn=ctx.createStereoPanner(); pn.pan.value=clamp(p,-0.95,0.95); pn.connect(dst); return pn; }
+  function spat(x,y,z,ref){ const dx=x-L.x, dy=y-L.y, dz=z-L.z, d=Math.hypot(dx,dy,dz)||0.01;
+    return {d, g:1/(1+Math.pow(d/ref,1.5)), pan:clamp((dx*L.rx+dz*L.rz)/Math.hypot(dx,dz||0.01)*0.85,-0.9,0.9)}; }
+
+  /* ───── 樂器 ───── */
+  function odaiko(dst,t,v=1,p=1){
+    const o=osc('sine',92*p,t,1.5); o.frequency.exponentialRampToValueAtTime(43*p,t+0.42);
+    const g=gn(0); perc(g,t,v,1.35,0.006); o.connect(g).connect(dst);
+    const o2=osc('triangle',175*p,t,0.35); o2.frequency.exponentialRampToValueAtTime(88*p,t+0.16);
+    const g2=gn(0); perc(g2,t,v*0.32,0.28); o2.connect(g2).connect(dst);
+    const n=nz(t,0.14), f=flt('lowpass',1100), g3=gn(0); perc(g3,t,v*0.55,0.1,0.002); n.connect(f).connect(g3).connect(dst);
+  }
+  function ka(dst,t,v=1){ const n=nz(t,0.05), f=flt('bandpass',2600,1.8), g=gn(0); perc(g,t,v*0.9,0.04,0.001); n.connect(f).connect(g).connect(dst);
+    const o=osc('square',1150,t,0.05), g2=gn(0); perc(g2,t,v*0.08,0.03,0.001); o.connect(g2).connect(dst); }
+  function shime(dst,t,v=1){ const o=osc('triangle',400,t,0.2); o.frequency.exponentialRampToValueAtTime(300,t+0.08);
+    const g=gn(0); perc(g,t,v*0.5,0.14,0.002); o.connect(g).connect(dst);
+    const n=nz(t,0.05), f=flt('bandpass',2400,1.2), g2=gn(0); perc(g2,t,v*0.55,0.045,0.001); n.connect(f).connect(g2).connect(dst); }
+  function kane(dst,t,v=1){ for(const [m,d,a] of [[1,0.9,1],[2.41,0.6,0.6],[3.93,0.45,0.45],[5.6,0.3,0.3]]){ if(880*m>ctx.sampleRate*0.45) continue;
+      const o=osc('sine',880*m,t,d+0.1), g=gn(0); perc(g,t,v*0.09*a,d,0.002); o.connect(g).connect(dst); } }
+  function tsuzumi(dst,t,v=1,type='pon'){
+    if(type==='pon'){ const o=osc('sine',285,t,0.6); o.frequency.linearRampToValueAtTime(318,t+0.05); o.frequency.exponentialRampToValueAtTime(270,t+0.5);
+      const g=gn(0); perc(g,t,v*0.5,0.5,0.003); o.connect(g).connect(dst);
+      const o2=osc('triangle',575,t,0.3), g2=gn(0); perc(g2,t,v*0.1,0.2); o2.connect(g2).connect(dst);
+      const n=nz(t,0.03), f=flt('bandpass',1500,1), g3=gn(0); perc(g3,t,v*0.3,0.025,0.001); n.connect(f).connect(g3).connect(dst);
+    } else { const n=nz(t,0.06), f=flt('bandpass',3300,2.2), g=gn(0); perc(g,t,v*1.1,0.05,0.001); n.connect(f).connect(g).connect(dst);
+      const o=osc('sine',1450,t,0.06), g2=gn(0); perc(g2,t,v*0.25,0.04,0.001); o.connect(g2).connect(dst); }
+  }
+  let WAVES=null;
+  function waves(){ if(WAVES) return WAVES; const mk=(h)=>{ const re=new Float32Array(h.length), im=new Float32Array(h); return ctx.createPeriodicWave(re,im); };
+    WAVES={ shino:mk([0,1,0.32,0.16,0.07,0.04,0.02]), shaku:mk([0,1,0.55,0.3,0.14,0.08,0.04,0.02]), noh:mk([0,1,0.62,0.45,0.3,0.22,0.12,0.08]) }; return WAVES; }
+  function flute(dst,t,f,dur,v,kind='shino'){
+    const K={shino:{a:0.035,r:0.12,lp:5200,br:0.1,bend:0.985,vib:5.6,vd:0.011},
+             shaku:{a:0.13,r:0.3,lp:2500,br:0.32,bend:0.93,vib:4.6,vd:0.014},
+             noh:{a:0.03,r:0.15,lp:7000,br:0.14,bend:0.97,vib:6.4,vd:0.022}}[kind];
+    const o=ctx.createOscillator(); o.setPeriodicWave(waves()[kind]);
+    o.frequency.setValueAtTime(f*K.bend,t); o.frequency.exponentialRampToValueAtTime(f,t+Math.min(0.14,dur*0.3));
+    const lfo=osc('sine',K.vib,t,dur+K.r), ld=gn(0); ld.gain.setValueAtTime(0,t);
+    if(dur>0.45){ ld.gain.setValueAtTime(0,t+dur*0.3); ld.gain.linearRampToValueAtTime(f*K.vd,t+dur*0.85); }
+    lfo.connect(ld).connect(o.frequency);
+    const g=gn(0); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(v,t+K.a);
+    g.gain.setValueAtTime(v*(kind==='shaku'?0.8:0.92),t+Math.max(K.a,dur*0.5)); if(kind==='shaku') g.gain.linearRampToValueAtTime(v,t+dur*0.85);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur+K.r);
+    const lp=flt('lowpass',K.lp,0.5); o.connect(lp).connect(g).connect(dst); o.start(t); o.stop(t+dur+K.r+0.05);
+    const n=nz(t,dur+K.r), bp=flt('bandpass',Math.min(f*1.6,6000),1.1), bg=gn(0);
+    bg.gain.setValueAtTime(0.0001,t); bg.gain.linearRampToValueAtTime(v*K.br*1.8,t+0.02); bg.gain.exponentialRampToValueAtTime(v*K.br*0.5,t+0.12);
+    bg.gain.setValueAtTime(v*K.br*0.5,t+dur); bg.gain.exponentialRampToValueAtTime(0.0001,t+dur+K.r);
+    n.connect(bp).connect(bg).connect(dst);
+  }
+  const KS={};
+  function ksBuf(f,kind){
+    const key=kind+Math.round(f); if(KS[key]) return KS[key];
+    const sr=ctx.sampleRate, P=Math.max(8,Math.round(sr/f)), dur=kind==='biwa'?2.2:2.8, N=Math.floor(sr*dur);
+    const b=ctx.createBuffer(1,N,sr), d=b.getChannelData(0), line=new Float32Array(P);
+    for(let i=0;i<P;i++) line[i]=(R()*2-1)*(kind==='koto'?0.8+0.2*Math.sin(i/P*Math.PI):1);
+    let idx=0, prev=0; const dec=kind==='koto'?0.9965:0.9935, bright=kind==='koto'?0.5:0.62;
+    for(let i=0;i<N;i++){ const a=line[idx], nx=line[(idx+1)%P]; const y=(a*bright+nx*(1-bright))*dec; d[i]=a; line[idx]=y; idx=(idx+1)%P; }
+    if(kind==='biwa') for(let i=0;i<N;i++){ const x=d[i]*2.6; d[i]=Math.tanh(x)*0.55+0.08*Math.sin(x*9)*Math.exp(-i/sr*3); }
+    let mx=0; for(let i=0;i<N;i++) mx=Math.max(mx,Math.abs(d[i])); for(let i=0;i<N;i++) d[i]/=mx||1;
+    KS[key]={b,rate:f*P/sr}; return KS[key];
+  }
+  function pluck(dst,t,f,v,kind='koto'){ const k=ksBuf(f,kind); const s=ctx.createBufferSource(); s.buffer=k.b; s.playbackRate.value=k.rate;
+    const g=gn(v*0.55), lp=flt('lowpass',kind==='koto'?3800:2600,0.7); s.connect(lp).connect(g).connect(dst); s.start(t); }
+  function sho(dst,t,dur,notes,v){ for(const n of notes){ const f=NOTE(n);
+      const o=osc('sawtooth',f*(1+(R()-0.5)*0.003),t,dur+2), lp=flt('lowpass',1500,0.6), g=gn(0);
+      g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(v/notes.length,t+1.3); g.gain.setValueAtTime(v/notes.length,t+dur); g.gain.linearRampToValueAtTime(0.0001,t+dur+1.8);
+      o.connect(lp).connect(g).connect(dst); } }
+  const VOW={a:[730,1090,2440],o:[570,840,2410],u:[320,870,2240],e:[530,1840,2480],i:[300,2200,2950]};
+  function chant(dst,t,notes,beat,v){
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(NOTE(notes[0][0]),t);
+    const lfo=osc('sine',4.3,t,60), lg=gn(3.2); lfo.connect(lg).connect(o.frequency);
+    const out=gn(0); out.connect(dst);
+    const fs=[0,1,2].map(i=>{ const b=flt('bandpass',VOW.o[i],[7,9,12][i]); const g=gn([1,0.6,0.25][i]); o.connect(b).connect(g).connect(out); return b; });
+    const body=flt('lowpass',700,0.6), bg=gn(0.22); o.connect(body).connect(bg).connect(out);
+    let tt=t;
+    for(const [n,b,vw] of notes){ const d=b*beat, f=NOTE(n);
+      o.frequency.setTargetAtTime(f,tt,0.07); fs.forEach((bp,i)=>bp.frequency.setTargetAtTime(VOW[vw||'o'][i],tt,0.06));
+      out.gain.setTargetAtTime(v,tt,0.08); out.gain.setTargetAtTime(v*0.35,tt+d*0.82,0.05); tt+=d; }
+    out.gain.setTargetAtTime(0.0001,tt,0.2); o.start(t); o.stop(tt+1.2); lfo.stop(tt+1.2);
+  }
+  function hyoshigi(dst,t,v=1){ for(const dt of [0,0.16]){ const n=nz(t+dt,0.05), f=flt('bandpass',2300,9), g=gn(0); perc(g,t+dt,v*2.2,0.06,0.001); n.connect(f).connect(g).connect(dst);
+      const o=osc('sine',1950,t+dt,0.06), g2=gn(0); perc(g2,t+dt,v*0.2,0.05,0.001); o.connect(g2).connect(dst); } }
+
+  /* ───── 旋律素材(都節音階・D) ───── */
+  const THEME=[['D5',2],['Bb4',1],['A4',1],['G4',2],['A4',2],['Bb4',1],['A4',1],['G4',1],['Eb4',1],['D4',4],
+               ['G4',2],['A4',1],['Bb4',1],['D5',2],['Eb5',1],['D5',1],['Bb4',2],['A4',1],['G4',1],['A4',4]];
+  const SHAKU=[[['A4',3],['Bb4',1],['A4',2],['G4',2],['A4',4]], [['D5',2],['Eb5',1],['D5',1],['Bb4',2],['A4',2],['G4',3],['A4',5]],
+               [['G4',2],['A4',1],['Bb4',1],['D5',3],['Eb5',1],['D5',2],['Bb4',2],['A4',4]], [['D4',2],['Eb4',2],['G4',2],['A4',2],['G4',1],['Eb4',1],['D4',6]]];
+  const FUE=[[['D5',1],['D5',.5],['Eb5',.5],['G5',1],['A5',1],['Bb5',.5],['A5',.5],['G5',1],['A5',2]],
+             [['A5',1],['Bb5',1],['D6',1],['Bb5',.5],['A5',.5],['G5',1],['Eb5',1],['D5',2]],
+             [['G5',.5],['A5',.5],['Bb5',1],['A5',.5],['G5',.5],['Eb5',1],['G5',1],['A5',1],['D5',2]],
+             [['D6',1.5],['Bb5',.5],['A5',1],['G5',1],['A5',.5],['Bb5',.5],['A5',1],['D5',2]]];
+  const CHARGE=[[['D6',.5],['D6',.5],['Bb5',.5],['A5',.5],['G5',1],['A5',1],['D6',.5],['Eb6',.5],['D6',1],['A5',2]],
+                [['A5',.5],['Bb5',.5],['D6',.5],['Eb6',.5],['D6',1],['Bb5',1],['A5',.5],['G5',.5],['A5',1],['D5',2]],
+                [['G5',.5],['A5',.5],['Bb5',.5],['D6',.5],['Eb6',1.5],['D6',.5],['Bb5',1],['A5',1],['G5',.5],['A5',.5],['D6',2]]];
+  const NOHKAN=[[['A6',.4],['D6',1.2],['Eb6',.5],['D6',1.5],['A5',2]],[['G5',1],['A5',.5],['D6',2],['Eb6',.5],['D6',.5],['A5',2.5]]];
+  const UTAI=[[['D3',2,'o'],['D3',1,'a'],['Eb3',1.5,'o'],['D3',2.5,'u'],['A2',1.5,'o'],['D3',3,'a']],
+              [['G3',2,'a'],['G3',1,'e'],['A3',1,'o'],['G3',2,'u'],['D3',2,'o'],['Eb3',1,'i'],['D3',3,'o']],
+              [['D3',1.5,'u'],['G3',2.5,'o'],['A3',1,'a'],['G3',1.5,'o'],['Eb3',1,'e'],['D3',4,'o']]];
+  function playPhrase(dst,t,ph,beat,fn){ let tt=t; for(const [n,b] of ph){ fn(tt,NOTE(n),b*beat); tt+=b*beat; } return tt-t; }
+  const up=(ph,oct)=>ph.map(([n,b,...r])=>[n.replace(/-?\d$/,m=>String(+m+oct)),b,...r]);
+
+  /* ───── 樂段 ───── */
+  const SEC={}; let cur=null, nextT=0, step=0, voices={};
+  function defSec(name,bpm,lvl,fn){ const g=gn(0); g.connect(musBus); SEC[name]={g,bpm,lvl,fn}; }
+  function pat(p,i){ return p[i%p.length]; }
+  function setupSections(){
+    defSec('title',54,0.9,(t,i,d,o)=>{
+      if(i%64===0) sho(o,t,d*60,[['D4','A4','D5','E5'],['G4','D5','Eb5','A5']][(i/64|0)%2],0.16);
+      if(i%32===0) odaiko(o,t,0.35,0.9);
+      if(i%32===16 && R()<0.8) [0,1,2,3].forEach(k=>pluck(o,t+k*d*1.5,NOTE(['D4','A4','Bb4','D5'][k]),0.5,'koto'));
+      if(t>=(voices.sh||0) && i%8===0){ const ph=SHAKU[(voices.shi=(voices.shi||0)+1)%SHAKU.length];
+        voices.sh=t+playPhrase(o,t,ph,d*4,(tt,f,dd)=>flute(o,tt,f,dd*0.97,0.23,'shaku'))+d*4*(3+R()*3); }
+    });
+    defSec('dawn',56,0.85,(t,i,d,o)=>{
+      const p='D..d............'; const c=pat(p,i); if(c==='D') odaiko(o,t,0.55,0.85); if(c==='d') odaiko(o,t,0.28,0.85);
+      if(i%64===0) sho(o,t,d*62,['D3','A3','D4'],0.1);
+      if(i%32===8) pluck(o,t,NOTE('D3'),0.7,'biwa'); if(i%32===22 && R()<0.7) pluck(o,t,NOTE(R()<0.5?'Eb3':'A2'),0.6,'biwa');
+      if(i%64===40) kane(o,t,0.35);
+      if(t>=(voices.sh||0) && i%16===0 && i>0){ const ph=up(SHAKU[(voices.shi=(voices.shi||0)+1)%SHAKU.length],-1);
+        voices.sh=t+playPhrase(o,t,ph,d*4,(tt,f,dd)=>flute(o,tt,f,dd*0.95,0.2,'shaku'))+d*4*(4+R()*4); }
+    });
+    defSec('baba',60,1.25,(t,i,d,o)=>{
+      const tz='p...t.p.p.....t.'; const c=pat(tz,i); if(c==='p') tsuzumi(o,t,0.7,'pon'); if(c==='t') tsuzumi(o,t,0.7,'ta');
+      if(i%64===0) sho(o,t,d*62,['D4','G4','A4','D5'],0.12);
+      if(t>=(voices.ut||0) && i%16===4){ const ph=UTAI[(voices.uti=(voices.uti||0)+1)%UTAI.length];
+        chant(o,t,ph,d*2.2,0.22); voices.ut=t+ph.reduce((a,b)=>a+b[1],0)*d*2.2+d*8; }
+      if(t>=(voices.nk||0) && i%16===12 && R()<0.6){ const ph=NOHKAN[(voices.nki=(voices.nki||0)+1)%2];
+        voices.nk=t+playPhrase(o,t,ph,d*3,(tt,f,dd)=>flute(o,tt,f,dd,0.12,'noh'))+d*24; }
+    });
+    defSec('battle',96,0.8,(t,i,d,o)=>{
+      const I=S.intensity||0.5;
+      const pD='D.d.D...D.d.D.dd', pK='....k.......k...', pS='s.s.s.s.s.s.s.s.';
+      const c=pat(pD,i); if(c==='D') odaiko(o,t,0.75); if(c==='d') odaiko(o,t,0.4);
+      if(pat(pK,i)==='k') ka(o,t,0.35); if(pat(pS,i)==='s') shime(o,t,0.18+0.12*I*(i%4===0?1.5:1));
+      if(i%32===0) kane(o,t,0.4);
+      if(i%4===0){ const seq=['D3','D3','Eb3','D3','A2','D3','Bb2','A2']; pluck(o,t,NOTE(seq[(i/4)%8]),0.4,'biwa'); }
+      if(t>=(voices.fu||0) && i%16===0){ const ph=FUE[(voices.fui=(voices.fui||0)+1)%FUE.length];
+        voices.fu=t+playPhrase(o,t,up(ph,-1),d*4,(tt,f,dd)=>flute(o,tt,f,dd*0.92,0.2,'shaku'))+d*4*6; }
+    });
+    defSec('noh',72,1.3,(t,i,d,o)=>{
+      const tz='p..p..t.....p.t.'; const c=pat(tz,i); if(c==='p') tsuzumi(o,t,0.6,'pon'); if(c==='t') tsuzumi(o,t,0.8,'ta');
+      if(i%64===0) sho(o,t,d*62,['D4','A4','Eb5'],0.08);
+      if(t>=(voices.ut||0) && i%16===0){ const ph=UTAI[(voices.uti=(voices.uti||0)+1)%UTAI.length];
+        chant(o,t,ph,d*2,0.26); voices.ut=t+ph.reduce((a,b)=>a+b[1],0)*d*2+d*6; }
+      if(t>=(voices.nk||0) && i%32===24 && R()<0.5){ const ph=NOHKAN[(voices.nki=(voices.nki||0)+1)%2];
+        voices.nk=t+playPhrase(o,t,ph,d*3,(tt,f,dd)=>flute(o,tt,f,dd,0.1,'noh'))+d*32; }
+    });
+    defSec('rout',60,0.9,(t,i,d,o)=>{
+      const T=S.tension||0; SEC.rout.bpm=70+T*60;
+      const lvl=T<0.33?'D.......d.......':(T<0.66?'D...d...D...d.d.':'D.d.D.d.D.dDD.dd');
+      const c=pat(lvl,i); if(c==='D') odaiko(o,t,0.5+0.4*T,0.8); if(c==='d') odaiko(o,t,0.3+0.3*T,0.8);
+      if(T>0.5 && i%2===0) shime(o,t,0.08+0.12*T);
+      if(i%64===0) sho(o,t,d*62,['D3','Eb3','A3','D4'],0.12);
+      if(i%32===16 && R()<0.6) pluck(o,t,NOTE('D2'),0.8,'biwa');
+    });
+    defSec('battle2',128,0.95,(t,i,d,o)=>{
+      const pD='D.d.D.dkD.d.DdDk', pS='ssssssssssssssss';
+      const bar=(i/16|0)%8;
+      if(bar===7){ if(i%16<12) odaiko(o,t,0.35+0.05*(i%16),1); else if(i%2===0) odaiko(o,t,0.95,1); }
+      else { const c=pat(pD,i); if(c==='D') odaiko(o,t,0.9); if(c==='d') odaiko(o,t,0.5); if(c==='k') ka(o,t,0.4); }
+      if(pat(pS,i)==='s') shime(o,t,i%4===0?0.36:0.16);
+      if(i%8===0) kane(o,t,0.55);
+      if(t>=(voices.fu||0) && i%16===0){ const ph=CHARGE[(voices.fui=(voices.fui||0)+1)%CHARGE.length];
+        voices.fu=t+playPhrase(o,t,ph,d*4,(tt,f,dd)=>{ flute(o,tt,f,dd*0.9,0.24,'shino'); })+d*4; }
+      if(i%4===0){ const seq=['D3','D3','A3','D3','Eb3','D3','A2','D3']; pluck(o,t,NOTE(seq[(i/4)%8]),0.55,'biwa'); }
+    });
+    defSec('lament',46,1.25,(t,i,d,o)=>{
+      if(i<12) return;
+      if(i%64===12) sho(o,t,d*60,['D4','A4','Bb4','D5'],0.13);
+      if(i%32===24) odaiko(o,t,0.22,0.8);
+      if(t>=(voices.sh||0) && i%8===0){ const ph=SHAKU[(voices.shi=(voices.shi===undefined?1:voices.shi+1))%SHAKU.length];
+        voices.sh=t+playPhrase(o,t,ph,d*4,(tt,f,dd)=>flute(o,tt,f,dd*0.97,0.24,'shaku'))+d*4*(2+R()*2); }
+      if(i%32===8 && R()<0.6) pluck(o,t,NOTE('D4'),0.45,'biwa');
+    });
+    defSec('ending',64,1.3,(t,i,d,o)=>{
+      if(i%128===0){ let tt=t; for(const [n,b] of THEME){ pluck(o,tt,NOTE(n),0.62,'koto'); if(b>=2) pluck(o,tt,NOTE(n)/2,0.3,'koto'); tt+=b*d*4; } }
+      if(i%128===64){ let tt=t; for(const [n,b] of THEME){ flute(o,tt,NOTE(n),b*d*4*0.96,0.17,'shaku'); tt+=b*d*4; } }
+      if(i%32===0) odaiko(o,t,0.3,0.85);
+      if(i%64===0) sho(o,t,d*62,['D4','A4','D5','E5'],0.1);
+    });
+  }
+  function setSection(name){
+    if(!ctx || cur===name) return;
+    const now=ctx.currentTime;
+    for(const k in SEC){ const s=SEC[k]; s.g.gain.cancelScheduledValues(now); s.g.gain.setValueAtTime(s.g.gain.value,now);
+      s.g.gain.setTargetAtTime(k===name?s.lvl:0, now, k===name?0.5:(name==='charge'||name==='fall'?0.15:0.9)); }
+    cur=name; step=0; voices={}; nextT=Math.max(nextT, now+0.06);
+  }
+  function tickMusic(){
+    const now=ctx.currentTime; if(nextT<now-0.3) nextT=now+0.03;
+    const s=SEC[cur]; if(!s) return;
+    while(nextT<now+0.16){ const d=60/s.bpm/4; try{ s.fn(nextT,step,d,s.g); }catch(e){ console.warn(e); } nextT+=d; step++; }
+  }
+
+  /* ───── 環境音(連續層) ───── */
+  let A={};
+  function setupAmbience(){
+    const mk=(buf,chain,v=0)=>{ const s=loopSrc(buf); let n=s; for(const c of chain){ n.connect(c); n=c; } const g=gn(v); n.connect(g).connect(ambBus); return g; };
+    A.rain=mk(noiseB,[flt('highpass',420),flt('lowpass',7200)]);
+    A.rainLow=mk(brownB,[flt('lowpass',520)]);
+    A.windF=flt('bandpass',380,0.7); A.wind=mk(brownB,[A.windF]);
+    A.sea=mk(brownB,[flt('lowpass',650)]);
+    A.murF=flt('bandpass',520,0.9); A.murmur=mk(noiseB,[A.murF,flt('lowpass',1400)]);
+    A.dinF=flt('bandpass',1900,1.3); A.din=mk(noiseB,[A.dinF]);
+    A.fire=mk(brownB,[flt('lowpass',280)]);
+  }
+  const tgt=(g,v,tc=0.4)=>{ g.gain.setTargetAtTime(v, ctx.currentTime, tc); };
+  let evT=0;
+  function tickAmbience(){
+    const now=ctx.currentTime, dt=Math.min(0.1, now-(evT||now)); evT=now;
+    const duck=S.interlude?0.35:1;
+    tgt(A.rain, (0.24*S.rain)*duck); tgt(A.rainLow, 0.5*S.rain*duck);
+    tgt(A.wind, (0.08+0.55*S.wind*S.wind)*duck, 0.8); A.windF.frequency.setTargetAtTime(260+500*S.wind+180*Math.sin(now*0.37), now, 0.5);
+    tgt(A.sea, 0.18*S.sea*(0.75+0.25*Math.sin(now*0.55))*duck, 0.6);
+    tgt(A.murmur, 0.045*S.murmur*(0.8+0.4*R())*duck, 0.3); A.murF.frequency.setTargetAtTime(420+220*R(), now, 0.2);
+    tgt(A.din, 0.07*S.combat*(0.6+0.8*R())*duck, 0.08); A.dinF.frequency.setTargetAtTime(1500+900*R(),now,0.1);
+    tgt(A.fire, 0.35*S.fire*duck, 0.5);
+    if(!sfxOn) return;
+    const P=(rate)=>R()<rate*dt;
+    /* 蛙鳴(夜、雨後) */
+    if(P(9*S.frogs)) frog(now+R()*0.1);
+    /* 晨鳥 */
+    if(P(5*S.birds)) chirp(now+R()*0.1);
+    /* 雨滴、冰雹 */
+    if(S.rain>0.2) for(let k=0;k<4;k++) if(P(20*S.rain)) drip(now+R()*0.1, 0.12*S.rain);
+    if(S.hail>0.05) for(let k=0;k<8;k++) if(P(40*S.hail)) hailHit(now+R()*0.1, S.hail);
+    /* 火焰劈啪 */
+    if(S.fire>0.05) for(let k=0;k<3;k++) if(P(18*S.fire)) crackle(now+R()*0.1, S.fire);
+    /* 戰鬥 */
+    if(S.combat>0.05 && S.playing){
+      const cp=S.combatPos||{x:L.x,z:L.z};
+      if(P(7*S.combat)) clash(cp.x+(R()-0.5)*4, cp.z+(R()-0.5)*4, now+R()*0.1);
+      if(P(1.2*S.combat)) shout(cp.x+(R()-0.5)*4, cp.z+(R()-0.5)*4, now+R()*0.1);
+      if(S.teppo && P(1.8*S.combat*S.teppo)) teppo(cp.x+(R()-0.5)*5, cp.z+(R()-0.5)*5, now+R()*0.1);
+    }
+  }
+  function frog(t){ const n=4+(R()*7|0), f=420+R()*380, rate=16+R()*14, pan=(R()-0.5)*1.6, v=0.04+R()*0.05;
+    const dst=panner(sfxBus,pan);
+    for(let k=0;k<n;k++){ const tt=t+k/rate, o=osc('square',f*(1+(R()-0.5)*0.04),tt,0.04), bp=flt('bandpass',f*2.1,3), g=gn(0);
+      perc(g,tt,v,0.025,0.003); o.connect(bp).connect(g).connect(dst); } }
+  function chirp(t){ const n=2+(R()*5|0), base=2600+R()*2400, pan=(R()-0.5)*1.6, dst=panner(sfxBus,pan);
+    for(let k=0;k<n;k++){ const tt=t+k*(0.07+R()*0.06), o=osc('sine',base,tt,0.1); o.frequency.exponentialRampToValueAtTime(base*(0.7+R()*0.7),tt+0.06);
+      const g=gn(0); perc(g,tt,0.035,0.06,0.005); o.connect(g).connect(dst); } }
+  function hototogisu(pan=0.4, v=0.1){ if(!ctx||!sfxOn) return; const t=ctx.currentTime+0.05, dst=panner(sfxBus,pan);
+    const seq=[[1700,2150,0.13],[0,0,0.05],[1650,2050,0.09],[2050,1900,0.08],[1900,2350,0.2],[0,0,0.45],[1700,2150,0.12],[0,0,0.04],[1650,2050,0.09],[2050,1900,0.08],[1900,2350,0.2]];
+    let tt=t; for(const [a,b,d] of seq){ if(a){ const o=osc('sine',a,tt,d+0.02); o.frequency.exponentialRampToValueAtTime(b,tt+d*0.8);
+        const g=gn(0); g.gain.setValueAtTime(0.0001,tt); g.gain.linearRampToValueAtTime(v,tt+0.015); g.gain.setValueAtTime(v,tt+d*0.7); g.gain.exponentialRampToValueAtTime(0.0001,tt+d);
+        o.connect(g).connect(dst); } tt+=d; } }
+  function drip(t,v){ const n=nz(t,0.02), f=flt('bandpass',2500+R()*4000,4), g=gn(0); perc(g,t,v*(0.5+R()),0.015,0.001); n.connect(f).connect(g).connect(panner(ambBus,(R()-0.5)*1.8)); }
+  function hailHit(t,v){ const n=nz(t,0.02), f=flt('bandpass',4200+R()*3000,6), g=gn(0); perc(g,t,0.22*v*(0.4+R()),0.012,0.0005); n.connect(f).connect(g).connect(panner(ambBus,(R()-0.5)*1.8)); }
+  function crackle(t,v){ const n=nz(t,0.03), f=flt('highpass',1800+R()*2500), g=gn(0); perc(g,t,0.18*v*R(),0.01+R()*0.02,0.0005); n.connect(f).connect(g).connect(panner(ambBus,(R()-0.5)*1.2)); }
+
+  /* ───── 事件音效 ───── */
+  function clash(x,z,t){ const s=spat(x,0.5,z,22); if(s.g<0.03) return; const dst=panner(sfxBus,s.pan), base=1600+R()*1400;
+    for(const [m,dd,a] of [[1,0.35,1],[2.76,0.22,0.6],[5.4,0.14,0.4],[8.9,0.08,0.25]]){ if(base*m>ctx.sampleRate*0.45) continue; const o=osc('sine',base*m*(1+(R()-0.5)*0.02),t,dd), g=gn(0); perc(g,t,0.05*a*s.g,dd,0.001); o.connect(g).connect(dst); }
+    const n=nz(t,0.03), f=flt('highpass',3000), g=gn(0); perc(g,t,0.2*s.g,0.02,0.001); n.connect(f).connect(g).connect(dst); }
+  function crowd(dst,t,dur,v,shape,vowels){
+    const out=gn(0), mix=gn(1); out.connect(dst);
+    const fs=[0,1,2].map(i=>{ const b=flt('bandpass',VOW[vowels[0]][i],[5,7,9][i]), g=gn([1,0.55,0.25][i]); mix.connect(b).connect(g).connect(out); return b; });
+    for(let k=0;k<12;k++){ const f0=110+R()*140, o=osc('sawtooth',f0,t,dur+0.3); o.detune.value=(R()-0.5)*60;
+      const j=osc('sine',3+R()*5,t,dur+0.3), jg=gn(f0*0.03); j.connect(jg).connect(o.frequency);
+      if(shape==='rise'){ o.frequency.setValueAtTime(f0*0.85,t); o.frequency.linearRampToValueAtTime(f0*1.25,t+dur*0.6); }
+      o.connect(gn(0.12)).connect(mix); }
+    const n=nz(t,dur+0.3), ng=gn(0.35); n.connect(ng).connect(mix);
+    vowels.forEach((vw,k)=>{ const tt=t+dur*k/vowels.length; fs.forEach((b,i)=>b.frequency.setTargetAtTime(VOW[vw][i],tt,0.05)); });
+    out.gain.setValueAtTime(0.0001,t); out.gain.linearRampToValueAtTime(v,t+Math.min(0.25,dur*0.3)); out.gain.setValueAtTime(v,t+dur*0.7); out.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  }
+  function shout(x,z,t){ const s=spat(x,0.5,z,20); if(s.g<0.04) return; crowd(panner(sfxBus,s.pan),t,0.5+R()*0.6,0.12*s.g,'rise',[R()<0.5?'a':'o','o']); }
+  function warcry(x,z,big=1){ if(!ctx||!sfxOn) return; const s=spat(x,0.5,z,40); const t=ctx.currentTime+0.05;
+    crowd(panner(sfxBus,s.pan),t,2.6,0.45*Math.max(0.35,s.g)*big,'rise',['a','a','o']); }
+  function kachidoki(){ if(!ctx||!sfxOn) return; const t=ctx.currentTime+0.1, dst=sfxBus;
+    crowd(dst,t,0.42,0.4,'flat',['e','i']); crowd(dst,t+0.62,0.42,0.42,'flat',['e','i']); crowd(dst,t+1.3,1.7,0.5,'rise',['o','o','u']); }
+  function horagai(x,z,v=1){ if(!ctx||!sfxOn) return; const s=x===undefined?{g:1,pan:0}:spat(x,1,z,45); const t=ctx.currentTime+0.05, dur=2.8, dst=panner(sfxBus,s.pan);
+    const gv=0.5*Math.max(0.3,s.g)*v;
+    const o=osc('sawtooth',196,t,dur+0.4); o.frequency.setValueAtTime(186,t); o.frequency.linearRampToValueAtTime(198,t+0.35); o.frequency.setValueAtTime(198,t+dur-0.6); o.frequency.linearRampToValueAtTime(176,t+dur);
+    const vib=osc('sine',5.2,t,dur), vg=gn(2); vib.connect(vg).connect(o.frequency);
+    const out=gn(0); out.gain.setValueAtTime(0.0001,t); out.gain.linearRampToValueAtTime(gv,t+0.45); out.gain.setValueAtTime(gv,t+dur-0.5); out.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.3);
+    for(const [f,q,a] of [[420,4,1],[840,5,0.5],[1500,6,0.22]]){ const b=flt('bandpass',f,q), g=gn(a); o.connect(b).connect(g).connect(out); }
+    const n=nz(t,dur), nb=flt('bandpass',900,1.5), ng=gn(0.12); n.connect(nb).connect(ng).connect(out);
+    out.connect(flt('lowpass',2400)).connect(dst); }
+  function hooves(x,z,dur=3,n=4){ if(!ctx||!sfxOn) return; const s=spat(x,0.5,z,30); if(s.g<0.03) return; const t0=ctx.currentTime+0.05, dst=panner(sfxBus,s.pan);
+    for(let h=0;h<n;h++){ const off=R()*0.3, per=0.34+R()*0.05;
+      for(let t=t0+off;t<t0+dur;t+=per) for(const dt of [0,0.07,0.15]){ const tt=t+dt+(R()-0.5)*0.01, f=flt('lowpass',380), g=gn(0), nn=nz(tt,0.06);
+        perc(g,tt,0.3*s.g*(dt===0.15?1:0.7)*(1-(t-t0)/dur*0.5),0.05,0.002); nn.connect(f).connect(g).connect(dst);
+        const o=osc('sine',75,tt,0.07), g2=gn(0); perc(g2,tt,0.15*s.g,0.06,0.002); o.connect(g2).connect(dst); } } }
+  function teppo(x,z,t){ const s=spat(x,0.5,z,30); if(s.g<0.02) return; const dst=panner(sfxBus,s.pan); t=t||ctx.currentTime+0.02;
+    const n=nz(t,0.05), f=flt('highpass',1400), g=gn(0); perc(g,t,0.55*s.g,0.035,0.0005); n.connect(f).connect(g).connect(dst);
+    const o=osc('sine',78,t,0.45); o.frequency.exponentialRampToValueAtTime(38,t+0.3); const g2=gn(0); perc(g2,t,0.5*s.g,0.4,0.002); o.connect(g2).connect(dst);
+    const n2=nz(t,0.7,brownB), f2=flt('lowpass',500), g3=gn(0); perc(g3,t,0.35*s.g,0.6,0.01); n2.connect(f2).connect(g3).connect(dst); }
+  function arrows(x,z){ if(!ctx||!sfxOn) return; const s=spat(x,0.5,z,25); if(s.g<0.04) return; const t=ctx.currentTime, dst=panner(sfxBus,s.pan);
+    for(let k=0;k<6;k++){ const tt=t+R()*0.5, n=nz(tt,0.35), f=flt('bandpass',3000,3), g=gn(0);
+      f.frequency.setValueAtTime(3500,tt); f.frequency.exponentialRampToValueAtTime(700,tt+0.3); perc(g,tt,0.12*s.g,0.3,0.05); n.connect(f).connect(g).connect(dst); } }
+  function thunder(dist,x,z){ if(!ctx||!sfxOn) return;
+    const s=spat(x,8,z,60), delay=clamp(dist*0.022,0.02,2.8), t=ctx.currentTime+delay, near=clamp(1-dist/75,0,1), dst=panner(sfxBus,s.pan*0.6);
+    if(near>0.2){ const n=nz(t,0.4), f=flt('highpass',900), g=gn(0); perc(g,t,0.9*near,0.3,0.002); n.connect(f).connect(g).connect(dst); }
+    const len=3.5+R()*3, N=64, curve=new Float32Array(N); let a=0;
+    for(let i=0;i<N;i++){ const u=i/(N-1); a=a*0.6+0.4*(0.4+R()*(u<0.3?1.2:0.8)); curve[i]=Math.max(0.0001,a*Math.pow(1-u,1.6)*(0.6+near*0.9)); }
+    const n=nz(t,len+0.2,brownB), f=flt('lowpass',160+near*650,0.7), g=gn(0);
+    g.gain.setValueCurveAtTime(curve,t+0.02,len); n.connect(f).connect(g).connect(dst);
+    const n2=nz(t,len,brownB), f2=flt('lowpass',70), g2=gn(0); g2.gain.setValueCurveAtTime(curve.map(v=>v*0.9),t+0.05,len); n2.connect(f2).connect(g2).connect(dst); }
+  function volley(x,z,n=14,spread=10){ if(!ctx||!sfxOn) return; const t0=ctx.currentTime+0.02;
+    for(let i=0;i<n;i++) teppo(x+(R()-0.5)*0.6, z+(R()-0.5)*spread, t0+R()*0.35);
+    const s=spat(x,1,z,40), dst=panner(sfxBus,s.pan*0.5);
+    const e=nz(t0+0.3,2.8,brownB), f=flt('lowpass',240), g=gn(0);
+    g.gain.setValueAtTime(0.0001,t0+0.3); g.gain.linearRampToValueAtTime(0.5*Math.max(0.3,s.g),t0+0.45); g.gain.exponentialRampToValueAtTime(0.0001,t0+3.0);
+    e.connect(f).connect(g).connect(dst); }
+  function wardrum(x,z,n=10){ if(!ctx||!sfxOn) return; const s=spat(x,1,z,45), dst=panner(sfxBus,s.pan), t0=ctx.currentTime+0.05, v=Math.max(0.25,s.g)*0.9;
+    let tt=t0, per=0.5; for(let i=0;i<n;i++){ odaiko(dst,tt,v*(i%2?0.7:1),0.9); tt+=per; per=Math.max(0.2,per*0.9); } }
+  function boom(v=1){ if(!ctx) return; const t=ctx.currentTime+0.02; odaiko(musBus,t,1.1*v,0.7); odaiko(musBus,t+0.02,0.8*v,0.5); }
+  function pray(){ if(!ctx||!sfxOn) return; const t=ctx.currentTime+0.1;
+    for(const dt of [0,0.55]){ const n=nz(t+dt,0.06), f=flt('bandpass',1300,1.2), g=gn(0); perc(g,t+dt,0.5,0.05,0.001); n.connect(f).connect(g).connect(sfxBus); }
+    for(let k=0;k<14;k++){ const tt=t+1.2+k*0.06+R()*0.02; for(const m of [1,1.5,2.3]){ const o=osc('sine',2900*m*(1+R()*0.01),tt,0.3), g=gn(0); perc(g,tt,0.02/m,0.25,0.001); o.connect(g).connect(sfxBus); } } }
+  function clack(){ if(!ctx) return; hyoshigi(musBus,ctx.currentTime+0.02,0.5); }
+
+  function init(){
+    if(ctx){ if(ctx.state==='suspended') ctx.resume(); return; }
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    ctx=new AC({latencyHint:'playback'});
+    master=gn(0.9);
+    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-16; comp.knee.value=14; comp.ratio.value=3.2; comp.attack.value=0.008; comp.release.value=0.3;
+    master.connect(comp).connect(ctx.destination);
+    noiseB=makeNoise(3); brownB=makeBrown(6);
+    verb=ctx.createConvolver(); verb.buffer=makeIR(3.4,2.4); const vo=gn(0.85); verb.connect(vo).connect(master);
+    musBus=gn(musOn?0.62:0); musBus.connect(master); const mv=gn(0.55); musBus.connect(mv).connect(verb);
+    sfxBus=gn(sfxOn?1:0); sfxBus.connect(master); const sv=gn(0.25); sfxBus.connect(sv).connect(verb);
+    ambBus=gn(sfxOn?0.9:0); ambBus.connect(master); const av=gn(0.12); ambBus.connect(av).connect(verb);
+    setupSections(); setupAmbience();
+    setInterval(()=>{ if(ctx.state!=='running') return; tickMusic(); tickAmbience(); }, 30);
+    started=true;
+  }
+  return {
+    init, get ready(){ return !!ctx && ctx.state==='running'; }, S, setSection, get section(){ return cur; },
+    listener(p,right){ L.x=p.x; L.y=p.y; L.z=p.z; L.rx=right.x; L.rz=right.z; },
+    volley, wardrum, thunder, horagai, warcry, kachidoki, hooves, teppo, arrows, boom, pray, clack, hototogisu,
+    shot(x,z){ if(ctx&&sfxOn) teppo(x,z,ctx.currentTime+0.02); },
+    tap(){ const an=ctx.createAnalyser(); an.fftSize=2048; master.connect(an); const b=new Float32Array(2048);
+      return ()=>{ an.getFloatTimeDomainData(b); let s=0,p=0; for(const v of b){ s+=v*v; p=Math.max(p,Math.abs(v)); } return {rms:Math.sqrt(s/b.length), peak:p, state:ctx.state}; }; },
+    toggleMusic(){ musOn=!musOn; if(musBus) musBus.gain.setTargetAtTime(musOn?0.62:0,ctx.currentTime,0.2); return musOn; },
+    toggleSfx(){ sfxOn=!sfxOn; if(sfxBus){ sfxBus.gain.setTargetAtTime(sfxOn?1:0,ctx.currentTime,0.1); ambBus.gain.setTargetAtTime(sfxOn?0.9:0,ctx.currentTime,0.2); } return sfxOn; },
+  };
+})();
+
+/* ════════════════════════════════ 後製(Bloom + 調色 + 暗角 + 底片顆粒) ════════════════════════════════ */
+const rtOpts={type:THREE.HalfFloatType, samples:QUALITY==='high'?4:0};
+const composer=new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth*PR(), innerHeight*PR(), rtOpts));
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), 0.5, 0.55, 0.9);
+bloom.enabled = QUALITY==='high';
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const grade=new ShaderPass({
+  uniforms:{tDiffuse:{value:null}, uTime:{value:0}, uSat:{value:1}, uCon:{value:1.05}, uTint:{value:new THREE.Vector3(1,1,1)},
+    uVig:{value:0.35}, uGrain:{value:0.035}, uLift:{value:0}},
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`uniform sampler2D tDiffuse; uniform float uTime,uSat,uCon,uVig,uGrain,uLift; uniform vec3 uTint; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+    void main(){ vec3 c=texture2D(tDiffuse,vUv).rgb;
+      float l=dot(c,vec3(0.299,0.587,0.114)); c=mix(vec3(l),c,uSat);
+      c=(c-0.5)*uCon+0.5+uLift; c*=uTint;
+      float r=length((vUv-0.5)*vec2(1.0,0.78)); c*=1.0-uVig*smoothstep(0.32,0.85,r);
+      c+=(h(vUv*vec2(1733.,997.)+fract(uTime*7.3))-0.5)*uGrain;
+      gl_FragColor=vec4(clamp(c,0.0,1.0),1.0); }`
+});
+composer.addPass(grade);
+function setPointScale(){ const s=renderer.domElement.height/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)); for(const p of [SMOKE,GLOW,SPARK]) p.mat.uniforms.uScale.value=s; }
+setPointScale();
+
+/* ════════════════════════════════ 事件・字幕 ════════════════════════════════ */
+const EVENTS=[
+ [0,   '寅の刻','設樂原・黎明','天正三年五月二十一日,梅雨時節,晨霧籠罩設樂原。連吾川西岸,織田信長三萬、德川家康八千藏身台地之後,沿河築起綿延近兩公里的馬防柵;東岸,武田勝頼一萬五千已然布陣。據『甲陽軍鑑』,前夜軍議老臣力諫撤兵,勝頼仍決意一戰。'],
+ [0.55,'寅の刻','鳶ヶ巣山 奇襲','前夜,酒井忠次率四千別働隊冒雨翻越船着山,繞到長篠城南岸。拂曉,鐵炮聲在武田軍背後的鳶ヶ巣山響起。'],
+ [1.0, '卯の刻','一番 山縣昌景','『信長公記』記:一番,山縣三郎兵衛擂響推太鼓攻來。武田左翼的赤備率先衝向德川陣前——柵後的鐵炮一齊擊發。'],
+ [1.55,'卯の刻','鳶ヶ巣山砦 陷落','酒井隊攻陷鳶ヶ巣山等諸砦,守將武田信實戰死;長篠城的奧平信昌開門出擊,被圍十日的孤城得救。武田軍的退路,就此暴露在背後。'],
+ [1.8, '卯の刻','二番 武田信廉','信玄之弟逍遙軒信廉率二番隊攻擊中央。武田各隊一隊退下、一隊補上,反覆衝擊馬防柵。'],
+ [2.8, '卯の刻','三番 小幡・赤武者','西上野小幡一黨的「赤武者」衝陣。柵前是梅雨泡軟的溼田與連吾川,人馬深陷泥中,正是鐵炮最好的靶。'],
+ [3.85,'辰の刻','四番 武田信豐・黑武者','典廄信豐的黑武者隊接續衝鋒。『信長公記』:織田方「<span class="q">御人數一首も御出しなく、鐵炮ばかりを相加へ</span>」——一兵不出,只以鐵炮迎擊。'],
+ [4.8, '辰の刻','山縣昌景 戰死','第三度衝鋒中,山縣昌景中彈落馬。這位追隨信玄征戰一生、令諸國聞之色變的赤備之將,倒在德川陣前的柵下。'],
+ [4.95,'辰の刻','五番 馬場信春','右翼馬場信春攻擊佐久間信盛隊,奪下柵外的丸山。'],
+ [5.8, '巳の刻','真田兄弟 出擊','真田信綱、昌輝兄弟率右翼,六文錢旗直撲瀧川隊前的柵列。'],
+ [6.5, '巳の刻','土屋昌續','土屋昌續突至柵前,據傳欲以手拉倒柵木,中彈而亡。信玄死時他曾欲殉死,被勸阻而活——兩年後,他死在這道柵前。'],
+ [7.6, '巳の刻','衝破第一重柵','據『甲陽軍鑑』,馬場、真田等隊一度攻破第一重柵。但柵後還有柵、還有一排排槍口……'],
+ [8.62,'午の刻','真田信綱・昌輝 戰死','兄弟二人同日戰死於柵前。真田家督改由三弟昌幸繼承——昌幸的次子,就是日後在大坂之陣名留青史的真田信繁(幸村)。'],
+ [8.8, '午の刻','內藤昌秀 最後的攻勢','內藤昌秀率中央殘部再度衝鋒。柵前、連吾川畔,武田將士的遺骸層層堆疊。'],
+ [9.7, '未の刻','全線崩潰','『信長公記』記,這場戰鬥自日出一直持續到未刻。武田軍力竭崩潰,柵後的織田・德川軍終於全線出擊追殺。'],
+ [9.85,'未の刻','勝頼 敗走','勝頼在旗本護衛下向信濃方向敗走。內藤昌秀回身斷後,戰死於亂軍之中。'],
+ [10.55,'未の刻','馬場信春 殿軍','馬場信春收攏殘兵擔任殿軍,據『甲陽軍鑑』,他望見勝頼已渡過寒狹川,方才回身迎向追兵。'],
+ [11.0,'申の刻','馬場信春 戰死','身經七十餘戰、從未負傷的「鬼美濃」,在出澤從容就死,年六十一。'],
+ [11.5,'申の刻','落日','武田方戰死者,『信長公記』記「一萬ばかり」,實數眾說紛紜。四名臣中在場的馬場、內藤、山縣三人,以及真田兄弟、土屋昌續、原昌胤等宿將,一日之內幾乎盡歿。七年後的天正十年,武田家於天目山滅亡。'],
+];
+const MOMENTS=[
+ {h:'🌫 晨霧・兩軍隔河對峙',x:4,z:-4,from:0.05,to:0.95,c:'blue'},
+ {h:'🔥 鳶ヶ巣山 奇襲',x:62.5,z:17.5,from:0.85,to:1.6,c:''},
+ {h:'🏯 長篠城 解圍',x:58,z:9.4,from:1.6,to:2.4,c:'gold'},
+ {h:'🥁 推太鼓・赤備衝鋒',x:6,z:15,from:1.0,to:1.35,c:''},
+ {h:'💥 鐵炮齊射',x:-3,z:5,from:2.0,to:2.4,c:'gold'},
+ {h:'☠ 山縣昌景 戰死',x:FX(15),z:15,from:4.8,to:5.6,c:''},
+ {h:'⛰ 馬場 奪丸山',x:4.2,z:-17,from:5.1,to:5.7,c:''},
+ {h:'☠ 土屋昌續 戰死',x:FX(-6.8),z:-6.8,from:7.25,to:7.9,c:''},
+ {h:'💥 第一重柵 被突破',x:-2.4,z:-11.4,from:8.32,to:8.9,c:''},
+ {h:'☠ 真田兄弟 戰死',x:FX(-11.4),z:-11.4,from:8.62,to:9.3,c:''},
+ {h:'⚔ 織田・德川 全線出擊',x:3,z:0,from:9.62,to:10.3,c:'gold'},
+ {h:'☠ 內藤昌秀 戰死',x:19.2,z:-4.8,from:10.35,to:11,c:''},
+ {h:'☠ 馬場信春 戰死',x:39.2,z:-26.6,from:11.0,to:12.2,c:''},
+];
+const momentObjs=MOMENTS.map(m=>{ const o=makeLabel(m.h,'mlabel'+(m.c?' '+m.c:'')); o.position.set(m.x,groundY(m.x,m.z)+3.2,m.z); o.visible=false; scene.add(o); return o; });
+
+/* ════════════════════════════════ 態勢小圖 ════════════════════════════════ */
+const INSETS=[
+ {from:-1, to:0.95, title:'🗺 天正三年五月 — 長篠城救援戰', svg:`<svg viewBox="0 0 270 150"><rect width="270" height="150" fill="#18221a"/>
+  <path d="M0,0 H270 V150 H0 Z" fill="#26341f"/>
+  <path d="M232,0 C226,40 222,70 214,86" fill="none" stroke="#6f97b8" stroke-width="3"/><path d="M270,62 C250,70 232,78 216,88" fill="none" stroke="#6f97b8" stroke-width="3"/>
+  <path d="M214,88 C190,104 150,116 110,122 C70,128 30,132 0,136" fill="none" stroke="#6f97b8" stroke-width="3.5"/>
+  <path d="M86,0 C84,40 86,80 82,128" fill="none" stroke="#6f97b8" stroke-width="1.4"/>
+  <path d="M76,14 C74,50 76,90 72,120" fill="none" stroke="#f0c23c" stroke-width="2.5" stroke-dasharray="1 2"/>
+  <circle cx="44" cy="68" r="3" fill="#f0c23c"/><text x="14" y="60" fill="#f3d27a">織田・德川 3.8萬</text>
+  <circle cx="118" cy="66" r="3" fill="#ff6a5a"/><text x="100" y="58" fill="#ffb4a8">武田 1.5萬</text>
+  <text x="54" y="112" fill="#f3d27a" font-size="8.5">馬防柵</text><text x="88" y="8" fill="#9fc0d8" font-size="8.5">連吾川</text>
+  <rect x="208" y="80" width="10" height="8" fill="#f2eee2"/><text x="222" y="96">長篠城(奧平)</text>
+  <circle cx="226" cy="110" r="3" fill="#ff6a5a"/><text x="200" y="126" fill="#ffb4a8">鳶ヶ巣山砦</text>
+  <path d="M170,148 C196,140 214,128 224,114" fill="none" stroke="#f2eee2" stroke-width="1.8" stroke-dasharray="4 3"/><text x="130" y="146" fill="#f2eee2" font-size="8.5">酒井隊 夜越船着山</text>
+  <text x="120" y="20" fill="#e9dfc6" font-size="8.5">5/11 武田圍長篠城 → 5/18 信長・家康著陣設樂原</text></svg>`},
+ {from:2.0, to:4.7, title:'🔫 「三千挺三段擊」?—— 史料怎麼說', svg:`<svg viewBox="0 0 270 150"><rect width="270" height="150" fill="#1c1a16"/>
+  <text x="12" y="22" fill="#f3d27a">『信長公記』(太田牛一・同時代)</text>
+  <text x="18" y="40" fill="#e9dfc6">鐵炮「千挺ばかり」(部分抄本作三千)</text>
+  <text x="18" y="56" fill="#e9dfc6">「足輕にて會釈」:以足輕、鐵炮應戰</text>
+  <text x="12" y="82" fill="#ffb4a8">『甫庵信長記』(1611 年以後)</text>
+  <text x="18" y="100" fill="#e9dfc6">三千挺、分三隊輪番射擊 ——「三段擊」</text>
+  <text x="12" y="126" fill="#c9c2ff" font-size="9">現代學界多認為「三段擊」屬後世潤色;</text>
+  <text x="12" y="140" fill="#c9c2ff" font-size="9">本片以柵後多列鐵炮連續射擊示意。</text></svg>`},
+ {from:8.9, to:9.65, title:'☠ 武田四名臣 —— 長篠之日', svg:`<svg viewBox="0 0 270 150"><rect width="270" height="150" fill="#1c1414"/>
+  <text x="14" y="24" fill="#ff9a8a">山縣昌景</text><text x="96" y="24" fill="#e9dfc6">辰の刻前後 戰死於德川陣前</text>
+  <text x="14" y="50" fill="#ff9a8a">內藤昌秀</text><text x="96" y="50" fill="#e9dfc6">掩護勝頼撤退時戰死</text>
+  <text x="14" y="76" fill="#ff9a8a">馬場信春</text><text x="96" y="76" fill="#e9dfc6">擔任殿軍,戰死於出澤</text>
+  <text x="14" y="102" fill="#a8a092">高坂昌信</text><text x="96" y="102" fill="#a8a092">不在場(留守海津城防上杉)</text>
+  <text x="14" y="134" fill="#c9b994" font-size="9">另有真田信綱・昌輝、土屋昌續、原昌胤、甘利信康等戰死</text></svg>`},
+];
+
+/* ════════════════════════════════ 幕間名句卡 ════════════════════════════════ */
+const INTERLUDES=[
+ {t:0.02, dur:12, html:`<div class="vert"><span>援軍將至</span><br><span style="transition-delay:.7s">城必得救</span><br><span style="transition-delay:1.4s">諸君 堅守勿降</span></div>
+   <div class="side"><div class="h">五 月 十 六 日 ・ 長 篠 城 外</div><div class="tr">為了向岡崎求援,足輕鳥居強右衛門潛出重圍。歸途被武田軍所擒,武田方要他向城中喊「援軍不來」——他卻高呼援軍將至,當場被處磔刑。<br><br>城兵因此死守到了今天。</div>
+   <div class="src">(喊話內容為大意;此事見於江戶時代諸軍記,細節各本不一)</div></div>`, onShow:()=>{ AU.setSection('dawn'); }},
+ {t:1.0, dur:4.2, light:true, html:`<div class="big">一番 山縣昌景<small>擂響推太鼓 —— 赤備,衝鋒</small></div>`,
+   onShow:()=>{ AU.setSection('battle'); AU.wardrum(FX(15)+8,15,12); AU.horagai(12,15,0.9); setTimeout(()=>AU.warcry(9,15,1.2),900); }},
+ {t:4.8, dur:7.5, html:`<div class="vert"><span>赤備之將</span><br><span style="transition-delay:.6s">山縣三郎兵衛昌景</span><br><span style="transition-delay:1.3s">倒於柵前</span></div>
+   <div class="side"><div class="h">辰 の 刻 ・ 德 川 陣 前</div><div class="tr">信玄一代的宿將,令諸國聞之色變的「赤備」之主。<br>主君死後兩年,他的第三度衝鋒,停在了這道木柵之前。</div>
+   <div class="src">後世傳說他雙臂中彈後仍口銜采配督戰——此為傳說,並無同時代史料。</div></div>`, onShow:()=>{ AU.setSection('lament'); AU.boom(0.9); }},
+ {t:8.62, dur:7.5, html:`<div class="vert"><span>真田信綱</span><br><span style="transition-delay:.5s">真田昌輝</span><br><span style="transition-delay:1.2s">兄弟同日 歿於柵前</span></div>
+   <div class="side"><div class="h">午 の 刻 ・ 瀧 川 隊 陣 前</div><div class="tr">六文錢的旗幟倒在第一重柵的缺口。<br>真田家督改由三弟昌幸繼承;他的兒子信繁,四十年後在大坂城下,向德川家康發起了最後的衝鋒。</div>
+   <div class="src">——據『甲陽軍鑑』等</div></div>`, onShow:()=>{ AU.setSection('lament'); AU.boom(1); }},
+ {t:11.0, dur:8.5, html:`<div class="vert"><span>身經七十餘戰</span><br><span style="transition-delay:.6s">未嘗負一傷</span><br><span style="transition-delay:1.3s">殿軍護主</span><br><span style="transition-delay:1.9s">鬼美濃 馬場信春</span></div>
+   <div class="side"><div class="h">申 の 刻 ・ 出 澤</div><div class="tr">望見勝頼渡過寒狹川,六十一歲的老將回身,迎向追兵。<br>信玄時代的武田,在這一刻真正結束。</div>
+   <div class="src">——『甲陽軍鑑』</div></div>`, onShow:()=>{ AU.setSection('baba'); AU.boom(1.1); }},
+];
+
+/* ════════════════════════════════ 運鏡 ════════════════════════════════ */
+const SHOTS=[
+ {t:0.3,  pos:[-15,13,32],  tgt:[4,1,-3]},
+ {t:1.1,  pos:[54.5,7,28],  tgt:[62,2,17.5]},
+ {t:1.22, pos:[5.5,3,22.5], tgt:[-0.5,1,15]},
+ {t:3.2,  pos:[-7,3.2,-10], tgt:[-1.5,1,3]},
+ {t:4.7,  pos:[4.5,3.4,20], tgt:[-1,1,15]},
+ {t:5.12, pos:[10,4.2,-11.5], tgt:[4.5,1.5,-17]},
+ {t:8.28, pos:[-7.5,3.2,-7], tgt:[-1.5,1,-11.4]},
+ {t:9.2,  pos:[5,5,6.5],    tgt:[-1.5,0.8,-1]},
+ {t:9.9,  pos:[-9,15,-26],  tgt:[13,1,-6]},
+ {t:10.9, pos:[33,4.2,-20.5], tgt:[39.2,1.5,-26.6]},
+];
+const XSHOTS={
+ nobu:{pos:[-25,4.5,-6], tgt:[-12,1.5,0]},
+ katsu:{pos:[26,4.5,2.5], tgt:[18,1.5,-2.5]},
+ f_nobukado:{follow:'nobukado', off:[6,3.5,5]},
+ f_obata:{follow:'obata', off:[5,3.2,-5]},
+ f_nobutoyo:{follow:'nobutoyo', off:[6,3.5,4]},
+ f_sanada:{follow:'sanada', off:[5.5,3.4,-4]},
+ tsuchiya:{pos:[-6.5,2.6,-3.5], tgt:[-1.5,1,-6.8]},
+ baba_fence:{pos:[2,4,-23], tgt:[-2,1,-17.8]},
+ f_baba:{follow:'baba', off:[-5,4,4]},
+ fence_long:{pos:[-4.5,2.2,-22], tgt:[-2.6,1,4]},
+ final:{pos:[-14,20,40], tgt:[6,0,-2]},
+ aftermath:{pos:[-8,24,34], tgt:[6,0,-2]},
+};
+const CUTS=[[0.02,SHOTS[0]],[0.45,XSHOTS.nobu],[0.8,SHOTS[1]],[1.0,SHOTS[2]],[1.7,XSHOTS.katsu],[1.9,XSHOTS.f_nobukado],[2.82,XSHOTS.f_obata],
+  [3.3,SHOTS[3]],[3.9,XSHOTS.f_nobutoyo],[4.55,SHOTS[4]],[4.95,SHOTS[5]],[5.82,XSHOTS.f_sanada],[6.55,XSHOTS.tsuchiya],[7.35,XSHOTS.baba_fence],
+  [7.95,XSHOTS.fence_long],[8.22,SHOTS[6]],[8.75,SHOTS[7]],[9.62,SHOTS[8]],[10.35,XSHOTS.f_baba],[10.85,SHOTS[9]],[11.45,XSHOTS.final]];
+const unitById=Object.fromEntries(UNITS.map(u=>[u.id,u]));
+let fly=null, follow=null, lastUser=-1e9;
+controls.addEventListener('start',()=>{ lastUser=performance.now(); follow=null; fly=null; });
+function clearLine(pos,tgt){           // 視線被地形擋住時,自動抬高機位
+  tgt.y=Math.max(tgt.y, groundY(tgt.x,tgt.z)+0.5);
+  let lift=Math.max(0, groundY(pos.x,pos.z)+1.2-pos.y);
+  for(let k=1;k<12;k++){ const u=k/12, x=lerp(pos.x,tgt.x,u), z=lerp(pos.z,tgt.z,u), y=lerp(pos.y+lift,tgt.y,u);
+    const need=groundY(x,z)+0.6-y; if(need>0) lift+=need/(1-u); }
+  pos.y+=lift; return pos;
+}
+function shotTarget(s){ let r;
+  if(s.follow){ const u=unitById[s.follow]; const y=groundY(u.hx,u.hz)+1; r={tgt:new THREE.Vector3(u.hx,y,u.hz), pos:new THREE.Vector3(u.hx+s.off[0],y+s.off[1],u.hz+s.off[2])}; }
+  else r={pos:new THREE.Vector3(...s.pos), tgt:new THREE.Vector3(...s.tgt)};
+  clearLine(r.pos,r.tgt); return r; }
+function flyTo(s,dur){
+  const e=shotTarget(s); const dist=camera.position.distanceTo(e.pos);
+  fly={p0:camera.position.clone(), t0:controls.target.clone(), s, u:0, dur:dur||clamp(1.6+dist*0.02,1.8,3.4), arc:clamp(dist*0.18,0,14)};
+  follow=null;
+}
+
+/* ════════════════════════════════ 時間軸 ════════════════════════════════ */
+const T_MAX=13.2;
+let simT=0, playing=false, speed=1, started=false;
+const SPEEDS=[0.5,1,2,4];
+const PACE=[[0,9],[0.8,9],[0.85,12],[1.6,12],[1.7,9],[4.5,9],[4.62,13],[5.25,13],[5.35,8],[8.1,8],[8.2,13],[9.0,13],[9.1,9],[9.55,9],[9.65,12],[11.2,13],[11.3,9],[13.2,9]];
+function secPerHour(t){ for(let i=0;i<PACE.length-1;i++) if(t<=PACE[i+1][0]) return lerp(PACE[i][1],PACE[i+1][1],(t-PACE[i][0])/(PACE[i+1][0]-PACE[i][0])); return 8; }
+const $=id=>document.getElementById(id);
+const slider=$('slider'), dateEl=$('date'), playBtn=$('play'), speedBtn=$('speed'), cinemaCk=$('cinema'), cardsCk=$('cards'),
+      capEl=$('caption'), capT=capEl.querySelector('.ct'), capD=capEl.querySelector('.cd'), insetEl=$('inset'), ilEl=$('interlude'), epEl=$('epilogue');
+function setT(v){ simT=clamp(v,0,T_MAX); slider.value=simT; }
+slider.addEventListener('input',()=>{ simT=+slider.value; closeInterlude(); epEl.classList.remove('show'); });
+function setPlaying(p){ playing=p; document.body.classList.toggle('playing',p); playBtn.textContent=playing?'⏸ 暫停':(simT>=T_MAX?'↻ 重播':'▶ 播放'); }
+playBtn.addEventListener('click',()=>{ AU.init(); if(simT>=T_MAX){ setT(0); epEl.classList.remove('show'); } setPlaying(!playing); });
+speedBtn.addEventListener('click',()=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; speedBtn.textContent=speed+'×'; });
+$('mus').addEventListener('click',e=>{ AU.init(); e.currentTarget.classList.toggle('off',!AU.toggleMusic()); });
+$('sfx').addEventListener('click',e=>{ AU.init(); const on=AU.toggleSfx(); e.currentTarget.textContent=on?'🔊':'🔇'; e.currentTarget.classList.toggle('off',!on); });
+$('mInfo').addEventListener('click',()=>{ document.body.classList.toggle('showInfo'); document.body.classList.remove('showShots'); });
+$('mShots').addEventListener('click',()=>{ document.body.classList.toggle('showShots'); document.body.classList.remove('showInfo'); });
+const qBtn=$('quality');
+function applyQuality(){
+  qBtn.textContent = QUALITY==='high'?'高畫質':'流暢';
+  renderer.setPixelRatio(PR()); bloom.enabled=QUALITY==='high'; sun.castShadow=QUALITY==='high'; renderer.shadowMap.enabled=true;
+  onResize();
+  try{ localStorage.setItem('oke_q',QUALITY); }catch(e){}
+}
+qBtn.addEventListener('click',()=>{ QUALITY=QUALITY==='high'?'low':'high'; applyQuality(); });
+let uiScale=(()=>{ try{ return +(localStorage.getItem('oke_ui')||1); }catch(e){ return 1; } })();
+function applyUI(){ uiScale=clamp(+uiScale.toFixed(2),0.7,1.8); document.documentElement.style.setProperty('--ui',uiScale); try{ localStorage.setItem('oke_ui',uiScale); }catch(e){} }
+applyUI();
+$('fontPlus').addEventListener('click',()=>{ uiScale+=0.1; applyUI(); });
+$('fontMinus').addEventListener('click',()=>{ uiScale-=0.1; applyUI(); });
+document.querySelectorAll('.shotBtn').forEach(b=>b.addEventListener('click',()=>{
+  AU.init(); AU.clack(); const s=SHOTS[+b.dataset.shot]; closeInterlude(); epEl.classList.remove('show');
+  setT(s.t); lastFire=s.t; lastUser=-1e9; flyTo(s,1.8); document.body.classList.remove('showShots');
+}));
+addEventListener('keydown',e=>{ if(e.code==='Space' && e.target.tagName!=='INPUT'){ e.preventDefault(); playBtn.click(); } });
+addEventListener('pointerdown',()=>{ if(started) AU.init(); });
+{ // 時間軸底色(晝夜天候)與刻度
+  const st=[[0,'#1a2240'],[0.7,'#7a6a78'],[1.2,'#c9ccd0'],[2.5,'#b8c6cc'],[4.8,'#8a2a22'],[5.3,'#aab4b8'],[8.6,'#7a2420'],[9.2,'#a8aeb0'],[9.7,'#b88a5a'],[11,'#6a2a20'],[12,'#d49a5a'],[13.2,'#c9783c']];
+  $('trackBg').style.background='linear-gradient(90deg,'+st.map(([t,c])=>`${c} ${(t/T_MAX*100).toFixed(1)}%`).join(',')+')';
+  const wrap=$('trackWrap');
+  for(const e of EVENTS){ const d=document.createElement('div'); d.className='tick'; d.style.left=(e[0]/T_MAX*100)+'%'; d.title=e[2]; wrap.appendChild(d); }
+  for(const il of INTERLUDES){ const d=document.createElement('div'); d.className='tick major'; d.style.left=(il.t/T_MAX*100)+'%'; wrap.appendChild(d); }
+}
+const KOKU=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+function kokuOf(h){ return KOKU[Math.floor(((h+1)%24)/2)]; }
+function fmtDate(t){ const h=4+t, hh=Math.floor(h), mm=Math.floor((h-hh)*60);
+  return `天正三年五月二十一日 ${kokuOf(h)}の刻<small>約 ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}(推估)・1575.6.29</small>`; }
+let curEvent=-2;
+function updateCaption(t){
+  let idx=-1; for(let i=0;i<EVENTS.length;i++) if(EVENTS[i][0]<=t+1e-4) idx=i;
+  if(idx===curEvent) return; curEvent=idx;
+  capEl.classList.add('fade');
+  setTimeout(()=>{ if(idx>=0){ const e=EVENTS[idx]; capT.innerHTML=`<span class="koku">${e[1]}</span>${e[2]}`; capD.innerHTML=e[3]; } capEl.classList.remove('fade'); },260);
+}
+let insetIdx=-2;
+function updateInset(t){
+  let idx=-1; INSETS.forEach((s,i)=>{ if(t>=s.from && t<s.to) idx=i; });
+  if(!started && idx<0) idx=0;
+  if(idx===insetIdx) return; insetIdx=idx;
+  if(idx<0){ insetEl.classList.remove('show'); return; }
+  insetEl.classList.remove('show');
+  setTimeout(()=>{ $('insetTitle').textContent=INSETS[idx].title; $('insetBody').innerHTML=INSETS[idx].svg; insetEl.classList.add('show'); },300);
+}
+/* 幕間 */
+let ilActive=null, ilUntil=0; const ilLog=[];
+function openInterlude(il){
+  ilActive=il; ilUntil=performance.now()+il.dur*1000; ilLog.push(il.t);
+  ilEl.innerHTML=il.html+'<div class="skip">點擊畫面繼續 ▸</div>';
+  ilEl.classList.toggle('light',!!il.light);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>ilEl.classList.add('show')));
+  document.documentElement.style.setProperty('--lb', innerWidth<760?'0px':'9vh');
+  AU.S.interlude=true; document.body.classList.add('il'); il.onShow&&il.onShow();
+}
+function closeInterlude(){ if(!ilActive) return; ilActive=null; ilEl.classList.remove('show'); AU.S.interlude=false; document.body.classList.remove('il');
+  document.documentElement.style.setProperty('--lb', innerWidth<760?'0px':'3.2vh'); }
+ilEl.addEventListener('click',closeInterlude);
+$('replay').addEventListener('click',()=>{ epEl.classList.remove('show'); setT(0); lastFire=0; curEvent=-2; setPlaying(true); flyTo(SHOTS[0]); });
+$('freeView').addEventListener('click',()=>{ epEl.classList.remove('show'); setPlaying(false); flyTo(XSHOTS.aftermath); });
+
+/* ════════════════════════════════ 天候・光照 ════════════════════════════════ */
+const SKYSTOPS=[ // el°, 天頂, 地平, 日色, 日強, 半球天, 半球地, 半球強, 霧色
+ [-18,0x04070f,0x0a1020,0x000000,0.0,0x2a3d66,0x12121a,0.34,0x0a0f1c],
+ [-10,0x07122e,0x1c2744,0x000000,0.0,0x34487a,0x16161e,0.38,0x131c30],
+ [-4, 0x1a2c56,0x8e5a52,0x000000,0.0,0x4a5a80,0x2a2420,0.34,0x4a4150],
+ [0,  0x36588e,0xe0885a,0xff9a52,0.7,0x8a90a8,0x4a3a2a,0.42,0xa88470],
+ [6,  0x4a74aa,0xecc08c,0xffc890,1.7,0xb0bcc8,0x564836,0.52,0xc7ae96],
+ [16, 0x3f7cc4,0xc8d6de,0xfff0d8,2.4,0xc0d0e0,0x5a5040,0.6,0xb7c5cc],
+ [45, 0x3a73b8,0xc9d3d6,0xfff4e4,2.7,0xc8d8e8,0x605644,0.66,0xbcc6c8],
+];
+const _c1=new THREE.Color(), _c2=new THREE.Color();
+function skyAt(el,k){ let i=0; while(i<SKYSTOPS.length-2 && el>SKYSTOPS[i+1][0]) i++;
+  const a=SKYSTOPS[i], b=SKYSTOPS[i+1], u=clamp((el-a[0])/(b[0]-a[0]),0,1);
+  return (k===4||k===7) ? lerp(a[k],b[k],u) : _c1.set(a[k]).lerp(_c2.set(b[k]),u).clone(); }
+function dirAt(hour,decDeg,noon,rate,out){
+  const lat=THREE.MathUtils.degToRad(34.92), dec=THREE.MathUtils.degToRad(decDeg), H=THREE.MathUtils.degToRad((hour-noon)*rate);
+  const el=Math.asin(Math.sin(lat)*Math.sin(dec)+Math.cos(lat)*Math.cos(dec)*Math.cos(H));
+  const A=Math.atan2(-Math.cos(dec)*Math.sin(H), Math.sin(dec)*Math.cos(lat)-Math.cos(dec)*Math.cos(H)*Math.sin(lat));
+  out.set(Math.sin(A)*Math.cos(el), Math.sin(el), -Math.cos(A)*Math.cos(el)); return THREE.MathUtils.radToDeg(el);
+}
+const W={};
+function weatherAt(t){
+  W.mist=1-smoothstep(0.7,2.6,t);                      // 梅雨晨霧
+  W.smoke=smoothstep(1.2,3.5,t)*(1-smoothstep(10.2,11.8,t));   // 硝煙瀰漫
+  W.cloud=0.55-0.2*smoothstep(3,8,t)+0.1*smoothstep(10,13,t);
+  W.wind=0.22+0.1*Math.sin(t*1.7);
+  W.wet=0.4-0.2*smoothstep(2,10,t);
+  return W;
+}
+
+/* ════════════════════════════════ 特效發射器 ════════════════════════════════ */
+function muzzle(x,y,z,s=1,smoke=true){
+  GLOW.spawn({x,y,z, life:0.08, s0:0.75*s, s1:0.35*s, c:[1,0.86,0.55], a:1});
+  if(Math.random()<0.4) SPARK.spawn({x:x+0.1,y,z, vx:1.5+Math.random(), vy:0.3, life:0.18, s0:0.1, s1:0.03, c:[1,0.8,0.4], a:1});
+  if(smoke) SMOKE.spawn({x:x+0.15,y:y+0.05,z, vx:0.9+Math.random()*0.4, vy:0.12, vz:(Math.random()-0.5)*0.2, life:11+Math.random()*5, s0:0.45*s, s1:3.2*s,
+    c:[0.9,0.9,0.88], a:0.34, drag:0.35, spin:(Math.random()-0.5)*0.2, fadeIn:0.03});
+}
+function spawnFire(x,z,r,rate,rdt){
+  const n=rate*rdt; for(let k=0;k<Math.floor(n)+(Math.random()<n%1?1:0);k++){
+    const a=Math.random()*6.28, d=Math.sqrt(Math.random())*r, px=x+Math.cos(a)*d, pz=z+Math.sin(a)*d, y=groundY(px,pz)+0.15;
+    GLOW.spawn({x:px,y,z:pz, vy:0.9+Math.random()*0.8, vx:(Math.random()-0.5)*0.2, life:0.5+Math.random()*0.5, s0:0.9+Math.random()*0.6, s1:0.25, c:[1,0.55+Math.random()*0.2,0.2], a:0.9});
+    if(Math.random()<0.45) SMOKE.spawn({x:px,y:y+0.8,z:pz, vy:1.3+Math.random()*0.6, vx:0.2, life:6+Math.random()*3, s0:0.9, s1:4.5, c:[0.12,0.11,0.1], a:0.55, drag:0.12, spin:(Math.random()-0.5)*0.4, fadeIn:0.15});
+  }
+}
+/* 鐵砲齊射:依武田各隊攻擊窗口,在對應柵段排出一列槍火 */
+const FIRES=[]; for(const u of UNITS) if(u.fire) for(const [a,b,z] of u.fire) FIRES.push({a,b,z,next:0});
+function volleyAt(z0, n, rdt, withSound){
+  const gun=GUN.figs;
+  for(let i=0;i<n;i++){
+    const f=gun[(Math.random()*gun.length)|0]; if(!f || f.wx===undefined || Math.abs(f.wz-z0)>6) continue;
+    const d=Math.random()*0.35;
+    setTimeout(()=>muzzle(f.wx+0.18,f.wy+0.22,f.wz,0.8), d*1000);
+  }
+  if(withSound) AU.volley(fenceX(z0)-0.5, z0, 12+(Math.random()*8|0), 10);
+}
+let lastSec=0, lastFire=0;
+
+/* ════════════════════════════════ 每幀更新 ════════════════════════════════ */
+const _sd=new THREE.Vector3(), _md=new THREE.Vector3(), _mat=new THREE.Matrix4(), _mf=new THREE.Matrix4(), ZERO=new THREE.Matrix4().makeScale(0,0,0);
+const _right=new THREE.Vector3(), _fp=[0,0,0];
+let lastCountAt=0; const TAK_TOTAL=UNITS.filter(u=>u.side==='tak').reduce((a,u)=>a+u.str,0);
+function update(t, dt, rdt, now){
+  const hour=4+t, sec=now/1000;
+  U.time.value=sec;
+  weatherAt(t);
+  const el=dirAt(hour,22.4,11.8,15,_sd); U.sunDir.value.copy(_sd);
+  const mel=dirAt(hour,-12,4.3,14.5,_md); skyMat.uniforms.uMoon.value.copy(_md);
+  const night=1-smoothstep(-9,1,el);
+  const top=skyAt(el,1), hor=skyAt(el,2), sunC=skyAt(el,3), hS=skyAt(el,5), hG=skyAt(el,6), fogC=skyAt(el,8);
+  let sunI=skyAt(el,4), hemiI=skyAt(el,7);
+  const mist=W.mist, smk=W.smoke;
+  fogC.lerp(new THREE.Color(0xaab3ba).multiplyScalar(lerp(1,0.45,night)), mist*0.55); fogC.lerp(new THREE.Color(0xc9c6bc), smk*0.25);
+  hor.lerp(fogC, mist*0.35);
+  sunI*=1-0.55*mist-0.12*smk;
+  hemiI+=0.1*mist;
+  U.skyTop.value.copy(top); U.skyHor.value.copy(hor); U.sunCol.value.copy(sunC);
+  skyMat.uniforms.uCloud.value=W.cloud; skyMat.uniforms.uStorm.value=0.15*mist; skyMat.uniforms.uFlash.value=0;
+  skyMat.uniforms.uNight.value=night; skyMat.uniforms.uSunVis.value=smoothstep(-3,1,el)*(1-mist*0.6);
+  skyMat.uniforms.uCloudCol.value.set(0xffffff).lerp(sunC.clone().multiplyScalar(0.9).add(new THREE.Color(0.25,0.25,0.3)), smoothstep(12,0,el)*0.7).multiplyScalar(lerp(1,0.14,night));
+  skyMat.uniforms.uCloudDark.value.set(0x767b80).multiplyScalar(lerp(1,0.14,night));
+  skyDome.position.copy(camera.position);
+  const sunUp=smoothstep(-2,3,el);
+  sun.intensity=sunI*sunUp; sun.color.copy(sunC);
+  sun.position.copy(controls.target).addScaledVector(_sd.y>0.02?_sd:_md,140); sun.target.position.copy(controls.target);
+  moon.intensity=1.1*night*smoothstep(-0.05,0.2,mel)*(1-W.cloud*0.5); moon.position.copy(controls.target).addScaledVector(_md,140); moon.target.position.copy(controls.target);
+  hemi.color.copy(hS); hemi.groundColor.copy(hG); hemi.intensity=hemiI;
+  scene.fog.color.copy(fogC);
+  scene.fog.density=0.006+0.004*night+0.013*mist+0.005*smk;
+  renderer.toneMappingExposure=1.0+0.6*night+0.1*mist;
+  U.wind.value=W.wind; U.wet.value=W.wet; WIND_X=0.6;
+  waterMat.uniforms.uTime.value=sec; waterMat.uniforms.uSun.value.copy(_sd.y>0?_sd:_md); waterMat.uniforms.uSunCol.value.copy(sunC).multiplyScalar(sunUp+night*0.15);
+  waterMat.uniforms.uTop.value.copy(top); waterMat.uniforms.uHor.value.copy(hor); waterMat.uniforms.uRain.value=0; waterMat.uniforms.uFlash.value=0;
+  rainMat.uniforms.uAmt.value=0; hailMat.uniforms.uAmt.value=0; boltMat.opacity=0; boltGlowMat.opacity=0; boltLight.intensity=0;
+  grade.uniforms.uTime.value=sec;
+  const late=smoothstep(9.6,13,t);
+  grade.uniforms.uSat.value=lerp(0.98,0.8,late)-0.2*night-0.12*mist;
+  grade.uniforms.uCon.value=1.06;
+  grade.uniforms.uTint.value.set(1+0.05*late-0.05*night, 1-0.01*late-0.02*night, 1-0.07*late+0.08*night+0.03*mist);
+  grade.uniforms.uVig.value=0.34+0.14*late+0.1*night;
+  grade.uniforms.uGrain.value=0.032+0.012*late+0.015*night;
+
+  updateUnits(t, sec);
+  fence.update(t);
+  for(const g of jinGroups) g.visible=true;
+
+  for(const A of ARROWS){ const dc=camera.position.distanceTo(A.a.mid)-A.a.len*0.35;
+    const op=win(t,A.from,A.to,0.1,0.1)*smoothstep(4,16,dc); A.a.m.uniforms.uOp.value=op; A.a.mesh.visible=op>0.01; }
+
+  /* 特效 */
+  const tgt=controls.target;
+  for(const f of FORTS) if(f.fall!==undefined){
+    const burn=win(t,f.fall,f.fall+1.6,0.05,0.8); if(burn>0.01) spawnFire(f.x,f.z,f.r*0.8,22*burn,rdt);
+    const col=win(t,f.fall,4.5,0.1,1); if(col>0.01 && Math.random()<rdt*4*col) SMOKE.spawn({x:f.x+(Math.random()-0.5),y:groundY(f.x,f.z)+0.6,z:f.z+(Math.random()-0.5),
+      vy:1.8,vx:0.3,life:11,s0:1.4,s1:8,c:[0.15,0.14,0.13],a:0.55,drag:0.06,spin:0.1,fadeIn:0.1});
+  }
+  /* 鳶ヶ巣山 攻防的槍火 */
+  if(t>0.85 && t<1.6 && Math.random()<rdt*5){ const a=Math.random()*6.28; muzzle(62.3+Math.cos(a)*2.2, groundY(62,18)+0.4, 17.6+Math.sin(a)*2, 0.8); if(playing && Math.random()<0.4) AU.shot(62,18); }
+  /* 馬防柵的齊射 */
+  for(const F of FIRES){
+    if(t<F.a || t>F.b){ F.next=0; continue; }
+    if(sec>=F.next){ const z0=F.z+(Math.random()-0.5)*5; volleyAt(z0, 16+(Math.random()*14|0), rdt, playing); F.next=sec+1.4+Math.random()*1.8; }
+    if(Math.random()<rdt*6){ const f=GUN.figs[(Math.random()*GUN.figs.length)|0]; if(f && f.wx!==undefined && Math.abs(f.wz-F.z)<8) muzzle(f.wx+0.18,f.wy+0.22,f.wz,0.7); }
+  }
+  /* 晨霧 */
+  if(mist>0.05 && Math.random()<rdt*10*mist){ const x=tgt.x+(Math.random()-0.5)*44, z=tgt.z+(Math.random()-0.5)*40;
+    SMOKE.spawn({x,y:groundY(x,z)+0.4,z, vy:0.04, vx:0.15, life:9, s0:3, s1:6.5, c:[0.9,0.92,0.94], a:0.08*mist, drag:0.2, fadeIn:0.3}); }
+  /* 衝鋒塵土、刀光、倒下 */
+  let cmb=0, cmbPos=null, murm=0;
+  for(const u of UNITS){ if(!u.visible) continue;
+    const c=inCombat(u,t); const d=Math.hypot(u.hx-camera.position.x, u.hz-camera.position.z, groundY(u.hx,u.hz)-camera.position.y);
+    const prox=1/(1+Math.pow(d/24,1.6));
+    if(c>0.05){
+      if(c*prox>cmb){ cmb=c*prox; cmbPos={x:u.hx,z:u.hz}; }
+      const fg=u.figs[(Math.random()*u.nShow)|0];
+      if(fg && fg.wx!==undefined && Math.random()<rdt*10*c) SPARK.spawn({x:fg.wx,y:fg.wy+0.25,z:fg.wz, life:0.12, s0:0.22, s1:0.05, c:[1,0.96,0.85], a:1});
+    }
+    if(u.moving>0.4 && Math.random()<rdt*14*u.moving){ const f=u.figs[(Math.random()*u.nShow)|0];
+      if(f && f.wx!==undefined) SMOKE.spawn({x:f.wx,y:f.wy+0.05,z:f.wz, vy:0.2, life:2, s0:0.35, s1:1.4, c:[0.42,0.37,0.3], a:0.28, drag:0.6}); }
+    if(u.str>=2000) murm=Math.max(murm, prox);
+    if(u.justDied) for(const f of u.justDied){ SMOKE.spawn({x:f.wx,y:f.wy+0.08,z:f.wz, vy:0.3, life:1.5, s0:0.3, s1:1.0, c:[0.45,0.38,0.3], a:0.35, drag:0.8}); }
+  }
+  SMOKE.update(rdt); GLOW.update(rdt); SPARK.update(rdt);
+
+  const cp=camera.position;
+  for(const p of placeLabels){ const d=cp.distanceTo(p.l.position); p.l.visible = d<p.far && (p.from===undefined||t>=p.from);
+    if(p.f && p.f.fall!==undefined) p.l.element.classList.toggle('fallen', t>=p.f.fall); }
+  for(const l of terrLabels){ const d=cp.distanceTo(l.position); l.element.style.opacity = d<100 ? (d<12?0:0.85) : 0; }
+  MOMENTS.forEach((m,i)=>{ momentObjs[i].visible = t>=m.from && t<=m.to && cp.distanceTo(momentObjs[i].position)<90; });
+
+  if(now-lastCountAt>250){ lastCountAt=now; let o=0, tk=0;
+    for(const u of UNITS){ if(!u.visible) continue; const s=u.aliveStr||0; if(u.side==='tak') tk+=s; else o+=s; }
+    let lost=0; for(const u of UNITS) if(u.side==='tak') lost+=u.lostStr||0;
+    $('nOda').textContent=Math.round(o).toLocaleString(); $('nIma').textContent=Math.round(tk).toLocaleString();
+    $('fOda').style.width=Math.min(100,o/400)+'%'; $('fIma').style.width=Math.min(100,tk/400)+'%';
+    $('nLoss').textContent='約 '+(Math.round(lost/100)*100).toLocaleString(); }
+
+  const S=AU.S; S.t=t; S.playing=playing;
+  S.rain=0; S.hail=0; S.wind=0.25+0.3*mist; S.storm=0;
+  S.frogs=clamp(night*0.8+mist*0.5,0,1)*(t<1.4?1:0)+(t>11.6?0.3:0);
+  S.birds=win(t,0.4,3,0.3,1)*0.7+(t>11.3?0.25:0.05);
+  S.combat=cmb; S.combatPos=cmbPos; S.teppo=0.6; S.murmur=murm*(0.5+0.5*(1-night));
+  S.sea=0; S.fire=0;
+  { for(const f of FORTS) if(f.fall!==undefined){ const b=win(t,f.fall,f.fall+1.6,0.05,0.8); if(b>0){ const d=cp.distanceTo(new THREE.Vector3(f.x,groundY(f.x,f.z),f.z)); S.fire=Math.max(S.fire,b/(1+Math.pow(d/10,1.5))); } } }
+  S.intensity=clamp(0.4+0.6*smoothstep(1,6,t),0,1); S.tension=smoothstep(9.6,10.9,t);
+  _right.setFromMatrixColumn(camera.matrixWorld,0); AU.listener(cp,_right);
+  if(started && !ilActive) AU.setSection(musicAt(t));
+  updateCaption(t); updateInset(t);
+  dateEl.innerHTML=fmtDate(Math.min(t,T_MAX-0.001));
+}
+function musicAt(t){
+  if(t<1.0) return 'dawn'; if(t<4.8) return 'battle'; if(t<5.35) return 'lament'; if(t<8.62) return 'battle2';
+  if(t<9.2) return 'lament'; if(t<9.62) return 'battle2'; if(t<11.0) return 'rout'; if(t<11.6) return 'baba'; return 'ending';
+}
+
+/* ════════════════════════════════ 部隊更新 ════════════════════════════════ */
+function aliveXZ(u,f,t,hx,hz,hd,mv,s,out){
+  const ch=Math.cos(hd), sh=Math.sin(hd);
+  let lx=f.sx, lz=f.sz;
+  if(u.fort){ lx=f.fx; lz=f.fz; }
+  if(u.lineShape){ out[0]=f.lx; out[1]=f.lz; out[2]=Math.PI/2+(f.r2-0.5)*0.2; return out; }
+  let x=hx+lx*ch+lz*sh, z=hz-lx*sh+lz*ch, yaw=hd+(f.r2-0.5)*0.3;
+  out[0]=x; out[1]=z; out[2]=yaw; return out;
+}
+function updateUnits(t, sec){
+  for(const u of UNITS){
+    const vis=(u.appear===undefined||t>=u.appear)&&(u.leave===undefined||t<u.leave);
+    u.visible=vis;
+    const [hx,hz]=kfPos(u.kf,t), [px,pz]=kfPos(u.kf,t-0.03);
+    let hd;
+    if(Math.hypot(hx-px,hz-pz)>0.004) hd=Math.atan2(hx-px,hz-pz);
+    else if(u.face) hd=Math.atan2(u.face[0]-hx,u.face[1]-hz);
+    else hd=u.side==='tak'?-Math.PI/2:Math.PI/2;
+    u.hx=hx; u.hz=hz; u.hd=hd;
+    const dieU=u.dieAt!==undefined?smoothstep(u.dieAt-0.02,u.dieAt+0.35,t):0;
+    const routU=u.routAt!==undefined?smoothstep(u.routAt-0.02,u.routAt+0.3,t):0;
+    const n=vis?u.cap:0; u.nShow=n;
+    const mv=movingF(u,t); u.moving=mv;
+    const comb=inCombat(u,t);
+    const cas=(u.casualty||0.35);
+    let dx0=hx, dz0=hz, dhd=hd;
+    if(u.dieAt!==undefined && t>u.dieAt){ const q=kfPos(u.kf,u.dieAt), q2=kfPos(u.kf,u.dieAt-0.03); dx0=q[0]; dz0=q[1];
+      if(Math.hypot(q[0]-q2[0],q[1]-q2[1])>0.004) dhd=Math.atan2(q[0]-q2[0],q[1]-q2[1]); }
+    const ch=Math.cos(hd), sh=Math.sin(hd);
+    let alive=0, dead=0; u.justDied=null;
+    for(const f of u.figs){
+      if(f.j>=u.cap || (!vis && !(t>=f.td))){ f.arm.setMatrixAt(f.ai,ZERO); f.rest.setMatrixAt(f.ri,ZERO); flagIM.setMatrixAt(f.fi,ZERO); f.wx=undefined; continue; }
+      let lying=false, hide=false, x, z, yaw;
+      if(t>=f.td){                         // 於預定時刻陣亡:倒在當時的位置
+        if(f.dp===undefined){ const tq=f.td, [qx,qz]=kfPos(u.kf,tq), [rx,rz]=kfPos(u.kf,tq-0.03);
+          let qh=Math.hypot(qx-rx,qz-rz)>0.004?Math.atan2(qx-rx,qz-rz):(u.face?Math.atan2(u.face[0]-qx,u.face[1]-qz):-Math.PI/2);
+          aliveXZ(u,f,tq,qx,qz,qh,0,0,_fp); f.dp=[_fp[0]+(f.r2-0.5)*0.3,_fp[1]+(f.r3-0.5)*0.3,f.r2*6.28]; }
+        x=f.dp[0]; z=f.dp[1]; yaw=f.dp[2]; lying=true; dead++;
+        if(f.lastT!==undefined && f.lastT<f.td) (u.justDied||(u.justDied=[])).push(f);
+      } else {
+        aliveXZ(u,f,t,hx,hz,hd,mv,0,_fp); x=_fp[0]; z=_fp[1]; yaw=_fp[2];
+        if(routU>0){ x+=-sh*routU*(f.r2-0.3)*2+ch*(f.r3-0.5)*3*routU; z+=-ch*routU*(f.r2-0.3)*2-sh*(f.r3-0.5)*3*routU; }
+        if(dieU>0){
+          if(f.j===0 || f.r1<cas){ if(dieU>f.r4*0.7 || f.j===0){ lying=true; const c2=Math.cos(dhd), s2=Math.sin(dhd);
+              x=dx0+f.sx*c2+f.sz*s2; z=dz0-f.sx*s2+f.sz*c2; yaw=f.r2*6.28; dead++; } }
+          else { const fl=dieU*(2.5+f.r2*6); x+=-sh*fl+ch*(f.r3-0.5)*5*dieU; z+=-ch*fl-sh*(f.r3-0.5)*5*dieU; yaw=hd+Math.PI+(f.r3-0.5);
+            if(f.r4<dieU*0.92) hide=true; }
+        }
+        if(!lying && !hide) alive++;
+      }
+      f.lastT=t;
+      if(hide){ f.arm.setMatrixAt(f.ai,ZERO); f.rest.setMatrixAt(f.ri,ZERO); flagIM.setMatrixAt(f.fi,ZERO); f.wx=undefined; continue; }
+      if(comb>0 && !lying){ const j=Math.sin(sec*(6+f.r1*4)+f.r2*20)*0.07*comb; x+=sh*j; z+=ch*j; }
+      let y=groundY(x,z);
+      if(!lying) y+=Math.abs(Math.sin(sec*(f.mounted?11:8)+f.r1*10))*(f.mounted?0.035:0.02)*Math.max(mv,comb*0.6);
+      f.wx=x; f.wy=y; f.wz=z;
+      if(lying) _e.set(Math.PI/2*0.96, yaw, f.mounted?0.3:0, 'YXZ'); else _e.set(0,yaw,0);
+      _q.setFromEuler(_e); _mat.compose(_v.set(x,y+(lying?(f.mounted?0.07:0.04):0),z), _q, _s.set(1,1,1));
+      f.arm.setMatrixAt(f.ai,_mat); f.rest.setMatrixAt(f.ri,_mat);
+      if(lying){ if(f.r1<0.25){ _e.set(0,0,1.25,'YXZ'); _q.setFromEuler(_e); _mf.compose(_v.set(x+0.15,y+0.02,z+0.1),_q,_s.set(1,1,1)); flagIM.setMatrixAt(f.fi,_mf); } else flagIM.setMatrixAt(f.fi,ZERO); }
+      else { if(f.mounted) _mf.multiplyMatrices(_mat,FLAG_MOUNT_OFF); else _mf.copy(_mat); flagIM.setMatrixAt(f.fi,_mf); }
+      if(f.lying!==lying){ f.lying=lying; setFigColor(f,lying); }
+    }
+    u.aliveStr = n? u.str*alive/u.cap : 0;
+    u.lostStr = u.str*dead/u.cap;
+    /* 幟旗 */
+    u.nobori.forEach((g,i)=>{
+      g.visible=vis && n>0; if(!g.visible) return;
+      let x, z;
+      if(u.lineShape){ z=g.userData.lz; x=fenceX(z)-1.6; }
+      else { const [ox,oz]=g.userData.off; const sc=0.9; x=hx+ox*sc*ch+oz*sc*sh; z=hz-ox*sc*sh+oz*sc*ch; }
+      const lost=u.lostStr/u.str;
+      const fall=Math.max(dieU, routU*(i>=2?1:0), i===u.nobori.length-1?smoothstep(0.45,0.6,lost):0);
+      if(fall>0 && u.dieAt!==undefined && t>u.dieAt){ const c2=Math.cos(dhd), s2=Math.sin(dhd), [ox,oz]=g.userData.off; x=lerp(x, dx0+ox*c2+oz*s2, fall); z=lerp(z, dz0-ox*s2+oz*c2, fall); }
+      g.position.set(x, groundY(x,z)-0.02, z);
+      g.rotation.set(0, (u.side==='tak'?-1:1)*Math.PI/2 - 0.3*Math.sin(sec*0.3+i) + (fall>0?i:0), -fall*1.35*(0.7+0.3*(i%2)));
+    });
+    /* 標籤 */
+    const hideLbl = u.dieAt!==undefined && t>u.dieAt+1.2;
+    u.label.visible=vis && n>0 && !hideLbl;
+    if(u.label.visible){
+      const lx=u.lineShape?fenceX(0)-1.2:hx, lz=u.lineShape?0:hz;
+      u.label.position.set(lx, groundY(lx,lz)+(u.cap>60?2.2:1.9), lz);
+      let state=(u.dieAt!==undefined&&t>=u.dieAt)?'dead':(routU>0.5?'rout':'');
+      let sub=u.sub||'';
+      if(u.changeAt) for(const [ct,txt] of u.changeAt) if(t>=ct) sub=txt;
+      if(state==='dead') sub=u.deadSub; if(state==='rout') sub=u.routSub;
+      if(u.side==='tak' && state!=='dead' && u.lostStr>0) sub+=`・殘約${(Math.round(u.aliveStr/100)*100).toLocaleString()}`;
+      if(u._sub!==sub){ u._sub=sub; u.subEl.textContent=sub; }
+      if(u.state!==state){ u.div.classList.toggle('dead',state==='dead'); u.div.classList.toggle('rout',state==='rout'); u.state=state; }
+      const d=camera.position.distanceTo(u.label.position);
+      u.div.classList.toggle('far', d>40); u.div.classList.toggle('hid', d>(u.side==='tak'||u.id==='nobunaga'||u.id==='ieyasu'?110:70));
+    }
+  }
+  for(const m of [footArmIM,footRestIM,gunRestIM,mountArmIM,mountRestIM,flagIM]) m.instanceMatrix.needsUpdate=true;
+}
+
+/* ════════════════════════════════ 音效提示點(順播時觸發) ════════════════════════════════ */
+const CUES=[
+ [0.4,()=>AU.hototogisu(-0.3,0.07)],
+ [0.86,()=>{ AU.volley(61,19,10,4); setTimeout(()=>AU.warcry(60,20,0.8),600); }],
+ [1.55,()=>AU.warcry(62,18,0.7)],
+ [1.62,()=>AU.horagai(58,9.4,0.7)],
+ ...UNITS.filter(u=>u.charges).flatMap(u=>u.charges.map((c,i)=> [c[0]+0.01, (u.id==='yamagata'&&i===0)?()=>AU.hooves(u.home[0]-3,u.home[1],3.5,6):()=>{ AU.wardrum(u.home[0],u.home[1],8); if(i>0||u.id!=='yamagata') AU.horagai(u.home[0],u.home[1],0.6); setTimeout(()=>AU.hooves(u.home[0]-3,u.home[1],3.5,6),700); setTimeout(()=>AU.warcry(u.home[0]-4,u.home[1],1),1200); }])),
+ [5.0, ()=>{ AU.warcry(4.2,-17,0.9); AU.hooves(6,-17.5,3,5); }],
+ [7.72,()=>AU.warcry(-2.4,-17.8,1)],
+ [8.32,()=>AU.warcry(-2.4,-11.4,1.1)],
+ [9.62,()=>{ AU.horagai(-18,-2,1); AU.boom(1); setTimeout(()=>AU.warcry(-4,0,1.3),500); setTimeout(()=>AU.hooves(0,0,4,6),900); }],
+ [10.6,()=>AU.hooves(38,-26,3,4)],
+ [11.3,()=>AU.kachidoki()],
+ [12.1,()=>AU.hototogisu(0.4,0.08)],
+];
+/* ════════════════════════════════ 主迴圈 ════════════════════════════════ */
+let lastReal=performance.now(), prevT=0, cutIdx=0;
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now(), rdt=Math.min(0.05,(now-lastReal)/1000); lastReal=now;
+  let dt=0;
+  if(ilActive){ if(now>ilUntil) closeInterlude(); }
+  else if(playing){
+    dt=rdt*speed/secPerHour(simT);
+    let nt=simT+dt;
+    if(cardsCk.checked) for(const il of INTERLUDES) if(simT<il.t && nt>=il.t){ nt=il.t; openInterlude(il); break; }
+    for(const c of CUES) if(simT<c[0] && nt>=c[0]) c[1]();
+    if(cinemaCk.checked && now-lastUser>9000) for(const c of CUTS) if(simT<c[0] && nt>=c[0]) flyTo(c[1]);
+    simT=clamp(nt,0,T_MAX); slider.value=simT;
+    if(simT>=T_MAX){ setPlaying(false); epEl.classList.add('show'); AU.setSection('ending'); }
+  }
+  prevT=simT;
+  /* 攝影機 */
+  if(fly){
+    fly.u=Math.min(1,fly.u+rdt/fly.dur); const e=fly.u<0.5?4*fly.u**3:1-Math.pow(-2*fly.u+2,3)/2;
+    const g=shotTarget(fly.s);
+    camera.position.lerpVectors(fly.p0,g.pos,e); camera.position.y+=Math.sin(Math.PI*e)*fly.arc;
+    controls.target.lerpVectors(fly.t0,g.tgt,e);
+    if(fly.u>=1){ if(fly.s.follow) follow=fly.s; fly=null; }
+  } else if(follow){
+    const g=shotTarget(follow); camera.position.lerp(g.pos,Math.min(1,rdt*2.5)); controls.target.lerp(g.tgt,Math.min(1,rdt*3));
+  } else if(!started || (cinemaCk.checked && playing && now-lastUser>9000)){
+    const off=camera.position.clone().sub(controls.target); off.applyAxisAngle(new THREE.Vector3(0,1,0), rdt*0.018); camera.position.copy(controls.target).add(off);
+  }
+  update(simT, dt, rdt, now);
+  controls.update();
+  const cy=groundY(camera.position.x,camera.position.z)+0.6; if(camera.position.y<cy) camera.position.y=cy;
+  shake*=Math.exp(-rdt*3.5);
+  let sx=0, sy=0;
+  if(shake>0.002){ sx=(Math.random()-0.5)*shake*0.25; sy=(Math.random()-0.5)*shake*0.25; camera.position.x+=sx; camera.position.y+=sy; }
+  composer.render(rdt);
+  labelRenderer.render(scene,camera);
+  if(shake>0.002){ camera.position.x-=sx; camera.position.y-=sy; }
+}
+function onResize(){
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); composer.setPixelRatio(PR()); composer.setSize(innerWidth,innerHeight);
+  labelRenderer.setSize(innerWidth,innerHeight); setPointScale();
+  if(innerWidth<760) document.documentElement.style.setProperty('--lb','0px');
+}
+addEventListener('resize',onResize);
+applyQuality();
+
+/* 字型載入後,重繪幟旗文字 */
+if(document.fonts && document.fonts.load){
+  document.fonts.load('900 34px "Noto Serif TC"','永樂通寶厭離穢土欣求淨').then(()=>{
+    for(const k in flagMats){ const m=flagMats[k]; if(!m.userData.text && m.userData.crest!=='eiraku') continue; const old=m.map;
+      m.map=m.emissiveMap=crestTex(m.userData.crest,{...BANNER_STYLE[m.userData.style], tall:true, text:m.userData.text, textSize:m.userData.textSize}); old.dispose(); }
+  }).catch(()=>{});
+}
+
+/* ════════════════════════════════ 序幕 ════════════════════════════════ */
+const opening=$('opening'), goBtn=$('goBtn');
+function begin(fromT){
+  started=true; opening.classList.add('gone'); document.body.classList.remove('pre');
+  AU.init(); AU.setSection(musicAt(fromT));
+  setT(fromT); curEvent=-2; setPlaying(true);
+  flyTo(fromT<0.3?SHOTS[0]:{pos:camera.position.toArray(),tgt:controls.target.toArray()},3.2);
+  lastUser=-1e9;
+}
+goBtn.addEventListener('click',()=>begin(0));
+camera.position.set(-15,13,32); controls.target.set(4,1,-3);
+if(QS.has('t')){
+  opening.classList.add('gone'); document.body.classList.remove('pre'); started=true; setT(+QS.get('t')); setPlaying(QS.has('play'));
+  if(QS.has('shot')){ const s=SHOTS[+QS.get('shot')]; const e=shotTarget(s.follow?(updateUnits(simT,0),s):s); camera.position.copy(e.pos); controls.target.copy(e.tgt); }
+  if(QS.has('cam')){ const c=QS.get('cam').split(',').map(Number); camera.position.set(c[0],c[1],c[2]); controls.target.set(c[3],c[4],c[5]); }
+  if(QS.has('noui')) for(const id of ['left','right','bottom','title','hint','inset']) $(id).style.display='none';
+}
+$('loadMsg').textContent='戰場已就緒'; goBtn.disabled=false;
+window.__oke={groundY, ilLog, setT:(v)=>{ setT(v); }, get t(){ return simT; }, camera, controls, AU};
+animate();
+</script>
+</body>
+</html>
