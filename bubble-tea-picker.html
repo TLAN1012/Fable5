@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今天喝什麼｜附近手搖飲選擇器</title>
+<meta name="description" content="GPS 找出附近的手搖飲店，內建各大連鎖品牌常態菜單；選店家可自己選、輪流或亂數，選飲料可隨機，每次的選擇都會記錄下來供下次參考。純前端、資料只存在你的瀏覽器。">
+<link rel="canonical" href="https://tlan1012.github.io/Fable5/bubble-tea-picker.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="今天喝什麼｜附近手搖飲選擇器">
+<meta property="og:description" content="GPS 找附近手搖飲、看菜單、輪流或亂數決定店家，並記錄每一杯。">
+<meta property="og:url" content="https://tlan1012.github.io/Fable5/bubble-tea-picker.html">
+<meta property="og:locale" content="zh_TW">
+<style>
+:root{--bg:#f6efe4;--card:#fffdf9;--ink:#33241a;--muted:#8a7766;--line:#e7dccb;--accent:#9a5b2c;--accent-dk:#6e3d1a;--pearl:#2e1c12;--matcha:#5f8a3c;--pink:#c2546d;--soft:#f3e6d4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%}
+button,input,select{font-family:inherit;font-size:inherit}
+header{background:linear-gradient(150deg,#6e3d1a,#9a5b2c 55%,#c08a55);color:#fff;padding:26px 20px 22px;text-align:center;border-bottom:4px solid var(--pearl);position:relative}
+header h1{font-size:1.85rem;letter-spacing:2px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+header .sub{opacity:.92;font-size:.95rem;margin-top:4px}
+header .back{position:absolute;left:14px;top:12px;color:#fde9cf;font-size:.82rem;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 60px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:14px 0;box-shadow:0 2px 8px rgba(80,50,20,.05)}
+.panel h2{font-size:1.15rem;display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--accent-dk)}
+.panel h2 .step{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--pearl);color:#fff;font-size:.85rem;align-items:center;justify-content:center}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--accent);background:#fff;color:var(--accent-dk);font-weight:700;padding:8px 14px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--accent);color:#fff}
+.btn.pri:hover{background:var(--accent-dk)}
+.btn.ghost{border-color:var(--line);color:var(--muted);font-weight:600}
+.btn.sm{padding:4px 10px;font-size:.82rem;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.inp,.sel{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);min-width:0}
+.inp:focus,.sel:focus{outline:2px solid #e2b98c}
+.status{font-size:.85rem;color:var(--muted);margin-top:8px;min-height:1.4em}
+.status.err{color:#b23b2a}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:9px 16px;font-weight:700;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--pearl);color:#fff}
+.modehint{font-size:.84rem;color:var(--muted);margin:8px 0 10px;flex-basis:100%}
+.shops{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:12px;max-height:520px;overflow:auto;padding:2px}
+.shop{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;cursor:pointer;transition:.15s;position:relative}
+.shop:hover{border-color:#d7b48c}
+.shop.on{border-color:var(--accent);background:#fff6ea;box-shadow:0 0 0 3px rgba(154,91,44,.15)}
+.shop.flash{animation:flash .12s}
+@keyframes flash{50%{background:#ffe3b8}}
+.shop .nm{font-weight:800;font-size:1rem;line-height:1.35;padding-right:56px}
+.shop .dist{position:absolute;right:10px;top:10px;font-size:.74rem;font-weight:800;color:var(--accent);background:var(--soft);padding:1px 7px;border-radius:8px}
+.shop .meta{font-size:.78rem;color:var(--muted);margin-top:3px}
+.badge{display:inline-block;font-size:.72rem;padding:0 7px;border-radius:8px;margin-right:4px;font-weight:700;vertical-align:1px}
+.b-chain{background:#efe2cf;color:var(--accent-dk)}
+.b-gen{background:#eee;color:#888}
+.b-man{background:#e5efe0;color:var(--matcha)}
+.b-next{background:var(--matcha);color:#fff}
+.picked{margin-top:12px;padding:12px 14px;border-radius:12px;background:linear-gradient(120deg,#3a2416,#6e3d1a);color:#fff;display:none}
+.picked.show{display:block}
+.picked .big{font-size:1.3rem;font-weight:800}
+.picked a{color:#ffd9a8}
+.menu-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.menu-src{font-size:.8rem;color:var(--muted);margin-bottom:8px}
+.menu-src a{color:var(--accent)}
+.cat{margin:10px 0 4px;font-size:.82rem;font-weight:800;color:var(--accent-dk);letter-spacing:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:18px;padding:5px 12px;font-size:.88rem;cursor:pointer;user-select:none;transition:.12s;position:relative}
+.chip:hover{border-color:#d7b48c}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip .cnt{font-size:.7rem;background:var(--pink);color:#fff;border-radius:8px;padding:0 5px;margin-left:4px}
+.chip.custom{border-style:dashed}
+.chip .x{margin-left:5px;color:#b9a48f;font-weight:800}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.opts label{font-size:.8rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.opts .sel,.opts .inp{width:100%}
+.save{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.summary{font-size:.95rem;font-weight:700}
+.hist{width:100%;border-collapse:collapse;font-size:.88rem}
+.hist th,.hist td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.hist th{font-size:.78rem;color:var(--muted)}
+.hist .how{font-size:.72rem;padding:0 6px;border-radius:7px;background:var(--soft);color:var(--accent-dk);white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:12px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+.stat h3{font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.bar{display:flex;align-items:center;gap:8px;font-size:.84rem;margin:3px 0}
+.bar .lbl{flex:0 0 46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .track{flex:1;height:8px;background:#f1e7da;border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent)}
+.bar .n{width:28px;text-align:right;color:var(--muted)}
+.notice{background:#fff4dc;border:1px solid #ecd29a;border-radius:10px;padding:8px 12px;font-size:.84rem;margin:6px 0 4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.menu-ver{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.empty{color:var(--muted);font-size:.9rem;padding:10px 0}
+details.add{margin-top:10px;font-size:.88rem}
+details.add summary{cursor:pointer;color:var(--accent);font-weight:700}
+details.add .row{margin-top:8px}
+.note{font-size:.78rem;color:var(--muted);line-height:1.8;margin-top:18px}
+footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:20px}
+footer a{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:var(--pearl);color:#fff;padding:10px 18px;border-radius:24px;font-weight:700;transition:.25s;z-index:99;opacity:0}
+.toast.show{transform:translateX(-50%);opacity:1}
+@media(max-width:600px){header h1{font-size:1.45rem}.panel{padding:14px 12px}.seg button{padding:8px 11px}.hist .hide-m{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./">← 回首頁</a>
+  <h1>🧋 今天喝什麼？</h1>
+  <div class="sub">附近手搖飲 × 菜單 × 輪流／亂數決定 × 每杯都記錄</div>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. 定位 -->
+  <div class="panel">
+    <h2><span class="step">1</span>找附近的手搖飲店</h2>
+    <div class="row">
+      <button class="btn pri" id="btnLocate">📍 用我的位置</button>
+      <select class="sel" id="radius" title="搜尋半徑">
+        <option value="300">300 公尺</option>
+        <option value="600" selected>600 公尺</option>
+        <option value="1000">1 公里</option>
+        <option value="2000">2 公里</option>
+      </select>
+      <input class="inp" id="addr" placeholder="或輸入地址／地標，例如：高雄車站" style="flex:1;min-width:180px">
+      <button class="btn" id="btnAddr">🔎 搜尋</button>
+    </div>
+    <div class="status" id="locStatus">店家資料來自 OpenStreetMap，按「用我的位置」開始。</div>
+  </div>
+
+  <!-- 2. 選店家 -->
+  <div class="panel">
+    <h2><span class="step">2</span>選店家</h2>
+    <div class="row">
+      <div class="seg" id="modeSeg">
+        <button data-mode="self" class="on">👆 自己選</button>
+        <button data-mode="rotate">🔁 輪流</button>
+        <button data-mode="random">🎲 亂數</button>
+      </div>
+      <button class="btn pri" id="btnPickShop" style="display:none"></button>
+      <label style="font-size:.84rem;color:var(--muted);display:none" id="avoidWrap"><input type="checkbox" id="avoidLast" checked> 避開上次喝的品牌</label>
+      <div class="modehint" id="modeHint"></div>
+    </div>
+    <div class="shops" id="shops"><div class="empty">尚未搜尋。也可以在下方手動加入常去的店。</div></div>
+    <details class="add">
+      <summary>＋ 手動加入店家（找不到、或常叫外送的店）</summary>
+      <div class="row">
+        <select class="sel" id="manChain"></select>
+        <input class="inp" id="manName" placeholder="分店名稱（選填），例如：50嵐 中山店" style="flex:1;min-width:180px">
+        <button class="btn" id="btnManAdd">加入</button>
+      </div>
+    </details>
+    <div class="picked" id="picked"></div>
+  </div>
+
+  <!-- 3. 選飲料 -->
+  <div class="panel" id="menuPanel">
+    <h2><span class="step">3</span>選飲料</h2>
+    <div id="menuBody"><div class="empty">先選一家店。</div></div>
+    <div class="menu-ver"><span id="menuVer">內建菜單讀取中…</span> <button class="btn sm ghost" id="btnCheckMenu">🔄 檢查菜單更新</button></div>
+  </div>
+
+  <!-- 4. 紀錄 -->
+  <div class="panel">
+    <h2><span class="step">4</span>我的手搖飲紀錄</h2>
+    <div class="stats" id="stats"></div>
+    <div id="histWrap"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sm ghost" id="btnExport">⬇ 匯出紀錄</button>
+      <label class="btn sm ghost" style="cursor:pointer">⬆ 匯入紀錄<input type="file" id="fileImport" accept="application/json" hidden></label>
+      <button class="btn sm ghost" id="btnClear">🗑 清空紀錄</button>
+    </div>
+  </div>
+
+  <div class="note">
+    ・店家位置來自 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 社群資料（透過 Overpass API），新開或剛歇業的店可能尚未更新；找不到的店請用「手動加入」。<br>
+    ・菜單為各連鎖品牌的<b>常態品項</b>，2026-10-12 逐一上網核對（優先採官網，其次官方菜單圖、外送平台或媒體整理，每家皆註明來源與版本）；不含季節限定，部分品牌各地區菜單略有不同，價格與限定品請以店家公告為準。連鎖品牌外的店家會顯示通用菜單。<br>
+    ・<b>更新菜單</b>：每家店都可按「✏️ 更新菜單」自行增刪品項，或從官網、外送平台複製整份菜單貼上（價格會自動去除），之後選飲料就用你的版本；內建菜單日後若更新，開啟頁面時會自動提示，也可隨時按「🔄 檢查菜單更新」。<br>
+    ・「輪流」會挑出附近店家中<b>最久沒喝（或從沒喝過）的品牌</b>；「亂數」可勾選避開上次喝的品牌。<br>
+    ・所有紀錄只存在這台裝置的瀏覽器（localStorage），不會上傳；換裝置可用「匯出／匯入紀錄」。
+  </div>
+  <footer>Fable5 番外篇 ・ <a href="./">回首頁</a> ・ 🤖 Generated with Claude Code</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ================= 菜單資料 =================
+ * 品牌與常態菜單放在 bubble-tea-menus.json，要更新內建菜單只需修改該檔；
+ * 讀到的資料快取在 localStorage，離線或讀取失敗時沿用快取。
+ * 使用者自行更新的菜單存在 userMenus，優先於內建菜單。
+ */
+const MENU_URL = 'bubble-tea-menus.json';
+let CHAINS = [];
+let GENERIC = {id:'', name:'（一般手搖飲）', url:'', updated:'', m:[]};
+let menuVersion = '';
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function applyMenuData(j){
+  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:new RegExp(c.match || reEsc(c.name), 'i'), url:c.url || '',
+    updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items]),
+    source:c.source || '', sourceDate:c.source_date || '', sourceType:c.source_type || ''}));
+  GENERIC = {id:'', name:j.generic?.name || '（一般手搖飲）', url:'', updated:j.version || '', m:(j.generic?.menu || []).map(x => [x.cat, x.items])};
+  menuVersion = j.version || '';
+}
+function validMenuData(j){
+  return j && Array.isArray(j.chains) && j.chains.every(c => c.id && c.name && Array.isArray(c.menu));
+}
+// 讀取內建菜單；回傳有變動的品牌名稱（與上次快取相比）
+async function loadMenus(force){
+  const r = await fetch(MENU_URL + (force ? '?t=' + Date.now() : ''), {cache: force ? 'no-store' : 'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (!validMenuData(j)) throw new Error('菜單檔格式不符');
+  const prev = LS.get('menuData', null);
+  const old = new Map((prev?.chains || []).map(c => [c.id, c.updated]));
+  const changed = prev ? j.chains.filter(c => old.get(c.id) !== c.updated).map(c => c.name) : [];
+  LS.set('menuData', j); applyMenuData(j);
+  return {changed, version: j.version, prevVersion: prev?.version || ''};
+}
+const SUGAR = ['正常甜','少糖','半糖','微糖','二分糖','一分糖','無糖'];
+const ICE = ['正常冰','少冰','微冰','去冰','完全去冰','常溫','溫','熱'];
+const SIZE = ['大杯','中杯'];
+const HOW = {self:'自己選', rotate:'輪流', random:'亂數'};
+
+/* ================= 儲存 ================= */
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem('bt_'+k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem('bt_'+k, JSON.stringify(v)); } catch(e){} }
+};
+let history = LS.get('history', []);          // [{id,ts,key,shop,chain,drink,sugar,ice,size,note,how}]
+let customDrinks = LS.get('custom', {});      // {menuKey: [drink,...]}
+let manualShops = LS.get('manual', []);       // [{id,name,chain}]
+let userMenus = LS.get('userMenus', {});       // {menuKey: {m:[[分類,[品項]]], updated, base}}
+let cache = LS.get('lastSearch', null);       // {lat,lon,label,shops,ts}
+let state = { mode: LS.get('mode','self'), shops: [], here: null, sel: null, how: 'self', drink: null, editing: false };
+let menusReady = Promise.resolve();
+
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const chainById = id => CHAINS.find(c => c.id === id) || null;
+function matchChain(...names){
+  for (const n of names) if (n) for (const c of CHAINS) if (c.re.test(n)) return c;
+  return null;
+}
+function dist(a, b){
+  const R = 6371000, r = x => x*Math.PI/180;
+  const dLat = r(b.lat-a.lat), dLon = r(b.lon-a.lon);
+  const h = Math.sin(dLat/2)**2 + Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+const fmtDist = m => m == null ? '' : m < 1000 ? Math.round(m)+' m' : (m/1000).toFixed(1)+' km';
+function fmtAgo(ts){
+  const d = (Date.now()-ts)/86400000;
+  if (d < 1/24) return '剛剛';
+  if (d < 1) return Math.round(d*24)+' 小時前';
+  if (d < 30) return Math.round(d)+' 天前';
+  return new Date(ts).toLocaleDateString('zh-TW');
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); }
+function status(msg, err){ const s = $('locStatus'); s.textContent = msg; s.classList.toggle('err', !!err); }
+// 輪流以「品牌」為單位；非連鎖店以店家本身為單位
+const rotKey = s => s.chain ? 'chain:'+s.chain : 'shop:'+s.name;
+const menuKey = s => s.chain ? 'chain:'+s.chain : 'shop:'+s.name;
+function lastVisit(key){ let t = 0; for (const h of history) if (h.key === key && h.ts > t) t = h.ts; return t; }
+function visitCount(key){ return history.filter(h => h.key === key).length; }
+
+/* ================= 店家搜尋（Overpass） ================= */
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+const chainReSrc = () => CHAINS.map(c => c.name.replace(/[.*+?^${}()|[\]\\"]/g,'')).concat(['五十嵐','茶','飲']).join('|');
+async function fetchShops(lat, lon, radius){
+  const a = `(around:${radius},${lat},${lon})`, CHAIN_RE_SRC = chainReSrc();
+  const q = `[out:json][timeout:25];(
+    nwr${a}["cuisine"~"bubble_tea|tea|juice",i];
+    nwr${a}["shop"~"^(beverages|tea)$"];
+    nwr${a}["amenity"~"^(cafe|fast_food)$"]["name"~"${CHAIN_RE_SRC}|tea|coco|chatime|kebuke|milksha",i];
+    nwr${a}["brand"~"${CHAIN_RE_SRC}",i];
+  );out center tags;`;
+  let lastErr;
+  for (const url of OVERPASS){
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 20000);
+      const r = await fetch(url, {method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}, signal:ctl.signal});
+      clearTimeout(to);
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      return parseShops(j.elements || [], {lat, lon});
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('Overpass 無回應');
+}
+function parseShops(els, here){
+  const out = [], seen = new Set();
+  for (const e of els){
+    const t = e.tags || {};
+    const name = t['name:zh'] || t.name || t['name:zh-Hant'] || t.brand || '';
+    if (!name) continue;
+    const c = matchChain(t.brand, t['brand:zh'], t.name, t['name:zh'], t['name:en']);
+    const cuisine = (t.cuisine || '').toLowerCase();
+    const isDrink = c || /bubble_tea|tea|juice/.test(cuisine) || /^(beverages|tea)$/.test(t.shop || '') || /茶|飲|tea/i.test(name);
+    if (!isDrink) continue;
+    const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+    if (lat == null) continue;
+    const id = e.type+'/'+e.id;
+    if (seen.has(id)) continue; seen.add(id);
+    const addr = [t['addr:city'], t['addr:district'], t['addr:street'], t['addr:housenumber'] && t['addr:housenumber']+'號'].filter(Boolean).join('');
+    out.push({id, name, chain: c ? c.id : '', lat, lon, d: dist(here, {lat, lon}), addr, hours: t.opening_hours || ''});
+  }
+  return out.sort((a, b) => a.d - b.d);
+}
+async function searchAt(lat, lon, label){
+  const radius = +$('radius').value;
+  status(`🔄 搜尋 ${label} 周邊 ${fmtDist(radius)} 的手搖飲…`);
+  try {
+    await menusReady;
+    const shops = await fetchShops(lat, lon, radius);
+    state.here = {lat, lon};
+    state.shops = shops;
+    cache = {lat, lon, label, shops, ts: Date.now()}; LS.set('lastSearch', cache);
+    status(shops.length ? `✅ ${label} 周邊找到 ${shops.length} 家（${shops.filter(s => s.chain).length} 家有內建菜單）` : `😢 ${label} 周邊 ${fmtDist(radius)} 內沒找到，試試放大半徑或手動加入店家。`);
+    renderShops();
+  } catch(e){
+    status('⚠ 店家資料讀取失敗（'+e.message+'），請稍後再試，或手動加入店家。', true);
+  }
+}
+$('btnLocate').onclick = () => {
+  if (!navigator.geolocation){ status('此瀏覽器不支援定位，請改輸入地址。', true); return; }
+  status('📡 取得位置中…');
+  navigator.geolocation.getCurrentPosition(
+    p => searchAt(p.coords.latitude, p.coords.longitude, '你的位置'),
+    e => status('無法取得位置（'+(e.code === 1 ? '未授權定位' : e.message)+'），請改輸入地址。', true),
+    {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+};
+async function geocode(){
+  const q = $('addr').value.trim(); if (!q) return;
+  status('🔎 查詢地址…');
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q='+encodeURIComponent(q));
+    const j = await r.json();
+    if (!j.length){ status('找不到這個地址，換個寫法試試（例如加上縣市）。', true); return; }
+    searchAt(+j[0].lat, +j[0].lon, '「'+q+'」');
+  } catch(e){ status('地址查詢失敗：'+e.message, true); }
+}
+$('btnAddr').onclick = geocode;
+$('addr').addEventListener('keydown', e => { if (e.key === 'Enter') geocode(); });
+$('radius').onchange = () => { if (state.here) searchAt(state.here.lat, state.here.lon, cache?.label || '此處'); };
+
+/* ================= 手動店家 ================= */
+function renderManChain(){
+  $('manChain').innerHTML = CHAINS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('') + '<option value="">其他店家（自填名稱）</option>';
+}
+$('btnManAdd').onclick = () => {
+  const chain = $('manChain').value, nm = $('manName').value.trim();
+  const name = nm || (chainById(chain)?.name);
+  if (!name){ toast('請填入店名'); return; }
+  manualShops.push({id:'m'+Date.now(), name, chain}); LS.set('manual', manualShops);
+  $('manName').value = ''; renderShops(); toast('已加入「'+name+'」');
+};
+function allShops(){
+  const man = manualShops.map(s => ({...s, manual:true, d:null}));
+  return state.shops.concat(man);
+}
+
+/* ================= 選店模式 ================= */
+const HINT = {
+  self: '直接點選下方任一家店。',
+  rotate: '依紀錄挑出附近「最久沒喝／從沒喝過」的品牌，同樣久則挑最近的那家。綠色「輪到它」標記就是下一家。',
+  random: '從附近店家中隨機抽一家。'
+};
+function setMode(m){
+  state.mode = m; LS.set('mode', m);
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('modeHint').textContent = HINT[m];
+  const btn = $('btnPickShop');
+  btn.style.display = m === 'self' ? 'none' : '';
+  btn.textContent = m === 'rotate' ? '🔁 輪到下一家' : '🎲 抽一家';
+  $('avoidWrap').style.display = m === 'random' ? '' : 'none';
+  renderShops();
+}
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+function rotationPick(list){
+  if (!list.length) return null;
+  return list.slice().sort((a, b) => (lastVisit(rotKey(a)) - lastVisit(rotKey(b))) || ((a.d ?? 1e9) - (b.d ?? 1e9)))[0];
+}
+$('btnPickShop').onclick = () => {
+  const list = allShops();
+  if (!list.length){ toast('先搜尋附近店家或手動加入'); return; }
+  if (state.mode === 'rotate'){ selectShop(rotationPick(list), 'rotate'); return; }
+  // 亂數：跑馬燈動畫後停下
+  let pool = list;
+  if ($('avoidLast').checked && history.length){
+    const lastKey = history[0].key;
+    const f = list.filter(s => rotKey(s) !== lastKey);
+    if (f.length) pool = f;
+  }
+  const final = pool[Math.floor(Math.random()*pool.length)];
+  const btn = $('btnPickShop'); btn.disabled = true;
+  let n = 0, steps = Math.min(18, 6 + pool.length*2);
+  (function spin(){
+    const s = n < steps ? pool[Math.floor(Math.random()*pool.length)] : final;
+    highlight(s);
+    if (n++ < steps) setTimeout(spin, 50 + n*12);
+    else { btn.disabled = false; selectShop(final, 'random'); }
+  })();
+};
+function highlight(s){
+  document.querySelectorAll('.shop').forEach(el => el.classList.toggle('on', el.dataset.id === s.id));
+  const el = document.querySelector(`.shop[data-id="${CSS.escape(s.id)}"]`);
+  if (el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+}
+
+/* ================= 店家清單 ================= */
+function renderShops(){
+  const list = allShops();
+  const box = $('shops');
+  if (!list.length){ box.innerHTML = '<div class="empty">尚未搜尋。也可以在下方手動加入常去的店。</div>'; return; }
+  const next = state.mode === 'rotate' ? rotationPick(list) : null;
+  box.innerHTML = list.map(s => {
+    const c = chainById(s.chain), k = rotKey(s), lv = lastVisit(k), cnt = visitCount(k);
+    const badge = s.manual ? '<span class="badge b-man">手動</span>' : c ? `<span class="badge b-chain">${esc(c.name)}</span>` : '<span class="badge b-gen">通用菜單</span>';
+    const nx = next && next.id === s.id ? '<span class="badge b-next">輪到它</span>' : '';
+    const meta = lv ? `上次 ${fmtAgo(lv)}・共 ${cnt} 次` : '還沒喝過';
+    return `<div class="shop ${state.sel && state.sel.id === s.id ? 'on' : ''}" data-id="${esc(s.id)}">
+      ${s.d != null ? `<span class="dist">${fmtDist(s.d)}</span>` : s.manual ? '<span class="dist" data-del="1" title="移除">✕</span>' : ''}
+      <div class="nm">${esc(s.name)}</div>
+      <div class="meta">${nx}${badge}${esc(meta)}</div>
+      ${s.addr ? `<div class="meta">${esc(s.addr)}</div>` : ''}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.shop').forEach(el => el.onclick = ev => {
+    const s = list.find(x => x.id === el.dataset.id);
+    if (ev.target.dataset.del){
+      manualShops = manualShops.filter(m => m.id !== s.id); LS.set('manual', manualShops);
+      if (state.sel?.id === s.id){ state.sel = null; renderPicked(); renderMenu(); }
+      renderShops(); return;
+    }
+    selectShop(s, 'self');
+  });
+}
+function selectShop(s, how){
+  state.sel = s; state.how = how; state.drink = null; state.editing = false;
+  renderShops(); renderPicked(); renderMenu();
+  if (how !== 'self') toast((how === 'rotate' ? '🔁 輪到：' : '🎲 抽中：') + s.name);
+}
+function renderPicked(){
+  const p = $('picked'), s = state.sel;
+  if (!s){ p.classList.remove('show'); return; }
+  const lastHere = history.find(h => h.key === rotKey(s));
+  const nav = s.lat ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=walking` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}`;
+  p.innerHTML = `<div style="font-size:.8rem;opacity:.8">${HOW[state.how]}選定</div>
+    <div class="big">🧋 ${esc(s.name)} ${s.d != null ? `<span style="font-size:.85rem;opacity:.8">・${fmtDist(s.d)}</span>` : ''}</div>
+    <div style="font-size:.85rem;margin-top:4px">${lastHere ? `上次在這裡（${fmtAgo(lastHere.ts)}）點了：<b>${esc(lastHere.drink)}</b> ${esc(lastHere.sugar)}／${esc(lastHere.ice)}` : '第一次喝這家！'}
+    ${s.hours ? `<br>營業時間（OSM）：${esc(s.hours)}` : ''}</div>
+    <div style="font-size:.85rem;margin-top:6px"><a href="${nav}" target="_blank" rel="noopener">🚶 ${s.lat ? '步行導航' : 'Google 地圖'}</a>　<a href="#menuPanel">👇 看菜單</a></div>`;
+  p.classList.add('show');
+}
+
+/* ================= 菜單 ================= */
+function drinkCounts(mk){
+  const m = {};
+  for (const h of history) if (h.mkey === mk) m[h.drink] = (m[h.drink] || 0) + 1;
+  return m;
+}
+const baseMenu = s => chainById(s.chain) || GENERIC;
+function effectiveMenu(s){
+  const base = baseMenu(s), u = userMenus[menuKey(s)];
+  return u ? {...base, m: u.m} : base;
+}
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const menuToText = m => m.map(([cat, items]) => cat + '：' + items.join('、')).join('\n');
+// 每行「分類：品項、品項…」；只有「分類：」的行，之後沒有冒號的行都歸入該分類；
+// 品項後面的價格（如「珍珠奶茶 55」「$60」「60元」）會自動去除。
+function parseMenuText(text){
+  const cats = new Map(); let cur = '其他';
+  for (let line of text.split(/\r?\n/)){
+    line = line.trim(); if (!line) continue;
+    const mm = line.match(/^([^:：、,，]{1,20})[:：](.*)$/);
+    let rest = line;
+    if (mm){ cur = mm[1].trim().replace(/^[#【\[「]+|[】\]」]+$/g, '').trim() || '其他'; rest = mm[2]; }
+    const items = rest.split(/[、,，;；|｜\t]+|\s{2,}/)
+      .map(x => x.trim().replace(/\s*(NT)?\$?\s*\d+\s*元?(\s*[\/／]\s*\$?\d+\s*元?)?$/i, '').trim())
+      .filter(Boolean);
+    if (!cats.has(cur)) cats.set(cur, []);
+    const arr = cats.get(cur);
+    for (const it of items) if (!arr.includes(it)) arr.push(it);
+  }
+  return [...cats].filter(([, items]) => items.length);
+}
+function renderEditor(s){
+  const body = $('menuBody'), mk = menuKey(s), base = baseMenu(s), u = userMenus[mk];
+  const custom = customDrinks[mk] || [];
+  let text = menuToText(effectiveMenu(s).m);
+  if (custom.length) text = '我加的：' + custom.join('、') + '\n' + text;
+  body.innerHTML = `
+    <div class="menu-top"><b style="font-size:1.05rem">✏️ 更新「${esc(s.name)}」的菜單</b></div>
+    <div class="menu-src">每行一個分類，格式為 <b>分類：品項、品項、品項</b>。也可以從${base.url ? ` <a href="${base.url}" target="_blank" rel="noopener">官方菜單 ↗</a> ` : '外送平台或店家菜單'}複製貼上：
+      只寫「分類：」的行，下面每行一個品項也可以；品項後的價格會自動去掉。刪掉的品項就是下架。</div>
+    <textarea class="inp" id="menuText" rows="12" style="width:100%;font-size:.92rem;line-height:1.7">${esc(text)}</textarea>
+    <div class="status" id="menuPreview"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn pri" id="btnMenuSave">💾 儲存菜單</button>
+      <button class="btn ghost" id="btnMenuCancel">取消</button>
+      ${u ? '<button class="btn ghost" id="btnMenuReset">↩ 還原內建菜單</button>' : ''}
+    </div>`;
+  const ta = $('menuText');
+  const preview = () => {
+    const m = parseMenuText(ta.value), n = m.reduce((t, [, it]) => t + it.length, 0);
+    $('menuPreview').textContent = n ? `將儲存 ${m.length} 個分類、${n} 個品項：${m.map(([c, it]) => `${c}（${it.length}）`).join('、')}` : '⚠ 目前沒有任何品項';
+    $('btnMenuSave').disabled = !n;
+  };
+  ta.oninput = preview; preview();
+  $('btnMenuSave').onclick = () => {
+    const m = parseMenuText(ta.value);
+    if (!m.length) return;
+    userMenus[mk] = {m, updated: today(), base: base.updated || ''};
+    // 「我加的」已併入菜單，不再另外列出
+    delete customDrinks[mk];
+    LS.set('userMenus', userMenus); LS.set('custom', customDrinks);
+    state.editing = false; renderMenu(); toast('✅ 菜單已更新');
+  };
+  $('btnMenuCancel').onclick = () => { state.editing = false; renderMenu(); };
+  if (u) $('btnMenuReset').onclick = () => {
+    if (!confirm('還原成內建菜單？你自己更新的內容會被移除。')) return;
+    delete userMenus[mk]; LS.set('userMenus', userMenus);
+    state.editing = false; renderMenu(); toast('已還原內建菜單');
+  };
+  ta.focus();
+}
+function renderMenu(){
+  const s = state.sel, body = $('menuBody');
+  if (!s){ body.innerHTML = '<div class="empty">先選一家店。</div>'; return; }
+  if (state.editing) return renderEditor(s);
+  const mk = menuKey(s), base = baseMenu(s), c = effectiveMenu(s), u = userMenus[mk];
+  // 使用者更新過的菜單，若內建菜單之後又更新，提示可改用新版
+  const newer = u && base.updated && u.base && base.updated > u.base;
+  const custom = customDrinks[mk] || [], counts = drinkCounts(mk);
+  const last = history.find(h => h.mkey === mk);
+  const chip = (d, isCustom) => `<span class="chip ${state.drink === d ? 'on' : ''} ${isCustom ? 'custom' : ''}" data-d="${esc(d)}">${esc(d)}${counts[d] ? `<span class="cnt">${counts[d]}</span>` : ''}${isCustom ? '<span class="x" data-x="1" title="移除">×</span>' : ''}</span>`;
+  const lastOpt = (arr, v) => arr.map(x => `<option ${x === v ? 'selected' : ''}>${x}</option>`).join('');
+  body.innerHTML = `
+    <div class="menu-top">
+      <b style="font-size:1.05rem">${esc(s.name)}</b>
+      <button class="btn sm" id="btnRandDrink">🎲 幫我選飲料</button>
+      ${last ? `<button class="btn sm ghost" id="btnSame">↺ 跟上次一樣（${esc(last.drink)}）</button>` : ''}
+      <label style="font-size:.8rem;color:var(--muted)"><input type="checkbox" id="avoidDrink" checked> 隨機時避開最近 3 次喝過的</label>
+    </div>
+    <div class="menu-src">${u ? `📝 你自己更新的菜單（${esc(u.updated)}）` : base.id ? `${esc(base.name)} 常態菜單（不含季節限定）・${esc(base.updated)} 核對${base.source ? `，來源：<a href="${esc(base.source)}" target="_blank" rel="noopener">${esc(base.sourceType || '資料來源')}</a>${base.sourceDate ? `（${esc(base.sourceDate)} 版）` : ''}` : ''}` : '非連鎖品牌，先用通用菜單'}
+      ${base.url ? `・<a href="${base.url}" target="_blank" rel="noopener">官方菜單 ↗</a>` : ''}
+      ・<button class="btn sm" id="btnEditMenu" style="padding:1px 9px">✏️ 更新菜單</button>
+      　<span class="chip" style="padding:0 6px;font-size:.72rem;cursor:default"><span class="cnt" style="margin:0">n</span></span> = 你點過的次數</div>
+    ${newer ? `<div class="notice">內建菜單已於 ${esc(base.updated)} 更新，你目前用的是自己在 ${esc(u.updated)} 更新的版本。<button class="btn sm" id="btnUseBase">改用內建新版</button> <button class="btn sm ghost" id="btnKeepMine">保留我的</button></div>` : ''}
+    ${custom.length ? `<div class="cat">⭐ 我加的</div><div class="chips">${custom.map(d => chip(d, true)).join('')}</div>` : ''}
+    ${c.m.map(([cat, items]) => `<div class="cat">${esc(cat)}</div><div class="chips">${items.map(d => chip(d)).join('')}</div>`).join('')}
+    <div class="row" style="margin-top:10px">
+      <input class="inp" id="newDrink" placeholder="菜單沒有？自己輸入飲料名稱" style="flex:1;min-width:180px">
+      <button class="btn sm" id="btnAddDrink">＋ 加入菜單</button>
+    </div>
+    <div class="opts">
+      <div><label>甜度</label><select class="sel" id="optSugar">${lastOpt(SUGAR, last?.sugar || '微糖')}</select></div>
+      <div><label>冰塊</label><select class="sel" id="optIce">${lastOpt(ICE, last?.ice || '少冰')}</select></div>
+      <div><label>容量</label><select class="sel" id="optSize">${lastOpt(SIZE, last?.size || '大杯')}</select></div>
+      <div><label>備註（加料、評價…）</label><input class="inp" id="optNote" placeholder="例如：加珍珠、太甜了"></div>
+    </div>
+    <div class="save">
+      <span class="summary" id="sum"></span>
+      <button class="btn pri" id="btnSave">✅ 就喝這杯，記錄下來</button>
+    </div>`;
+  const upd = () => { $('sum').textContent = state.drink ? `${s.name}｜${state.drink}｜${$('optSugar').value}／${$('optIce').value}／${$('optSize').value}` : '還沒選飲料'; $('btnSave').disabled = !state.drink; };
+  body.querySelectorAll('.chip[data-d]').forEach(el => el.onclick = ev => {
+    const d = el.dataset.d;
+    if (ev.target.dataset.x){
+      customDrinks[mk] = (customDrinks[mk] || []).filter(x => x !== d); LS.set('custom', customDrinks);
+      if (state.drink === d) state.drink = null;
+      renderMenu(); return;
+    }
+    state.drink = d;
+    body.querySelectorAll('.chip[data-d]').forEach(x => x.classList.toggle('on', x.dataset.d === d));
+    upd();
+  });
+  ['optSugar','optIce','optSize'].forEach(id => $(id).onchange = upd);
+  const addDrink = () => {
+    const d = $('newDrink').value.trim(); if (!d) return;
+    const arr = customDrinks[mk] || [];
+    if (!arr.includes(d)) arr.unshift(d);
+    customDrinks[mk] = arr; LS.set('custom', customDrinks);
+    state.drink = d; renderMenu();
+  };
+  $('btnAddDrink').onclick = addDrink;
+  $('newDrink').addEventListener('keydown', e => { if (e.key === 'Enter') addDrink(); });
+  $('btnRandDrink').onclick = () => {
+    let all = [...new Set(custom.concat(...c.m.map(x => x[1])))];
+    if ($('avoidDrink').checked){
+      const recent = history.filter(h => h.mkey === mk).slice(0, 3).map(h => h.drink);
+      const f = all.filter(d => !recent.includes(d));
+      if (f.length) all = f;
+    }
+    const chips = [...body.querySelectorAll('.chip[data-d]')];
+    const pickD = all[Math.floor(Math.random()*all.length)];
+    let n = 0;
+    (function spin(){
+      const d = n < 14 ? all[Math.floor(Math.random()*all.length)] : pickD;
+      chips.forEach(x => x.classList.toggle('on', x.dataset.d === d));
+      if (n++ < 14) setTimeout(spin, 45 + n*10);
+      else { state.drink = pickD; upd(); toast('🎲 就喝：' + pickD); }
+    })();
+  };
+  if ($('btnSame')) $('btnSame').onclick = () => {
+    state.drink = last.drink;
+    $('optSugar').value = last.sugar; $('optIce').value = last.ice; if (last.size) $('optSize').value = last.size;
+    body.querySelectorAll('.chip[data-d]').forEach(x => x.classList.toggle('on', x.dataset.d === last.drink));
+    upd();
+  };
+  $('btnEditMenu').onclick = () => { state.editing = true; renderMenu(); };
+  if (newer){
+    $('btnUseBase').onclick = () => { delete userMenus[mk]; LS.set('userMenus', userMenus); renderMenu(); toast('已改用內建新版菜單'); };
+    $('btnKeepMine').onclick = () => { u.base = base.updated; LS.set('userMenus', userMenus); renderMenu(); };
+  }
+  $('btnSave').onclick = () => {
+    if (!state.drink) return;
+    const cc = chainById(s.chain);
+    history.unshift({id: Date.now()+''+Math.random().toString(36).slice(2,6), ts: Date.now(), key: rotKey(s), mkey: mk,
+      shop: s.name, chain: s.chain || '', chainName: cc ? cc.name : '', drink: state.drink,
+      sugar: $('optSugar').value, ice: $('optIce').value, size: $('optSize').value, note: $('optNote').value.trim(), how: state.how});
+    LS.set('history', history);
+    toast('✅ 已記錄：' + state.drink);
+    state.drink = null;
+    renderHistory(); renderShops(); renderPicked(); renderMenu();
+  };
+  upd();
+}
+
+/* ================= 紀錄 ================= */
+function bars(title, map, limit){
+  const arr = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, limit);
+  if (!arr.length) return '';
+  const max = arr[0][1];
+  return `<div class="stat"><h3>${title}</h3>${arr.map(([k, v]) => `<div class="bar"><span class="lbl" title="${esc(k)}">${esc(k)}</span><span class="track"><span class="fill" style="width:${v/max*100}%;display:block"></span></span><span class="n">${v}</span></div>`).join('')}</div>`;
+}
+function renderHistory(){
+  if (!history.length){
+    $('stats').innerHTML = '';
+    $('histWrap').innerHTML = '<div class="empty">還沒有紀錄。選好店家與飲料後按「就喝這杯」就會出現在這裡。</div>';
+    return;
+  }
+  const brand = {}, drink = {}, sugar = {};
+  for (const h of history){
+    const b = h.chainName || h.shop; brand[b] = (brand[b] || 0) + 1;
+    const d = (h.chainName || h.shop) + '・' + h.drink; drink[d] = (drink[d] || 0) + 1;
+    sugar[h.sugar + '／' + h.ice] = (sugar[h.sugar + '／' + h.ice] || 0) + 1;
+  }
+  const monthAgo = Date.now() - 30*86400000;
+  $('stats').innerHTML =
+    `<div class="stat"><h3>總覽</h3><div style="font-size:1.6rem;font-weight:800;color:var(--accent)">${history.length} <span style="font-size:.9rem">杯</span></div><div style="font-size:.84rem;color:var(--muted)">近 30 天 ${history.filter(h => h.ts > monthAgo).length} 杯・${Object.keys(brand).length} 個品牌／店家</div></div>`
+    + bars('🏆 最常去的品牌', brand, 5) + bars('🧋 最常點的飲料', drink, 5) + bars('🍬 甜度冰塊習慣', sugar, 4);
+  $('histWrap').innerHTML = `<table class="hist"><thead><tr><th>時間</th><th>店家</th><th>飲料</th><th class="hide-m">方式</th><th></th></tr></thead><tbody>${
+    history.slice(0, 100).map(h => `<tr>
+      <td style="white-space:nowrap">${fmtTime(h.ts)}</td>
+      <td>${esc(h.shop)}</td>
+      <td><b>${esc(h.drink)}</b><div style="font-size:.76rem;color:var(--muted)">${esc(h.sugar)}／${esc(h.ice)}${h.size ? '／'+esc(h.size) : ''}${h.note ? '・'+esc(h.note) : ''}</div></td>
+      <td class="hide-m"><span class="how">${HOW[h.how] || ''}</span></td>
+      <td><button class="btn sm ghost" data-del="${esc(h.id)}" title="刪除這筆">✕</button></td></tr>`).join('')
+  }</tbody></table>${history.length > 100 ? `<div class="empty">僅顯示最近 100 筆（共 ${history.length} 筆，匯出可取得全部）</div>` : ''}`;
+  $('histWrap').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    history = history.filter(h => h.id !== b.dataset.del); LS.set('history', history);
+    renderHistory(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+  });
+}
+$('btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({version:1, history, customDrinks, manualShops, userMenus}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'bubble-tea-history-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('fileImport').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    if (!Array.isArray(j.history)) throw new Error('格式不符');
+    const ids = new Set(history.map(h => h.id));
+    history = history.concat(j.history.filter(h => h && h.id && h.drink && !ids.has(h.id))).sort((a, b) => b.ts - a.ts);
+    for (const [k, v] of Object.entries(j.customDrinks || {})) customDrinks[k] = [...new Set([...(customDrinks[k] || []), ...v])];
+    // 自己更新的菜單：兩邊都有時保留較新的
+    for (const [k, v] of Object.entries(j.userMenus || {})) if (v && Array.isArray(v.m) && (!userMenus[k] || v.updated > userMenus[k].updated)) userMenus[k] = v;
+    LS.set('userMenus', userMenus);
+    const mids = new Set(manualShops.map(m => m.id));
+    manualShops = manualShops.concat((j.manualShops || []).filter(m => !mids.has(m.id)));
+    LS.set('history', history); LS.set('custom', customDrinks); LS.set('manual', manualShops);
+    renderHistory(); renderShops(); if (state.sel) renderMenu();
+    toast('✅ 已匯入');
+  } catch(err){ toast('匯入失敗：' + err.message); }
+  e.target.value = '';
+};
+$('btnClear').onclick = () => {
+  if (!history.length || !confirm('確定清空全部 ' + history.length + ' 筆紀錄？（建議先匯出）')) return;
+  history = []; LS.set('history', history); renderHistory(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+};
+
+/* ================= 啟動 ================= */
+if (cache && cache.shops){
+  state.here = {lat: cache.lat, lon: cache.lon}; state.shops = cache.shops;
+  status(`上次搜尋：${cache.label}（${fmtAgo(cache.ts)}，${cache.shops.length} 家）。換了地方請重新定位。`);
+}
+function renderMenuVer(){
+  const n = Object.keys(userMenus).length;
+  $('menuVer').textContent = menuVersion ? `內建菜單版本 ${menuVersion}・${CHAINS.length} 個品牌${n ? `・你自己更新了 ${n} 家` : ''}` : '內建菜單尚未載入';
+}
+function afterMenus(){
+  renderManChain(); renderMenuVer();
+  // 用新的品牌規則重新比對已快取的店家
+  for (const s of state.shops){ const c = matchChain(s.name); if (c) s.chain = c.id; }
+  renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+}
+async function checkMenus(force){
+  const btn = $('btnCheckMenu'); btn.disabled = true;
+  try {
+    const {changed, version, prevVersion} = await loadMenus(force);
+    afterMenus();
+    if (changed.length) toast(`🆕 菜單已更新到 ${version}：${changed.slice(0, 4).join('、')}${changed.length > 4 ? ` 等 ${changed.length} 個品牌` : ''}`);
+    else if (force) toast(`✅ 已是最新菜單（${version}）`);
+  } catch(e){
+    if (force || !CHAINS.length) toast('⚠ 菜單讀取失敗：' + e.message + (CHAINS.length ? '，先沿用上次的菜單' : ''));
+    renderMenuVer();
+  } finally { btn.disabled = false; }
+}
+$('btnCheckMenu').onclick = () => checkMenus(true);
+const cachedMenu = LS.get('menuData', null);
+if (validMenuData(cachedMenu)) applyMenuData(cachedMenu);
+renderManChain(); renderMenuVer();
+setMode(state.mode);
+renderHistory();
+menusReady = checkMenus(false);
+</script>
+</body>
+</html>
