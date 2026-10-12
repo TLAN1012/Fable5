@@ -86,6 +86,8 @@ header .back{position:absolute;left:14px;top:12px;color:#fde9cf;font-size:.82rem
 .bar .track{flex:1;height:8px;background:#f1e7da;border-radius:4px;overflow:hidden}
 .bar .fill{height:100%;background:var(--accent)}
 .bar .n{width:28px;text-align:right;color:var(--muted)}
+.notice{background:#fff4dc;border:1px solid #ecd29a;border-radius:10px;padding:8px 12px;font-size:.84rem;margin:6px 0 4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.menu-ver{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .empty{color:var(--muted);font-size:.9rem;padding:10px 0}
 details.add{margin-top:10px;font-size:.88rem}
 details.add summary{cursor:pointer;color:var(--accent);font-weight:700}
@@ -153,6 +155,7 @@ footer a{color:var(--accent)}
   <div class="panel" id="menuPanel">
     <h2><span class="step">3</span>選飲料</h2>
     <div id="menuBody"><div class="empty">先選一家店。</div></div>
+    <div class="menu-ver"><span id="menuVer">內建菜單讀取中…</span> <button class="btn sm ghost" id="btnCheckMenu">🔄 檢查菜單更新</button></div>
   </div>
 
   <!-- 4. 紀錄 -->
@@ -169,7 +172,8 @@ footer a{color:var(--accent)}
 
   <div class="note">
     ・店家位置來自 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 社群資料（透過 Overpass API），新開或剛歇業的店可能尚未更新；找不到的店請用「手動加入」。<br>
-    ・菜單為各連鎖品牌的<b>常態品項整理</b>，季節限定與價格請以店家官方公告為準（每家皆附官方連結）。連鎖品牌外的店家會顯示通用菜單，你點過的自訂飲料會被記住，下次直接出現在菜單上。<br>
+    ・菜單為各連鎖品牌的<b>常態品項整理</b>，季節限定與價格請以店家官方公告為準（每家皆附官方連結）。連鎖品牌外的店家會顯示通用菜單。<br>
+    ・<b>更新菜單</b>：每家店都可按「✏️ 更新菜單」自行增刪品項，或從官網、外送平台複製整份菜單貼上（價格會自動去除），之後選飲料就用你的版本；內建菜單日後若更新，開啟頁面時會自動提示，也可隨時按「🔄 檢查菜單更新」。<br>
     ・「輪流」會挑出附近店家中<b>最久沒喝（或從沒喝過）的品牌</b>；「亂數」可勾選避開上次喝的品牌。<br>
     ・所有紀錄只存在這台裝置的瀏覽器（localStorage），不會上傳；換裝置可用「匯出／匯入紀錄」。
   </div>
@@ -180,118 +184,36 @@ footer a{color:var(--accent)}
 <script>
 'use strict';
 /* ================= 菜單資料 =================
- * 各品牌常態品項；m: [分類, [品項...]]
- * 規則 re 用來比對 OpenStreetMap 的 name / brand。
+ * 品牌與常態菜單放在 bubble-tea-menus.json，要更新內建菜單只需修改該檔；
+ * 讀到的資料快取在 localStorage，離線或讀取失敗時沿用快取。
+ * 使用者自行更新的菜單存在 userMenus，優先於內建菜單。
  */
-const CHAINS = [
-  {id:'50lan', name:'50嵐', re:/50\s*嵐|五十嵐|50lan/i, url:'https://www.50lan.com.tw/', m:[
-    ['找好茶',['茉莉綠茶','阿薩姆紅茶','四季春青茶','黃金烏龍']],
-    ['找奶茶',['奶茶','奶綠','四季奶青','黃金烏龍奶茶','珍珠奶茶','波霸奶茶','椰果奶茶','布丁奶茶','仙草凍奶茶']],
-    ['找拿鐵',['紅茶拿鐵','綠茶拿鐵','烏龍拿鐵','珍珠紅茶拿鐵','布丁紅茶拿鐵']],
-    ['找口感',['1號（四季春＋珍波椰）','波霸紅茶','波霸綠茶','冰淇淋紅茶']],
-    ['找新鮮',['檸檬綠','檸檬紅','8冰綠','養樂多綠','金桔檸檬','柚子綠','葡萄柚綠','百香綠']]]},
-  {id:'chingshin', name:'清心福全', re:/清心|福全|ching\s*shin/i, url:'https://www.chingshin.tw/', m:[
-    ['原味茶',['烏龍綠茶','錫蘭紅茶','特級綠茶','高山青茶','冬瓜茶']],
-    ['奶茶',['珍珠奶茶','烏龍奶茶','奶綠','布丁奶茶','椰果奶茶','鮮奶茶']],
-    ['特調',['冬瓜檸檬','蜂蜜檸檬','梅子綠茶','優多綠茶','百香綠茶','柳橙綠茶','冬瓜青茶']]]},
-  {id:'milksha', name:'迷客夏', re:/迷客夏|milk\s*sha/i, url:'https://www.milksha.com/', m:[
-    ['鮮奶系列',['娜杯紅茶拿鐵','伯爵紅茶拿鐵','珍珠綠茶拿鐵','琥珀烏龍拿鐵','大甲芋頭鮮奶','焙香大麥拿鐵','可可芭蕾']],
-    ['原萃茶',['琥珀高峰烏龍','伯爵紅茶','茉香綠茶','焙香大麥']],
-    ['果茶',['柳丁綠茶','檸檬綠茶','冬瓜檸檬','梅子綠茶']]]},
-  {id:'coco', name:'CoCo都可', re:/coco|都可/i, url:'https://www.coco-tea.com/', m:[
-    ['招牌',['百香雙響炮','珍珠奶茶','椰果奶茶','鮮芋牛奶']],
-    ['原茶',['茉莉綠茶','阿薩姆紅茶','四季春茶','翡翠烏龍']],
-    ['果茶',['鮮百香綠茶','檸檬綠茶','芒果綠茶','葡萄柚綠茶','冬瓜檸檬']],
-    ['奶茶',['奶綠','布丁奶茶','雙響炮奶茶','鮮奶茶']]]},
-  {id:'kebuke', name:'可不可熟成紅茶', re:/可不可|kebuke/i, url:'https://www.kebuke.com/', m:[
-    ['純茶',['熟成紅茶','麗春紅茶','太妃熟成','胭脂紅茶','雪花冷露','春芽冷露','春芽綠茶','熟成冷露']],
-    ['歐蕾',['熟成歐蕾','白玉歐蕾','冷露歐蕾','太妃歐蕾']],
-    ['加料',['白玉熟成紅茶','白玉麗春紅茶','熟成檸果','春芽檸果']]]},
-  {id:'wootea', name:'五桐號', re:/五桐號|wootea/i, url:'https://www.wootea.com/', m:[
-    ['招牌',['五桐茶','杏仁凍五桐茶','杏仁凍奶茶','五桐奶茶']],
-    ['鮮奶',['紅茶鮮奶','烏龍鮮奶','杏仁凍紅茶鮮奶']],
-    ['果茶',['檸檬五桐茶','百香綠茶','金桔檸檬']]]},
-  {id:'macu', name:'麻古茶坊', re:/麻古|macu/i, url:'https://www.macutea.com.tw/', m:[
-    ['果粒',['芝芝葡萄果粒','楊枝甘露2.0','芝芝芒果果粒','柳橙果粒茶','葡萄柚果粒茶']],
-    ['原茶',['高山金萱','高山青茶','錫蘭紅茶','茉莉綠茶']],
-    ['奶茶',['金萱雙Q','波霸奶茶','奶綠','金萱奶茶']]]},
-  {id:'dayungs', name:'大苑子', re:/大苑子|dayung/i, url:'https://www.dayungs.com/', m:[
-    ['鮮果',['愛文芒果冰沙','翡翠柳橙','柳橙綠茶','紅心芭樂','鮮榨檸檬綠','奇異果綠茶','西瓜汁']],
-    ['原茶',['金萱茶','翡翠綠茶','錫蘭紅茶']],
-    ['奶茶',['珍珠奶茶','金萱奶茶','鮮奶茶']]]},
-  {id:'zhenzhudan', name:'珍煮丹', re:/珍煮丹/i, url:'https://www.tpitea.com.tw/', m:[
-    ['招牌',['黑糖珍珠鮮奶','黑糖珍珠鮮奶茶','黑糖珍珠紅茶拿鐵']],
-    ['鮮奶',['紅豆鮮奶','芋頭鮮奶','烏龍鮮奶茶']],
-    ['原茶',['紅茶','綠茶','烏龍茶','冬瓜檸檬']]]},
-  {id:'chunshuitang', name:'春水堂', re:/春水堂|chun\s*shui/i, url:'https://chunshuitang.com.tw/', m:[
-    ['招牌',['珍珠奶茶','珍珠鮮奶茶','功夫紅茶','鐵觀音奶茶','鐵觀音拿鐵']],
-    ['原茶',['功夫鐵觀音','茉香綠茶','凍頂烏龍']],
-    ['特調',['檸檬冰茶','冬瓜檸檬','蜂蜜紅茶']]]},
-  {id:'presotea', name:'茶湯會', re:/茶湯會|tp\s*tea/i, url:'https://www.tp-tea.com/', m:[
-    ['招牌',['觀音拿鐵','珍珠奶茶','鐵觀音','翡翠檸檬']],
-    ['原茶',['四季春','翡翠綠茶','錫蘭紅茶','鐵觀音']],
-    ['奶茶',['觀音奶茶','珍珠紅茶拿鐵','奶綠']]]},
-  {id:'teatop', name:'Tea Top 第一味', re:/第一味|tea\s*top/i, url:'https://www.teatop.com.tw/', m:[
-    ['招牌',['珍珠奶茶','冬瓜檸檬','烏龍綠茶','黃金烏龍']],
-    ['果茶',['百香綠','檸檬綠','金桔檸檬','多多綠']]]},
-  {id:'deyzheng', name:'得正', re:/得正|oolong\s*tea\s*project/i, url:'https://www.oolongteaproject.com/', m:[
-    ['烏龍茶',['春烏龍','輕烏龍','焙烏龍','烏龍綠']],
-    ['鮮奶',['春烏龍鮮奶','焙烏龍鮮奶','輕烏龍鮮奶']],
-    ['果茶',['檸檬春烏龍','烏龍綠檸檬']]]},
-  {id:'guiji', name:'龜記茗品', re:/龜記|guiji/i, url:'https://www.guiji-group.com/', m:[
-    ['招牌',['紅柚翡翠','楊枝甘露','招牌三十三茶王','紅烏龍']],
-    ['鮮奶',['紅烏龍拿鐵','黑糖珍珠鮮奶']],
-    ['果茶',['百香翡翠','檸檬翡翠','芒果翡翠']]]},
-  {id:'comebuy', name:'COMEBUY', re:/come\s*buy/i, url:'https://www.comebuy2002.com.tw/', m:[
-    ['招牌',['玉荷包烏龍','百香果綠茶','芒果冰沙','珍珠奶茶']],
-    ['原茶',['烏龍茶','紅茶','綠茶','四季春']],
-    ['奶茶',['奶茶','奶綠','烏龍奶茶']]]},
-  {id:'sleep5', name:'再睡5分鐘', re:/再睡\s*5\s*分鐘|再睡五分鐘/i, url:'https://www.facebook.com/nap5min/', m:[
-    ['招牌',['冬瓜檸檬','熊貓珍珠奶茶','冰淇淋紅茶']],
-    ['原茶',['紅茶','綠茶','青茶','冬瓜茶']],
-    ['奶茶',['奶茶','奶綠','珍珠奶茶']]]},
-  {id:'teamagichand', name:'茶之魔手', re:/茶之魔手|tea\s*magic/i, url:'https://www.teamagichand.com.tw/', m:[
-    ['招牌',['蜂蜜檸檬','冬瓜檸檬','珍珠奶茶','百香綠茶']],
-    ['原茶',['紅茶','綠茶','青茶','烏龍茶']],
-    ['奶茶',['奶茶','奶綠','布丁奶茶']]]},
-  {id:'tenren', name:'天仁喫茶趣', re:/天仁|tenren|喫茶趣/i, url:'https://www.tenren.com.tw/', m:[
-    ['招牌',['913茶王','珍珠奶茶','抹茶拿鐵','烏龍奶茶']],
-    ['原茶',['烏龍茶','綠茶','紅茶']],
-    ['果茶',['檸檬綠茶','百香綠茶']]]},
-  {id:'chatime', name:'日出茶太', re:/茶太|chatime/i, url:'https://www.chatime.com.tw/', m:[
-    ['招牌',['珍珠奶茶','百香綠茶','芒果綠茶','烏龍奶茶']],
-    ['原茶',['阿薩姆紅茶','茉莉綠茶','烏龍茶']],
-    ['奶茶',['奶綠','布丁奶茶','仙草奶茶']]]},
-  {id:'yimuri', name:'一沐日', re:/一沐日|yimuri|ymr/i, url:'https://www.facebook.com/yimuri.tea/', m:[
-    ['粉粿',['粉粿鮮奶茶','粉粿紅茶','粉粿烏龍']],
-    ['原茶',['紅茶','綠茶','烏龍茶']],
-    ['特調',['嫩仙草奶茶','冬瓜檸檬','荔枝烏龍']]]},
-  {id:'ooh', name:'烏弄', re:/烏弄|wonong/i, url:'https://www.wonong.com.tw/', m:[
-    ['原茶',['原生烏龍','焙香烏龍','金萱烏龍']],
-    ['鮮奶',['烏龍鮮奶','黑糖珍珠鮮奶','焙香烏龍鮮奶']],
-    ['果茶',['檸檬烏龍','百香烏龍']]]},
-  {id:'xianhedao', name:'先喝道', re:/先喝道|tao\s*tao/i, url:'https://www.taotaotea.com.tw/', m:[
-    ['招牌',['英倫伯爵紅茶','伯爵紅茶拿鐵','珍珠奶茶','玫瑰紅茶']],
-    ['原茶',['伯爵紅茶','茉莉綠茶','鐵觀音']],
-    ['果茶',['檸檬綠茶','百香綠茶']]]},
-  {id:'laolai', name:'老賴茶棧', re:/老賴/i, url:'https://www.laolaitea.com/', m:[
-    ['招牌',['波霸奶茶','冬瓜檸檬','蜂蜜綠茶','多多綠']],
-    ['原茶',['紅茶','綠茶','青茶']],
-    ['奶茶',['奶茶','奶綠','布丁奶茶']]]},
-  {id:'kungfutea', name:'功夫茶', re:/功夫茶|kung\s*fu\s*tea/i, url:'https://www.kungfutea.com.tw/', m:[
-    ['招牌',['功夫奶茶','冬瓜檸檬','黃金烏龍','珍珠奶茶']],
-    ['果茶',['百香綠茶','檸檬綠茶','養樂多綠']]]},
-  {id:'hechalou', name:'鶴茶樓', re:/鶴茶樓/i, url:'https://www.facebook.com/hechalou/', m:[
-    ['招牌',['鶴頂紅茶','鶴頂紅茶拿鐵','柳丁青茶']],
-    ['原茶',['紅茶','青茶','烏龍茶']]]},
-  {id:'machimachi', name:'麥吉', re:/麥吉|machi\s*machi/i, url:'https://www.machimachi.com.tw/', m:[
-    ['招牌',['奶蓋紅茶','奶蓋烏龍','草莓鮮奶']],
-    ['原茶',['紅茶','烏龍茶','綠茶']]]},
-];
-const GENERIC = {id:'', name:'（一般手搖飲）', url:'', m:[
-  ['原茶',['紅茶','綠茶','青茶','烏龍茶','冬瓜茶']],
-  ['奶茶',['奶茶','奶綠','珍珠奶茶','波霸奶茶','鮮奶茶','布丁奶茶']],
-  ['果茶',['檸檬綠','百香綠','多多綠','金桔檸檬','冬瓜檸檬','梅子綠']]]};
+const MENU_URL = 'bubble-tea-menus.json';
+let CHAINS = [];
+let GENERIC = {id:'', name:'（一般手搖飲）', url:'', updated:'', m:[]};
+let menuVersion = '';
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function applyMenuData(j){
+  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:new RegExp(c.match || reEsc(c.name), 'i'), url:c.url || '',
+    updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items])}));
+  GENERIC = {id:'', name:j.generic?.name || '（一般手搖飲）', url:'', updated:j.version || '', m:(j.generic?.menu || []).map(x => [x.cat, x.items])};
+  menuVersion = j.version || '';
+}
+function validMenuData(j){
+  return j && Array.isArray(j.chains) && j.chains.every(c => c.id && c.name && Array.isArray(c.menu));
+}
+// 讀取內建菜單；回傳有變動的品牌名稱（與上次快取相比）
+async function loadMenus(force){
+  const r = await fetch(MENU_URL + (force ? '?t=' + Date.now() : ''), {cache: force ? 'no-store' : 'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (!validMenuData(j)) throw new Error('菜單檔格式不符');
+  const prev = LS.get('menuData', null);
+  const old = new Map((prev?.chains || []).map(c => [c.id, c.updated]));
+  const changed = prev ? j.chains.filter(c => old.get(c.id) !== c.updated).map(c => c.name) : [];
+  LS.set('menuData', j); applyMenuData(j);
+  return {changed, version: j.version, prevVersion: prev?.version || ''};
+}
 const SUGAR = ['正常甜','少糖','半糖','微糖','二分糖','一分糖','無糖'];
 const ICE = ['正常冰','少冰','微冰','去冰','完全去冰','常溫','溫','熱'];
 const SIZE = ['大杯','中杯'];
@@ -305,8 +227,10 @@ const LS = {
 let history = LS.get('history', []);          // [{id,ts,key,shop,chain,drink,sugar,ice,size,note,how}]
 let customDrinks = LS.get('custom', {});      // {menuKey: [drink,...]}
 let manualShops = LS.get('manual', []);       // [{id,name,chain}]
+let userMenus = LS.get('userMenus', {});       // {menuKey: {m:[[分類,[品項]]], updated, base}}
 let cache = LS.get('lastSearch', null);       // {lat,lon,label,shops,ts}
-let state = { mode: LS.get('mode','self'), shops: [], here: null, sel: null, how: 'self', drink: null };
+let state = { mode: LS.get('mode','self'), shops: [], here: null, sel: null, how: 'self', drink: null, editing: false };
+let menusReady = Promise.resolve();
 
 /* ================= 工具 ================= */
 const $ = id => document.getElementById(id);
@@ -344,9 +268,9 @@ function visitCount(key){ return history.filter(h => h.key === key).length; }
 
 /* ================= 店家搜尋（Overpass） ================= */
 const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-const CHAIN_RE_SRC = CHAINS.map(c => c.name.replace(/[.*+?^${}()|[\]\\]/g,'')).concat(['五十嵐','茶','飲']).join('|');
+const chainReSrc = () => CHAINS.map(c => c.name.replace(/[.*+?^${}()|[\]\\"]/g,'')).concat(['五十嵐','茶','飲']).join('|');
 async function fetchShops(lat, lon, radius){
-  const a = `(around:${radius},${lat},${lon})`;
+  const a = `(around:${radius},${lat},${lon})`, CHAIN_RE_SRC = chainReSrc();
   const q = `[out:json][timeout:25];(
     nwr${a}["cuisine"~"bubble_tea|tea|juice",i];
     nwr${a}["shop"~"^(beverages|tea)$"];
@@ -389,6 +313,7 @@ async function searchAt(lat, lon, label){
   const radius = +$('radius').value;
   status(`🔄 搜尋 ${label} 周邊 ${fmtDist(radius)} 的手搖飲…`);
   try {
+    await menusReady;
     const shops = await fetchShops(lat, lon, radius);
     state.here = {lat, lon};
     state.shops = shops;
@@ -422,7 +347,9 @@ $('addr').addEventListener('keydown', e => { if (e.key === 'Enter') geocode(); }
 $('radius').onchange = () => { if (state.here) searchAt(state.here.lat, state.here.lon, cache?.label || '此處'); };
 
 /* ================= 手動店家 ================= */
-$('manChain').innerHTML = CHAINS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('') + '<option value="">其他店家（自填名稱）</option>';
+function renderManChain(){
+  $('manChain').innerHTML = CHAINS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('') + '<option value="">其他店家（自填名稱）</option>';
+}
 $('btnManAdd').onclick = () => {
   const chain = $('manChain').value, nm = $('manName').value.trim();
   const name = nm || (chainById(chain)?.name);
@@ -513,7 +440,7 @@ function renderShops(){
   });
 }
 function selectShop(s, how){
-  state.sel = s; state.how = how; state.drink = null;
+  state.sel = s; state.how = how; state.drink = null; state.editing = false;
   renderShops(); renderPicked(); renderMenu();
   if (how !== 'self') toast((how === 'rotate' ? '🔁 輪到：' : '🎲 抽中：') + s.name);
 }
@@ -536,10 +463,78 @@ function drinkCounts(mk){
   for (const h of history) if (h.mkey === mk) m[h.drink] = (m[h.drink] || 0) + 1;
   return m;
 }
+const baseMenu = s => chainById(s.chain) || GENERIC;
+function effectiveMenu(s){
+  const base = baseMenu(s), u = userMenus[menuKey(s)];
+  return u ? {...base, m: u.m} : base;
+}
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const menuToText = m => m.map(([cat, items]) => cat + '：' + items.join('、')).join('\n');
+// 每行「分類：品項、品項…」；只有「分類：」的行，之後沒有冒號的行都歸入該分類；
+// 品項後面的價格（如「珍珠奶茶 55」「$60」「60元」）會自動去除。
+function parseMenuText(text){
+  const cats = new Map(); let cur = '其他';
+  for (let line of text.split(/\r?\n/)){
+    line = line.trim(); if (!line) continue;
+    const mm = line.match(/^([^:：、,，]{1,20})[:：](.*)$/);
+    let rest = line;
+    if (mm){ cur = mm[1].trim().replace(/^[#【\[「]+|[】\]」]+$/g, '').trim() || '其他'; rest = mm[2]; }
+    const items = rest.split(/[、,，;；|｜\t]+|\s{2,}/)
+      .map(x => x.trim().replace(/\s*(NT)?\$?\s*\d+\s*元?(\s*[\/／]\s*\$?\d+\s*元?)?$/i, '').trim())
+      .filter(Boolean);
+    if (!cats.has(cur)) cats.set(cur, []);
+    const arr = cats.get(cur);
+    for (const it of items) if (!arr.includes(it)) arr.push(it);
+  }
+  return [...cats].filter(([, items]) => items.length);
+}
+function renderEditor(s){
+  const body = $('menuBody'), mk = menuKey(s), base = baseMenu(s), u = userMenus[mk];
+  const custom = customDrinks[mk] || [];
+  let text = menuToText(effectiveMenu(s).m);
+  if (custom.length) text = '我加的：' + custom.join('、') + '\n' + text;
+  body.innerHTML = `
+    <div class="menu-top"><b style="font-size:1.05rem">✏️ 更新「${esc(s.name)}」的菜單</b></div>
+    <div class="menu-src">每行一個分類，格式為 <b>分類：品項、品項、品項</b>。也可以從${base.url ? ` <a href="${base.url}" target="_blank" rel="noopener">官方菜單 ↗</a> ` : '外送平台或店家菜單'}複製貼上：
+      只寫「分類：」的行，下面每行一個品項也可以；品項後的價格會自動去掉。刪掉的品項就是下架。</div>
+    <textarea class="inp" id="menuText" rows="12" style="width:100%;font-size:.92rem;line-height:1.7">${esc(text)}</textarea>
+    <div class="status" id="menuPreview"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn pri" id="btnMenuSave">💾 儲存菜單</button>
+      <button class="btn ghost" id="btnMenuCancel">取消</button>
+      ${u ? '<button class="btn ghost" id="btnMenuReset">↩ 還原內建菜單</button>' : ''}
+    </div>`;
+  const ta = $('menuText');
+  const preview = () => {
+    const m = parseMenuText(ta.value), n = m.reduce((t, [, it]) => t + it.length, 0);
+    $('menuPreview').textContent = n ? `將儲存 ${m.length} 個分類、${n} 個品項：${m.map(([c, it]) => `${c}（${it.length}）`).join('、')}` : '⚠ 目前沒有任何品項';
+    $('btnMenuSave').disabled = !n;
+  };
+  ta.oninput = preview; preview();
+  $('btnMenuSave').onclick = () => {
+    const m = parseMenuText(ta.value);
+    if (!m.length) return;
+    userMenus[mk] = {m, updated: today(), base: base.updated || ''};
+    // 「我加的」已併入菜單，不再另外列出
+    delete customDrinks[mk];
+    LS.set('userMenus', userMenus); LS.set('custom', customDrinks);
+    state.editing = false; renderMenu(); toast('✅ 菜單已更新');
+  };
+  $('btnMenuCancel').onclick = () => { state.editing = false; renderMenu(); };
+  if (u) $('btnMenuReset').onclick = () => {
+    if (!confirm('還原成內建菜單？你自己更新的內容會被移除。')) return;
+    delete userMenus[mk]; LS.set('userMenus', userMenus);
+    state.editing = false; renderMenu(); toast('已還原內建菜單');
+  };
+  ta.focus();
+}
 function renderMenu(){
   const s = state.sel, body = $('menuBody');
   if (!s){ body.innerHTML = '<div class="empty">先選一家店。</div>'; return; }
-  const c = chainById(s.chain) || GENERIC, mk = menuKey(s);
+  if (state.editing) return renderEditor(s);
+  const mk = menuKey(s), base = baseMenu(s), c = effectiveMenu(s), u = userMenus[mk];
+  // 使用者更新過的菜單，若內建菜單之後又更新，提示可改用新版
+  const newer = u && base.updated && u.base && base.updated > u.base;
   const custom = customDrinks[mk] || [], counts = drinkCounts(mk);
   const last = history.find(h => h.mkey === mk);
   const chip = (d, isCustom) => `<span class="chip ${state.drink === d ? 'on' : ''} ${isCustom ? 'custom' : ''}" data-d="${esc(d)}">${esc(d)}${counts[d] ? `<span class="cnt">${counts[d]}</span>` : ''}${isCustom ? '<span class="x" data-x="1" title="移除">×</span>' : ''}</span>`;
@@ -551,7 +546,11 @@ function renderMenu(){
       ${last ? `<button class="btn sm ghost" id="btnSame">↺ 跟上次一樣（${esc(last.drink)}）</button>` : ''}
       <label style="font-size:.8rem;color:var(--muted)"><input type="checkbox" id="avoidDrink" checked> 隨機時避開最近 3 次喝過的</label>
     </div>
-    <div class="menu-src">${c.url ? `${esc(c.name)} 常態菜單整理・季節限定請看 <a href="${c.url}" target="_blank" rel="noopener">官方菜單 ↗</a>` : '非連鎖品牌，先用通用菜單；點不到的就自己加，下次會記住。'}　<span class="chip" style="padding:0 6px;font-size:.72rem;cursor:default"><span class="cnt" style="margin:0">n</span></span> = 你點過的次數</div>
+    <div class="menu-src">${u ? `📝 你自己更新的菜單（${esc(u.updated)}）` : base.id ? `${esc(base.name)} 常態菜單・內建資料更新於 ${esc(base.updated)}` : '非連鎖品牌，先用通用菜單'}
+      ${base.url ? `・<a href="${base.url}" target="_blank" rel="noopener">官方菜單 ↗</a>` : ''}
+      ・<button class="btn sm" id="btnEditMenu" style="padding:1px 9px">✏️ 更新菜單</button>
+      　<span class="chip" style="padding:0 6px;font-size:.72rem;cursor:default"><span class="cnt" style="margin:0">n</span></span> = 你點過的次數</div>
+    ${newer ? `<div class="notice">內建菜單已於 ${esc(base.updated)} 更新，你目前用的是自己在 ${esc(u.updated)} 更新的版本。<button class="btn sm" id="btnUseBase">改用內建新版</button> <button class="btn sm ghost" id="btnKeepMine">保留我的</button></div>` : ''}
     ${custom.length ? `<div class="cat">⭐ 我加的</div><div class="chips">${custom.map(d => chip(d, true)).join('')}</div>` : ''}
     ${c.m.map(([cat, items]) => `<div class="cat">${esc(cat)}</div><div class="chips">${items.map(d => chip(d)).join('')}</div>`).join('')}
     <div class="row" style="margin-top:10px">
@@ -613,6 +612,11 @@ function renderMenu(){
     body.querySelectorAll('.chip[data-d]').forEach(x => x.classList.toggle('on', x.dataset.d === last.drink));
     upd();
   };
+  $('btnEditMenu').onclick = () => { state.editing = true; renderMenu(); };
+  if (newer){
+    $('btnUseBase').onclick = () => { delete userMenus[mk]; LS.set('userMenus', userMenus); renderMenu(); toast('已改用內建新版菜單'); };
+    $('btnKeepMine').onclick = () => { u.base = base.updated; LS.set('userMenus', userMenus); renderMenu(); };
+  }
   $('btnSave').onclick = () => {
     if (!state.drink) return;
     const cc = chainById(s.chain);
@@ -664,7 +668,7 @@ function renderHistory(){
   });
 }
 $('btnExport').onclick = () => {
-  const blob = new Blob([JSON.stringify({version:1, history, customDrinks, manualShops}, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify({version:1, history, customDrinks, manualShops, userMenus}, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'bubble-tea-history-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -677,6 +681,9 @@ $('fileImport').onchange = async e => {
     const ids = new Set(history.map(h => h.id));
     history = history.concat(j.history.filter(h => h && h.id && h.drink && !ids.has(h.id))).sort((a, b) => b.ts - a.ts);
     for (const [k, v] of Object.entries(j.customDrinks || {})) customDrinks[k] = [...new Set([...(customDrinks[k] || []), ...v])];
+    // 自己更新的菜單：兩邊都有時保留較新的
+    for (const [k, v] of Object.entries(j.userMenus || {})) if (v && Array.isArray(v.m) && (!userMenus[k] || v.updated > userMenus[k].updated)) userMenus[k] = v;
+    LS.set('userMenus', userMenus);
     const mids = new Set(manualShops.map(m => m.id));
     manualShops = manualShops.concat((j.manualShops || []).filter(m => !mids.has(m.id)));
     LS.set('history', history); LS.set('custom', customDrinks); LS.set('manual', manualShops);
@@ -695,8 +702,35 @@ if (cache && cache.shops){
   state.here = {lat: cache.lat, lon: cache.lon}; state.shops = cache.shops;
   status(`上次搜尋：${cache.label}（${fmtAgo(cache.ts)}，${cache.shops.length} 家）。換了地方請重新定位。`);
 }
+function renderMenuVer(){
+  const n = Object.keys(userMenus).length;
+  $('menuVer').textContent = menuVersion ? `內建菜單版本 ${menuVersion}・${CHAINS.length} 個品牌${n ? `・你自己更新了 ${n} 家` : ''}` : '內建菜單尚未載入';
+}
+function afterMenus(){
+  renderManChain(); renderMenuVer();
+  // 用新的品牌規則重新比對已快取的店家
+  for (const s of state.shops){ const c = matchChain(s.name); if (c) s.chain = c.id; }
+  renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+}
+async function checkMenus(force){
+  const btn = $('btnCheckMenu'); btn.disabled = true;
+  try {
+    const {changed, version, prevVersion} = await loadMenus(force);
+    afterMenus();
+    if (changed.length) toast(`🆕 菜單已更新到 ${version}：${changed.slice(0, 4).join('、')}${changed.length > 4 ? ` 等 ${changed.length} 個品牌` : ''}`);
+    else if (force) toast(`✅ 已是最新菜單（${version}）`);
+  } catch(e){
+    if (force || !CHAINS.length) toast('⚠ 菜單讀取失敗：' + e.message + (CHAINS.length ? '，先沿用上次的菜單' : ''));
+    renderMenuVer();
+  } finally { btn.disabled = false; }
+}
+$('btnCheckMenu').onclick = () => checkMenus(true);
+const cachedMenu = LS.get('menuData', null);
+if (validMenuData(cachedMenu)) applyMenuData(cachedMenu);
+renderManChain(); renderMenuVer();
 setMode(state.mode);
 renderHistory();
+menusReady = checkMenus(false);
 </script>
 </body>
 </html>
