@@ -237,9 +237,14 @@ let menusReady = Promise.resolve();
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const chainById = id => CHAINS.find(c => c.id === id) || null;
+// 比對到最長文字的規則優先，讓「米里.*旗山」這類單一分店菜單蓋過「米里」品牌菜單
 function matchChain(...names){
-  for (const n of names) if (n) for (const c of CHAINS) if (c.re.test(n)) return c;
-  return null;
+  let best = null, bestLen = 0;
+  for (const n of names) if (n) for (const c of CHAINS){
+    const m = n.match(c.re);
+    if (m && m[0].length > bestLen){ best = c; bestLen = m[0].length; }
+  }
+  return best;
 }
 function dist(a, b){
   const R = 6371000, r = x => x*Math.PI/180;
