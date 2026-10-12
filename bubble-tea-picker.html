@@ -172,7 +172,7 @@ footer a{color:var(--accent)}
 
   <div class="note">
     ・店家位置來自 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 社群資料（透過 Overpass API），新開或剛歇業的店可能尚未更新；找不到的店請用「手動加入」。<br>
-    ・菜單為各連鎖品牌的<b>常態品項整理</b>，季節限定與價格請以店家官方公告為準（每家皆附官方連結）。連鎖品牌外的店家會顯示通用菜單。<br>
+    ・菜單為各連鎖品牌的<b>常態品項</b>，2026-10-12 逐一上網核對（優先採官網，其次官方菜單圖、外送平台或媒體整理，每家皆註明來源與版本）；不含季節限定，部分品牌各地區菜單略有不同，價格與限定品請以店家公告為準。連鎖品牌外的店家會顯示通用菜單。<br>
     ・<b>更新菜單</b>：每家店都可按「✏️ 更新菜單」自行增刪品項，或從官網、外送平台複製整份菜單貼上（價格會自動去除），之後選飲料就用你的版本；內建菜單日後若更新，開啟頁面時會自動提示，也可隨時按「🔄 檢查菜單更新」。<br>
     ・「輪流」會挑出附近店家中<b>最久沒喝（或從沒喝過）的品牌</b>；「亂數」可勾選避開上次喝的品牌。<br>
     ・所有紀錄只存在這台裝置的瀏覽器（localStorage），不會上傳；換裝置可用「匯出／匯入紀錄」。
@@ -195,7 +195,8 @@ let menuVersion = '';
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function applyMenuData(j){
   CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:new RegExp(c.match || reEsc(c.name), 'i'), url:c.url || '',
-    updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items])}));
+    updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items]),
+    source:c.source || '', sourceDate:c.source_date || '', sourceType:c.source_type || ''}));
   GENERIC = {id:'', name:j.generic?.name || '（一般手搖飲）', url:'', updated:j.version || '', m:(j.generic?.menu || []).map(x => [x.cat, x.items])};
   menuVersion = j.version || '';
 }
@@ -546,7 +547,7 @@ function renderMenu(){
       ${last ? `<button class="btn sm ghost" id="btnSame">↺ 跟上次一樣（${esc(last.drink)}）</button>` : ''}
       <label style="font-size:.8rem;color:var(--muted)"><input type="checkbox" id="avoidDrink" checked> 隨機時避開最近 3 次喝過的</label>
     </div>
-    <div class="menu-src">${u ? `📝 你自己更新的菜單（${esc(u.updated)}）` : base.id ? `${esc(base.name)} 常態菜單・內建資料更新於 ${esc(base.updated)}` : '非連鎖品牌，先用通用菜單'}
+    <div class="menu-src">${u ? `📝 你自己更新的菜單（${esc(u.updated)}）` : base.id ? `${esc(base.name)} 常態菜單（不含季節限定）・${esc(base.updated)} 核對${base.source ? `，來源：<a href="${esc(base.source)}" target="_blank" rel="noopener">${esc(base.sourceType || '資料來源')}</a>${base.sourceDate ? `（${esc(base.sourceDate)} 版）` : ''}` : ''}` : '非連鎖品牌，先用通用菜單'}
       ${base.url ? `・<a href="${base.url}" target="_blank" rel="noopener">官方菜單 ↗</a>` : ''}
       ・<button class="btn sm" id="btnEditMenu" style="padding:1px 9px">✏️ 更新菜單</button>
       　<span class="chip" style="padding:0 6px;font-size:.72rem;cursor:default"><span class="cnt" style="margin:0">n</span></span> = 你點過的次數</div>
