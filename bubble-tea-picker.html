@@ -193,14 +193,17 @@ let GENERIC = {id:'', name:'（一般手搖飲）', url:'', updated:'', m:[]};
 let menuVersion = '';
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function applyMenuData(j){
-  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:new RegExp(c.match || reEsc(c.name), 'i'), url:c.url || '',
+  // 比對規則寫錯時退回「店名完全一致」，不讓一筆壞資料拖垮整頁
+  const toRe = c => { try { return new RegExp(c.match || reEsc(c.name), 'i'); } catch(e){ return new RegExp(reEsc(c.name), 'i'); } };
+  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:toRe(c), url:c.url || '',
     updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items]),
     source:c.source || '', sourceDate:c.source_date || '', sourceType:c.source_type || ''}));
   GENERIC = {id:'', name:j.generic?.name || '（一般手搖飲）', url:'', updated:j.version || '', m:(j.generic?.menu || []).map(x => [x.cat, x.items])};
   menuVersion = j.version || '';
 }
 function validMenuData(j){
-  return j && Array.isArray(j.chains) && j.chains.every(c => c.id && c.name && Array.isArray(c.menu));
+  const okMenu = m => Array.isArray(m) && m.every(x => x && typeof x.cat === 'string' && Array.isArray(x.items) && x.items.every(i => typeof i === 'string'));
+  return j && Array.isArray(j.chains) && j.chains.every(c => c.id && c.name && okMenu(c.menu)) && (!j.generic || okMenu(j.generic.menu));
 }
 // 讀取內建菜單；回傳有變動的品牌名稱（與上次快取相比）
 async function loadMenus(force){

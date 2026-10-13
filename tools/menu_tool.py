@@ -100,12 +100,24 @@ def validate(d):
         ids.add(cid)
         if not c.get('name'):
             errs.append(f'{cid}: 缺 name')
+        pat = c.get('match') or re.escape(c.get('name', ''))
         try:
-            re.compile(c.get('match') or re.escape(c.get('name', '')), re.I)
+            re.compile(pat, re.I)
         except re.error as e:
             errs.append(f'{cid}: match 不是合法的正規表示式（{e}）')
-        if not c.get('menu') or not all(m.get('cat') and m.get('items') for m in c['menu']):
-            errs.append(f'{cid}: menu 不可為空，每個分類都要有品項')
+        # 網頁用 JavaScript 的 RegExp 解讀，只允許兩邊語法相同的寫法：
+        # 群組只能是 ( )、(?: )、(?= )、(?! )；不能用 Python 專屬的 (?P…)、(?i) 等行內旗標、\A \Z
+        if re.search(r'\(\?(?![:=!])', pat) or re.search(r'(?<!\\)\\[AZ]', pat):
+            errs.append(f'{cid}: match 用了 JavaScript 不支援的語法（如 (?P…)、(?i)、\\A、\\Z），請改用一般寫法')
+        if not isinstance(c.get('menu'), list) or not c['menu']:
+            errs.append(f'{cid}: menu 不可為空')
+        else:
+            for m in c['menu']:
+                ok = (isinstance(m, dict) and isinstance(m.get('cat'), str) and m['cat']
+                      and isinstance(m.get('items'), list) and m['items']
+                      and all(isinstance(i, str) and i for i in m['items']))
+                if not ok:
+                    errs.append(f'{cid}: 每個分類都要有 cat（文字）與 items（非空的文字清單），問題出在 {json.dumps(m, ensure_ascii=False)[:60]}')
     if not d.get('generic', {}).get('menu'):
         errs.append('generic 菜單不可為空')
     return errs
