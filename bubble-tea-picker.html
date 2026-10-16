@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>今天喝什麼｜附近手搖飲選擇器</title>
-<meta name="description" content="GPS 找出附近的手搖飲店，內建各大連鎖品牌常態菜單；選店家可自己選、輪流或亂數，選飲料可隨機，每次的選擇都會記錄下來供下次參考。純前端、資料只存在你的瀏覽器。">
+<meta name="description" content="勾選你附近有的手搖飲連鎖品牌，抽籤或自己選店家，內建 26 個品牌常態菜單，飲料也能隨機決定，每次的選擇都會記錄下來供下次參考。純前端、資料只存在你的瀏覽器。">
 <link rel="canonical" href="https://tlan1012.github.io/Fable5/bubble-tea-picker.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="今天喝什麼｜附近手搖飲選擇器">
-<meta property="og:description" content="GPS 找附近手搖飲、看菜單、輪流或亂數決定店家，並記錄每一杯。">
+<meta property="og:description" content="勾選附近有的手搖飲品牌，抽籤或自己選、看菜單，並記錄每一杯。">
 <meta property="og:url" content="https://tlan1012.github.io/Fable5/bubble-tea-picker.html">
 <meta property="og:locale" content="zh_TW">
 <style>
@@ -40,6 +40,15 @@ header .back{position:absolute;left:14px;top:12px;color:#fde9cf;font-size:.82rem
 .seg button{border:0;background:#fff;padding:9px 16px;font-weight:700;color:var(--muted);cursor:pointer}
 .seg button.on{background:var(--pearl);color:#fff}
 .modehint{font-size:.84rem;color:var(--muted);margin:8px 0 10px;flex-basis:100%}
+.pickcount{font-size:.88rem;color:var(--muted);font-weight:700;margin-right:auto}
+.brands{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.brand{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:.92rem;cursor:pointer;user-select:none;transition:.12s}
+.brand:hover{border-color:#d7b48c}
+.brand.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.brand input{accent-color:var(--accent-dk);margin:0}
+.brand .cnt{font-size:.7rem;background:var(--pink);color:#fff;border-radius:8px;padding:0 5px}
+.brand .x{color:#b9a48f;font-weight:800;padding-left:2px}
+.brand.on .x{color:#fde9cf}
 .shops{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:12px;max-height:520px;overflow:auto;padding:2px}
 .shop{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;cursor:pointer;transition:.15s;position:relative}
 .shop:hover{border-color:#d7b48c}
@@ -104,48 +113,43 @@ footer a{color:var(--accent)}
 <header>
   <a class="back" href="./">← 回首頁</a>
   <h1>🧋 今天喝什麼？</h1>
-  <div class="sub">附近手搖飲 × 菜單 × 輪流／亂數決定 × 每杯都記錄</div>
+  <div class="sub">勾選附近的店 × 抽籤或自己選 × 看菜單 × 每杯都記錄</div>
 </header>
 
 <div class="wrap">
 
-  <!-- 1. 定位 -->
+  <!-- 1. 勾選附近有的店 -->
   <div class="panel">
-    <h2><span class="step">1</span>找附近的手搖飲店</h2>
+    <h2><span class="step">1</span>勾選你附近有的店</h2>
     <div class="row">
-      <button class="btn pri" id="btnLocate">📍 用我的位置</button>
-      <div class="seg" id="waySeg" title="搜尋範圍">
-        <button data-way="pickup">🚶 自取・600 公尺</button>
-        <button data-way="delivery">🛵 外送・3 公里</button>
-      </div>
-      <input class="inp" id="addr" placeholder="或輸入地址／地標，例如：高雄車站" style="flex:1;min-width:180px">
-      <button class="btn" id="btnAddr">🔎 搜尋</button>
+      <span class="pickcount" id="pickCount"></span>
+      <button class="btn sm ghost" id="btnAll">全選</button>
+      <button class="btn sm ghost" id="btnNone">全不選</button>
     </div>
-    <div class="status" id="locStatus">店家資料來自 OpenStreetMap，按「用我的位置」開始。</div>
+    <div class="brands" id="brands"><div class="empty">品牌清單讀取中…</div></div>
+    <details class="add">
+      <summary>＋ 加入清單上沒有的店</summary>
+      <div class="row">
+        <input class="inp" id="manName" placeholder="店名，例如：米里 旗山店" style="flex:1;min-width:180px">
+        <button class="btn" id="btnManAdd">加入</button>
+      </div>
+    </details>
   </div>
 
   <!-- 2. 選店家 -->
   <div class="panel">
-    <h2><span class="step">2</span>選店家</h2>
+    <h2><span class="step">2</span>今天喝哪家？</h2>
     <div class="row">
       <div class="seg" id="modeSeg">
         <button data-mode="self" class="on">👆 自己選</button>
+        <button data-mode="random">🎲 抽籤</button>
         <button data-mode="rotate">🔁 輪流</button>
-        <button data-mode="random">🎲 亂數</button>
       </div>
       <button class="btn pri" id="btnPickShop" style="display:none"></button>
-      <label style="font-size:.84rem;color:var(--muted);display:none" id="avoidWrap"><input type="checkbox" id="avoidLast" checked> 避開上次喝的品牌</label>
+      <label style="font-size:.84rem;color:var(--muted);display:none" id="avoidWrap"><input type="checkbox" id="avoidLast" checked> 避開上次喝的店</label>
       <div class="modehint" id="modeHint"></div>
     </div>
-    <div class="shops" id="shops"><div class="empty">尚未搜尋。也可以在下方手動加入常去的店。</div></div>
-    <details class="add">
-      <summary>＋ 手動加入店家（找不到、或常叫外送的店）</summary>
-      <div class="row">
-        <select class="sel" id="manChain"></select>
-        <input class="inp" id="manName" placeholder="分店名稱（選填），例如：50嵐 中山店" style="flex:1;min-width:180px">
-        <button class="btn" id="btnManAdd">加入</button>
-      </div>
-    </details>
+    <div class="shops" id="shops"></div>
     <div class="picked" id="picked"></div>
   </div>
 
@@ -169,11 +173,11 @@ footer a{color:var(--accent)}
   </div>
 
   <div class="note">
-    ・店家位置來自 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 社群資料（透過 Overpass API），新開或剛歇業的店可能尚未更新；找不到的店請用「手動加入」。<br>
-    ・<b>🚶 自取</b>顯示 600 公尺內、可以走路去買的店，選定後附步行導航；<b>🛵 外送</b>顯示 3 公里內的店，選定後附 Uber Eats 與 foodpanda 搜尋連結。每筆紀錄都會註明是自取或外送。<br>
-    ・菜單為各連鎖品牌的<b>常態品項</b>，2026-10-12 逐一上網核對（優先採官網，其次官方菜單圖、外送平台或媒體整理，每家皆註明來源與版本）；不含季節限定，部分品牌各地區菜單略有不同，價格與限定品請以店家公告為準。連鎖品牌外的店家會顯示通用菜單。<br>
+    ・步驟 1 勾選你附近有、會去買的店，之後每次都從這些店裡選；勾選會記住，搬家或換地方再改即可。清單上沒有的店可以自己加，會用通用菜單，菜單也能自己更新。<br>
+    ・選定店家後，「📍 找最近的分店」會用 Google 地圖搜尋該店名，列出離你最近的分店；也附 Uber Eats 與 foodpanda 搜尋連結。<br>
+    ・菜單為各連鎖品牌的<b>常態品項</b>，2026-10-12 逐一上網核對（優先採官網，其次官方菜單圖、外送平台或媒體整理，每家皆註明來源與版本）；不含季節限定，部分品牌各地區菜單略有不同，價格與限定品請以店家公告為準。<br>
     ・<b>更新菜單</b>：每家店都可按「✏️ 更新菜單」自行增刪品項，或從官網、外送平台複製整份菜單貼上（價格會自動去除），之後選飲料就用你的版本；內建菜單日後若更新，開啟頁面時會自動提示，也可隨時按「🔄 檢查菜單更新」。<br>
-    ・「輪流」會挑出附近店家中<b>最久沒喝（或從沒喝過）的品牌</b>；「亂數」可勾選避開上次喝的品牌。<br>
+    ・「🎲 抽籤」從勾選的店裡隨機抽一家，可避開上次喝的店；「🔁 輪流」挑出<b>最久沒喝（或從沒喝過）的店</b>。<br>
     ・所有紀錄只存在這台裝置的瀏覽器（localStorage），不會上傳；換裝置可用「匯出／匯入紀錄」。
   </div>
   <footer>Fable5 番外篇 ・ <a href="./">回首頁</a> ・ 🤖 Generated with Claude Code</footer>
@@ -191,11 +195,8 @@ const MENU_URL = 'bubble-tea-menus.json';
 let CHAINS = [];
 let GENERIC = {id:'', name:'（一般手搖飲）', url:'', updated:'', m:[]};
 let menuVersion = '';
-const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function applyMenuData(j){
-  // 比對規則寫錯時退回「店名完全一致」，不讓一筆壞資料拖垮整頁
-  const toRe = c => { try { return new RegExp(c.match || reEsc(c.name), 'i'); } catch(e){ return new RegExp(reEsc(c.name), 'i'); } };
-  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, re:toRe(c), url:c.url || '',
+  CHAINS = j.chains.map(c => ({id:c.id, name:c.name, url:c.url || '',
     updated:c.updated || j.version || '', m:c.menu.map(x => [x.cat, x.items]),
     source:c.source || '', sourceDate:c.source_date || '', sourceType:c.source_type || ''}));
   GENERIC = {id:'', name:j.generic?.name || '（一般手搖飲）', url:'', updated:j.version || '', m:(j.generic?.menu || []).map(x => [x.cat, x.items])};
@@ -220,9 +221,9 @@ async function loadMenus(force){
 const SUGAR = ['正常甜','少糖','半糖','微糖','二分糖','一分糖','無糖'];
 const ICE = ['正常冰','少冰','微冰','去冰','完全去冰','常溫','溫','熱'];
 const SIZE = ['大杯','中杯'];
-const HOW = {self:'自己選', rotate:'輪流', random:'亂數'};
-// 自取＝走路去買，外送＝叫外送平台；兩種範圍共用同一次搜尋結果（外送範圍較大，自取直接從中篩選）
-const WAYS = {pickup:{label:'自取', icon:'🚶', radius:600}, delivery:{label:'外送', icon:'🛵', radius:3000}};
+const HOW = {self:'自己選', rotate:'輪流', random:'抽籤'};
+// 舊版紀錄會帶自取／外送標記，照樣顯示
+const WAYS = {pickup:{label:'自取', icon:'🚶'}, delivery:{label:'外送', icon:'🛵'}};
 
 /* ================= 儲存 ================= */
 const LS = {
@@ -231,33 +232,19 @@ const LS = {
 };
 let history = LS.get('history', []);          // [{id,ts,key,shop,chain,drink,sugar,ice,size,note,how}]
 let customDrinks = LS.get('custom', {});      // {menuKey: [drink,...]}
-let manualShops = LS.get('manual', []);       // [{id,name,chain}]
+let manualShops = LS.get('manual', []);       // [{id,name,chain:'',on}] 清單上沒有、自己加的店
+let myChains = new Set(LS.get('myChains', []));  // 勾選的品牌 id
 let userMenus = LS.get('userMenus', {});       // {menuKey: {m:[[分類,[品項]]], updated, base}}
-let cache = LS.get('lastSearch', null);       // {lat,lon,label,shops,radius,ts}
-let state = { mode: LS.get('mode','self'), way: WAYS[LS.get('way','pickup')] ? LS.get('way','pickup') : 'pickup',
-  all: [], fetched: 0, shops: [], here: null, sel: null, how: 'self', drink: null, editing: false };
-let menusReady = Promise.resolve();
+let state = { mode: LS.get('mode','self'), sel: null, how: 'self', drink: null, editing: false };
+// 舊版「手動加入」若選了連鎖品牌，改成勾選該品牌；定位搜尋的快取不再使用
+for (const m of manualShops) if (m.chain) myChains.add(m.chain);
+manualShops = manualShops.filter(m => !m.chain);
+try { localStorage.removeItem('bt_lastSearch'); localStorage.removeItem('bt_way'); } catch(e){}
 
 /* ================= 工具 ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const chainById = id => CHAINS.find(c => c.id === id) || null;
-// 比對到最長文字的規則優先，讓「米里.*旗山」這類單一分店菜單蓋過「米里」品牌菜單
-function matchChain(...names){
-  let best = null, bestLen = 0;
-  for (const n of names) if (n) for (const c of CHAINS){
-    const m = n.match(c.re);
-    if (m && m[0].length > bestLen){ best = c; bestLen = m[0].length; }
-  }
-  return best;
-}
-function dist(a, b){
-  const R = 6371000, r = x => x*Math.PI/180;
-  const dLat = r(b.lat-a.lat), dLon = r(b.lon-a.lon);
-  const h = Math.sin(dLat/2)**2 + Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(h));
-}
-const fmtDist = m => m == null ? '' : m < 1000 ? Math.round(m)+' m' : (m/1000).toFixed(1)+' km';
 function fmtAgo(ts){
   const d = (Date.now()-ts)/86400000;
   if (d < 1/24) return '剛剛';
@@ -270,135 +257,73 @@ function fmtTime(ts){
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); }
-function status(msg, err){ const s = $('locStatus'); s.textContent = msg; s.classList.toggle('err', !!err); }
-// 輪流以「品牌」為單位；非連鎖店以店家本身為單位
+// 紀錄以品牌為單位；自己加的店以店名為單位
 const rotKey = s => s.chain ? 'chain:'+s.chain : 'shop:'+s.name;
 const menuKey = s => s.chain ? 'chain:'+s.chain : 'shop:'+s.name;
 function lastVisit(key){ let t = 0; for (const h of history) if (h.key === key && h.ts > t) t = h.ts; return t; }
 function visitCount(key){ return history.filter(h => h.key === key).length; }
 
-/* ================= 店家搜尋（Overpass） ================= */
-const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-const chainReSrc = () => CHAINS.map(c => c.name.replace(/[.*+?^${}()|[\]\\"]/g,'')).concat(['五十嵐','茶','飲']).join('|');
-async function fetchShops(lat, lon, radius){
-  const a = `(around:${radius},${lat},${lon})`, CHAIN_RE_SRC = chainReSrc();
-  const q = `[out:json][timeout:40];(
-    nwr${a}["cuisine"~"bubble_tea|tea|juice",i];
-    nwr${a}["shop"~"^(beverages|tea)$"];
-    nwr${a}["amenity"~"^(cafe|fast_food)$"]["name"~"${CHAIN_RE_SRC}|tea|coco|chatime|kebuke|milksha",i];
-    nwr${a}["brand"~"${CHAIN_RE_SRC}",i];
-  );out center tags;`;
-  let lastErr;
-  for (const url of OVERPASS){
-    try {
-      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 35000);
-      const r = await fetch(url, {method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}, signal:ctl.signal});
-      clearTimeout(to);
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
-      return parseShops(j.elements || [], {lat, lon});
-    } catch(e){ lastErr = e; }
-  }
-  throw lastErr || new Error('Overpass 無回應');
+/* ================= 1. 勾選附近有的店 ================= */
+// 店家＝勾選的連鎖品牌（含 JSON 裡的單一分店）＋自己加的店
+function allShops(){
+  const chains = CHAINS.filter(c => myChains.has(c.id)).map(c => ({id:'c:'+c.id, name:c.name, chain:c.id}));
+  const man = manualShops.filter(m => m.on !== false).map(m => ({id:m.id, name:m.name, chain:'', manual:true}));
+  return chains.concat(man);
 }
-function parseShops(els, here){
-  const out = [], seen = new Set();
-  for (const e of els){
-    const t = e.tags || {};
-    const name = t['name:zh'] || t.name || t['name:zh-Hant'] || t.brand || '';
-    if (!name) continue;
-    const c = matchChain(t.brand, t['brand:zh'], t.name, t['name:zh'], t['name:en']);
-    const cuisine = (t.cuisine || '').toLowerCase();
-    const isDrink = c || /bubble_tea|tea|juice/.test(cuisine) || /^(beverages|tea)$/.test(t.shop || '') || /茶|飲|tea/i.test(name);
-    if (!isDrink) continue;
-    const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
-    if (lat == null) continue;
-    const id = e.type+'/'+e.id;
-    if (seen.has(id)) continue; seen.add(id);
-    const addr = [t['addr:city'], t['addr:district'], t['addr:street'], t['addr:housenumber'] && t['addr:housenumber']+'號'].filter(Boolean).join('');
-    out.push({id, name, chain: c ? c.id : '', lat, lon, d: dist(here, {lat, lon}), addr, hours: t.opening_hours || '', phone: t.phone || t['contact:phone'] || ''});
-  }
-  return out.sort((a, b) => a.d - b.d);
+function saveMine(){ LS.set('myChains', [...myChains]); LS.set('manual', manualShops); }
+function renderBrands(){
+  const box = $('brands');
+  if (!CHAINS.length && !manualShops.length){ box.innerHTML = '<div class="empty">品牌清單讀取中…（讀取失敗時請按下方「🔄 檢查菜單更新」）</div>'; renderPickCount(); return; }
+  const item = (key, name, on, del) => {
+    const n = visitCount(key);
+    return `<label class="brand ${on ? 'on' : ''}"><input type="checkbox" data-key="${esc(key)}" ${on ? 'checked' : ''}>${esc(name)}${n ? `<span class="cnt">${n}</span>` : ''}${del ? `<span class="x" data-del="${esc(del)}" title="移除">✕</span>` : ''}</label>`;
+  };
+  box.innerHTML = CHAINS.map(c => item('chain:'+c.id, c.name, myChains.has(c.id))).join('')
+    + manualShops.map(m => item('shop:'+m.name, m.name, m.on !== false, m.id)).join('');
+  box.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
+    const k = cb.dataset.key;
+    if (k.startsWith('chain:')){ const id = k.slice(6); cb.checked ? myChains.add(id) : myChains.delete(id); }
+    else { const m = manualShops.find(x => 'shop:'+x.name === k); if (m) m.on = cb.checked; }
+    cb.parentElement.classList.toggle('on', cb.checked);
+    saveMine(); afterPickChange();
+  });
+  box.querySelectorAll('[data-del]').forEach(x => x.onclick = ev => {
+    ev.preventDefault();
+    manualShops = manualShops.filter(m => m.id !== x.dataset.del); saveMine();
+    renderBrands(); afterPickChange();
+  });
+  renderPickCount();
 }
-// 依目前的自取／外送範圍，從已搜尋到的店家篩出要顯示的
-function applyWay(label){
-  const w = WAYS[state.way];
-  state.shops = state.all.filter(s => s.d <= w.radius);
-  if (state.sel && !state.sel.manual && !state.shops.some(s => s.id === state.sel.id)){ state.sel = null; renderPicked(); renderMenu(); }
-  if (label){
-    const n = state.shops.length, more = state.way === 'pickup' ? state.all.length - n : 0;
-    status(n ? `✅ ${label} ${w.label}範圍 ${fmtDist(w.radius)} 內找到 ${n} 家（${state.shops.filter(s => s.chain).length} 家有內建菜單）${more > 0 ? `；3 公里內還有 ${more} 家，可切換「🛵 外送」` : ''}`
-             : `😢 ${label} ${fmtDist(w.radius)} 內沒找到${state.way === 'pickup' ? '，切換「🛵 外送・3 公里」看看' : '，可以手動加入店家'}。`);
-  }
+function renderPickCount(){
+  const n = allShops().length;
+  $('pickCount').textContent = n ? `已勾選 ${n} 家` : '勾選你附近有、會去買的店（會記住）';
+}
+// 勾選改變後：清單重畫；已選的店若被取消勾選就清掉
+function afterPickChange(){
+  renderPickCount();
+  if (state.sel && !allShops().some(s => s.id === state.sel.id)){ state.sel = null; renderPicked(); renderMenu(); }
   renderShops();
 }
-async function searchAt(lat, lon, label){
-  // 一律抓外送範圍（3 公里），切換到自取時直接篩選，不必重抓
-  const radius = WAYS.delivery.radius;
-  status(`🔄 搜尋 ${label} 周邊 ${fmtDist(radius)} 的手搖飲…`);
-  try {
-    await menusReady;
-    const shops = await fetchShops(lat, lon, radius);
-    state.here = {lat, lon}; state.all = shops; state.fetched = radius;
-    cache = {lat, lon, label, shops, radius, ts: Date.now()}; LS.set('lastSearch', cache);
-    applyWay(label);
-  } catch(e){
-    status('⚠ 店家資料讀取失敗（'+e.message+'），請稍後再試，或手動加入店家。', true);
-  }
-}
-function setWay(way){
-  state.way = way; LS.set('way', way);
-  document.querySelectorAll('#waySeg button').forEach(b => b.classList.toggle('on', b.dataset.way === way));
-  if (!state.here) return;
-  // 舊版快取的搜尋範圍較小，切到外送時重抓
-  if (WAYS[way].radius > state.fetched) searchAt(state.here.lat, state.here.lon, cache?.label || '此處');
-  else { applyWay(cache?.label || '此處'); if (state.sel) renderPicked(); }
-}
-document.querySelectorAll('#waySeg button').forEach(b => b.onclick = () => setWay(b.dataset.way));
-$('btnLocate').onclick = () => {
-  if (!navigator.geolocation){ status('此瀏覽器不支援定位，請改輸入地址。', true); return; }
-  status('📡 取得位置中…');
-  navigator.geolocation.getCurrentPosition(
-    p => searchAt(p.coords.latitude, p.coords.longitude, '你的位置'),
-    e => status('無法取得位置（'+(e.code === 1 ? '未授權定位' : e.message)+'），請改輸入地址。', true),
-    {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
-};
-async function geocode(){
-  const q = $('addr').value.trim(); if (!q) return;
-  status('🔎 查詢地址…');
-  try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q='+encodeURIComponent(q));
-    const j = await r.json();
-    if (!j.length){ status('找不到這個地址，換個寫法試試（例如加上縣市）。', true); return; }
-    searchAt(+j[0].lat, +j[0].lon, '「'+q+'」');
-  } catch(e){ status('地址查詢失敗：'+e.message, true); }
-}
-$('btnAddr').onclick = geocode;
-$('addr').addEventListener('keydown', e => { if (e.key === 'Enter') geocode(); });
-
-/* ================= 手動店家 ================= */
-function renderManChain(){
-  $('manChain').innerHTML = CHAINS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('') + '<option value="">其他店家（自填名稱）</option>';
-}
-$('btnManAdd').onclick = () => {
-  const chain = $('manChain').value, nm = $('manName').value.trim();
-  const name = nm || (chainById(chain)?.name);
+$('btnAll').onclick = () => { CHAINS.forEach(c => myChains.add(c.id)); manualShops.forEach(m => m.on = true); saveMine(); renderBrands(); afterPickChange(); };
+$('btnNone').onclick = () => { myChains.clear(); manualShops.forEach(m => m.on = false); saveMine(); renderBrands(); afterPickChange(); };
+function addManual(){
+  const name = $('manName').value.trim();
   if (!name){ toast('請填入店名'); return; }
-  manualShops.push({id:'m'+Date.now(), name, chain}); LS.set('manual', manualShops);
-  $('manName').value = ''; renderShops(); toast('已加入「'+name+'」');
-};
-function allShops(){
-  const man = manualShops.map(s => ({...s, manual:true, d:null}));
-  return state.shops.concat(man);
+  if (manualShops.some(m => m.name === name) || CHAINS.some(c => c.name === name)){ toast('清單上已經有「'+name+'」'); return; }
+  manualShops.push({id:'m'+Date.now(), name, chain:'', on:true}); saveMine();
+  $('manName').value = ''; renderBrands(); afterPickChange(); toast('已加入「'+name+'」');
 }
+$('btnManAdd').onclick = addManual;
+$('manName').addEventListener('keydown', e => { if (e.key === 'Enter') addManual(); });
 
-/* ================= 選店模式 ================= */
+/* ================= 2. 選店模式 ================= */
 const HINT = {
   self: '直接點選下方任一家店。',
-  rotate: '依紀錄挑出附近「最久沒喝／從沒喝過」的品牌，同樣久則挑最近的那家。綠色「輪到它」標記就是下一家。',
-  random: '從附近店家中隨機抽一家。'
+  random: '從勾選的店裡隨機抽一家。',
+  rotate: '依紀錄挑出「最久沒喝／從沒喝過」的店。綠色「輪到它」標記就是下一家。'
 };
 function setMode(m){
+  if (!HINT[m]) m = 'self';
   state.mode = m; LS.set('mode', m);
   document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   $('modeHint').textContent = HINT[m];
@@ -410,19 +335,19 @@ function setMode(m){
 }
 document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 
+// 最久沒喝的優先；都沒喝過時照清單順序
 function rotationPick(list){
   if (!list.length) return null;
-  return list.slice().sort((a, b) => (lastVisit(rotKey(a)) - lastVisit(rotKey(b))) || ((a.d ?? 1e9) - (b.d ?? 1e9)))[0];
+  return list.slice().sort((a, b) => lastVisit(rotKey(a)) - lastVisit(rotKey(b)))[0];
 }
 $('btnPickShop').onclick = () => {
   const list = allShops();
-  if (!list.length){ toast('先搜尋附近店家或手動加入'); return; }
+  if (!list.length){ toast('先在上面勾選附近有的店'); return; }
   if (state.mode === 'rotate'){ selectShop(rotationPick(list), 'rotate'); return; }
-  // 亂數：跑馬燈動畫後停下
+  // 抽籤：跑馬燈動畫後停下
   let pool = list;
   if ($('avoidLast').checked && history.length){
-    const lastKey = history[0].key;
-    const f = list.filter(s => rotKey(s) !== lastKey);
+    const f = list.filter(s => rotKey(s) !== history[0].key);
     if (f.length) pool = f;
   }
   const final = pool[Math.floor(Math.random()*pool.length)];
@@ -445,29 +370,19 @@ function highlight(s){
 function renderShops(){
   const list = allShops();
   const box = $('shops');
-  if (!list.length){ box.innerHTML = '<div class="empty">尚未搜尋。也可以在下方手動加入常去的店。</div>'; return; }
+  if (!list.length){ box.innerHTML = '<div class="empty">先在步驟 1 勾選你附近有的店。</div>'; return; }
   const next = state.mode === 'rotate' ? rotationPick(list) : null;
   box.innerHTML = list.map(s => {
-    const c = chainById(s.chain), k = rotKey(s), lv = lastVisit(k), cnt = visitCount(k);
-    const badge = s.manual ? '<span class="badge b-man">手動</span>' : c ? `<span class="badge b-chain">${esc(c.name)}</span>` : '<span class="badge b-gen">通用菜單</span>';
+    const k = rotKey(s), lv = lastVisit(k), cnt = visitCount(k);
+    const badge = s.manual ? '<span class="badge b-man">自己加的・通用菜單</span>' : '';
     const nx = next && next.id === s.id ? '<span class="badge b-next">輪到它</span>' : '';
     const meta = lv ? `上次 ${fmtAgo(lv)}・共 ${cnt} 次` : '還沒喝過';
     return `<div class="shop ${state.sel && state.sel.id === s.id ? 'on' : ''}" data-id="${esc(s.id)}">
-      ${s.d != null ? `<span class="dist">${fmtDist(s.d)}</span>` : s.manual ? '<span class="dist" data-del="1" title="移除">✕</span>' : ''}
       <div class="nm">${esc(s.name)}</div>
       <div class="meta">${nx}${badge}${esc(meta)}</div>
-      ${s.addr ? `<div class="meta">${esc(s.addr)}</div>` : ''}
     </div>`;
   }).join('');
-  box.querySelectorAll('.shop').forEach(el => el.onclick = ev => {
-    const s = list.find(x => x.id === el.dataset.id);
-    if (ev.target.dataset.del){
-      manualShops = manualShops.filter(m => m.id !== s.id); LS.set('manual', manualShops);
-      if (state.sel?.id === s.id){ state.sel = null; renderPicked(); renderMenu(); }
-      renderShops(); return;
-    }
-    selectShop(s, 'self');
-  });
+  box.querySelectorAll('.shop').forEach(el => el.onclick = () => selectShop(list.find(x => x.id === el.dataset.id), 'self'));
 }
 function selectShop(s, how){
   state.sel = s; state.how = how; state.drink = null; state.editing = false;
@@ -479,15 +394,13 @@ function renderPicked(){
   if (!s){ p.classList.remove('show'); return; }
   const lastHere = history.find(h => h.key === rotKey(s));
   const q = encodeURIComponent(s.name), link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
-  const map = s.lat ? `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
-  const links = state.way === 'delivery'
-    ? [link(`https://www.ubereats.com/tw/search?q=${q}`, '🛵 Uber Eats'), link(`https://www.google.com/search?q=${encodeURIComponent('foodpanda ' + s.name)}`, '🐼 foodpanda'), link(map, '📍 地圖')]
-    : [link(s.lat ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=walking` : map, s.lat ? '🚶 步行導航' : '📍 地圖')];
-  if (s.phone) links.push(link(`tel:${esc(s.phone.replace(/[^\d+]/g, ''))}`, '📞 ' + esc(s.phone)));
-  p.innerHTML = `<div style="font-size:.8rem;opacity:.8">${HOW[state.how]}選定・${WAYS[state.way].icon} ${WAYS[state.way].label}</div>
-    <div class="big">🧋 ${esc(s.name)} ${s.d != null ? `<span style="font-size:.85rem;opacity:.8">・${fmtDist(s.d)}</span>` : ''}</div>
-    <div style="font-size:.85rem;margin-top:4px">${lastHere ? `上次在這裡（${fmtAgo(lastHere.ts)}）點了：<b>${esc(lastHere.drink)}</b> ${esc(lastHere.sugar)}／${esc(lastHere.ice)}` : '第一次喝這家！'}
-    ${s.hours ? `<br>營業時間（OSM）：${esc(s.hours)}` : ''}</div>
+  // Google 地圖以店名搜尋時，會列出離你最近的分店
+  const links = [link(`https://www.google.com/maps/search/?api=1&query=${q}`, '📍 找最近的分店'),
+    link(`https://www.ubereats.com/tw/search?q=${q}`, '🛵 Uber Eats'),
+    link(`https://www.google.com/search?q=${encodeURIComponent('foodpanda ' + s.name)}`, '🐼 foodpanda')];
+  p.innerHTML = `<div style="font-size:.8rem;opacity:.8">${HOW[state.how]}選定</div>
+    <div class="big">🧋 ${esc(s.name)}</div>
+    <div style="font-size:.85rem;margin-top:4px">${lastHere ? `上次（${fmtAgo(lastHere.ts)}）點了：<b>${esc(lastHere.drink)}</b> ${esc(lastHere.sugar)}／${esc(lastHere.ice)}` : '第一次喝這家！'}</div>
     <div style="font-size:.85rem;margin-top:6px">${links.join('　')}　<a href="#menuPanel">👇 看菜單</a></div>`;
   p.classList.add('show');
 }
@@ -657,11 +570,11 @@ function renderMenu(){
     const cc = chainById(s.chain);
     history.unshift({id: Date.now()+''+Math.random().toString(36).slice(2,6), ts: Date.now(), key: rotKey(s), mkey: mk,
       shop: s.name, chain: s.chain || '', chainName: cc ? cc.name : '', drink: state.drink,
-      sugar: $('optSugar').value, ice: $('optIce').value, size: $('optSize').value, note: $('optNote').value.trim(), how: state.how, way: state.way});
+      sugar: $('optSugar').value, ice: $('optIce').value, size: $('optSize').value, note: $('optNote').value.trim(), how: state.how});
     LS.set('history', history);
     toast('✅ 已記錄：' + state.drink);
     state.drink = null;
-    renderHistory(); renderShops(); renderPicked(); renderMenu();
+    renderHistory(); renderBrands(); renderShops(); renderPicked(); renderMenu();
   };
   upd();
 }
@@ -699,11 +612,11 @@ function renderHistory(){
   }</tbody></table>${history.length > 100 ? `<div class="empty">僅顯示最近 100 筆（共 ${history.length} 筆，匯出可取得全部）</div>` : ''}`;
   $('histWrap').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     history = history.filter(h => h.id !== b.dataset.del); LS.set('history', history);
-    renderHistory(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+    renderHistory(); renderBrands(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
   });
 }
 $('btnExport').onclick = () => {
-  const blob = new Blob([JSON.stringify({version:1, history, customDrinks, manualShops, userMenus}, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify({version:1, history, customDrinks, manualShops, userMenus, myChains:[...myChains]}, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'bubble-tea-history-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -720,33 +633,30 @@ $('fileImport').onchange = async e => {
     for (const [k, v] of Object.entries(j.userMenus || {})) if (v && Array.isArray(v.m) && (!userMenus[k] || v.updated > userMenus[k].updated)) userMenus[k] = v;
     LS.set('userMenus', userMenus);
     const mids = new Set(manualShops.map(m => m.id));
-    manualShops = manualShops.concat((j.manualShops || []).filter(m => !mids.has(m.id)));
+    for (const m of (j.manualShops || [])) if (m && m.name && !mids.has(m.id)){
+      if (m.chain) myChains.add(m.chain); else manualShops.push(m);
+    }
+    for (const id of (Array.isArray(j.myChains) ? j.myChains : [])) myChains.add(id);
+    LS.set('myChains', [...myChains]);
     LS.set('history', history); LS.set('custom', customDrinks); LS.set('manual', manualShops);
-    renderHistory(); renderShops(); if (state.sel) renderMenu();
+    renderHistory(); renderBrands(); afterPickChange(); if (state.sel) renderMenu();
     toast('✅ 已匯入');
   } catch(err){ toast('匯入失敗：' + err.message); }
   e.target.value = '';
 };
 $('btnClear').onclick = () => {
   if (!history.length || !confirm('確定清空全部 ' + history.length + ' 筆紀錄？（建議先匯出）')) return;
-  history = []; LS.set('history', history); renderHistory(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+  history = []; LS.set('history', history); renderHistory(); renderBrands(); renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
 };
 
 /* ================= 啟動 ================= */
-if (cache && cache.shops){
-  state.here = {lat: cache.lat, lon: cache.lon}; state.all = cache.shops; state.fetched = cache.radius || 0;
-  state.shops = state.all.filter(s => s.d <= WAYS[state.way].radius);
-  status(`上次搜尋：${cache.label}（${fmtAgo(cache.ts)}，${cache.shops.length} 家）。換了地方請重新定位。`);
-}
 function renderMenuVer(){
   const n = Object.keys(userMenus).length;
   $('menuVer').textContent = menuVersion ? `內建菜單版本 ${menuVersion}・${CHAINS.length} 個品牌${n ? `・你自己更新了 ${n} 家` : ''}` : '內建菜單尚未載入';
 }
 function afterMenus(){
-  renderManChain(); renderMenuVer();
-  // 用新的品牌規則重新比對已快取的店家
-  for (const s of state.shops){ const c = matchChain(s.name); if (c) s.chain = c.id; }
-  renderShops(); if (state.sel){ renderPicked(); renderMenu(); }
+  renderMenuVer(); renderBrands(); afterPickChange();
+  if (state.sel){ renderPicked(); renderMenu(); }
 }
 async function checkMenus(force){
   const btn = $('btnCheckMenu'); btn.disabled = true;
@@ -763,11 +673,10 @@ async function checkMenus(force){
 $('btnCheckMenu').onclick = () => checkMenus(true);
 const cachedMenu = LS.get('menuData', null);
 if (validMenuData(cachedMenu)) applyMenuData(cachedMenu);
-renderManChain(); renderMenuVer();
-document.querySelectorAll('#waySeg button').forEach(b => b.classList.toggle('on', b.dataset.way === state.way));
+renderMenuVer(); renderBrands();
 setMode(state.mode);
 renderHistory();
-menusReady = checkMenus(false);
+checkMenus(false);
 </script>
 </body>
 </html>
